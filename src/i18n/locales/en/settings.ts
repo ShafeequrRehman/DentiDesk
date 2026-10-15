@@ -21,7 +21,7 @@ export const settings = {
     manageProducts: "Manage Appointments",
     manageReceipt: "Manage Receipt",
     sidebarPages: "Sidebar Pages",
-    customerOrdering: "Patient Ordering",
+    customerOrdering: "Patient Appointment",
     paymentsTax: "Payments & Tax",
     hardwarePos: "Hardware / POS",
     security: "Security",

@@ -8,7 +8,7 @@ export const settings = {
     manageProducts: "اپائنٹمنٹس مینج کریں",
     manageReceipt: "رسید مینج کریں",
     sidebarPages: "سائیڈ بار صفحات",
-    customerOrdering: "مریض اپائنٹمنٹنگ",
+    customerOrdering: "مریض اپائنٹمنٹ",
     paymentsTax: "ادائیگیاں اور ٹیکس",
     hardwarePos: "ہارڈویئر / POS",
     security: "سیکیورٹی",

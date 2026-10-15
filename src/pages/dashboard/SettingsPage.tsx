@@ -127,7 +127,7 @@ export default function SettingsPage() {
     { id: "Manage Appointments", icon: <Package size={18} /> },
     { id: "Manage Receipt", icon: <Receipt size={18} /> },
     { id: "Sidebar Pages", icon: <Eye size={18} /> },
-    { id: "Patient Ordering", icon: <QrCode size={18} /> },
+    { id: "Patient Appointment", icon: <QrCode size={18} /> },
     { id: "Payments & Tax", icon: <CreditCard size={18} /> },
     { id: "Hardware / POS", icon: <Printer size={18} /> },
     { id: "Security", icon: <Lock size={18} /> },
@@ -261,7 +261,7 @@ export default function SettingsPage() {
               <ProductManagementSection />
             ) : activeSection === "Sidebar Pages" ? (
               <SidebarPagesSection />
-            ) : activeSection === "Patient Ordering" ? (
+            ) : activeSection === "Patient Appointment" ? (
               <CustomerOrderingSection />
             ) : (
               <>

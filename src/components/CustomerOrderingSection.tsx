@@ -110,7 +110,7 @@ export function CustomerOrderingSection() {
       <div className="rounded-[28px] border border-indigo-100 bg-indigo-50/70 p-6">
         <div className="flex items-center gap-2">
           <QrCodeIcon size={18} className="text-indigo-600" />
-          <h3 className="text-lg font-black text-slate-900">Patient Self-Ordering QR Code</h3>
+          <h3 className="text-lg font-black text-slate-900">Patient Self-Appointment QR Code</h3>
         </div>
         <p className="mt-2 max-w-2xl text-sm text-slate-600">
           Print this and place it on tables or your counter. A patient scans it with their phone's camera - no app
@@ -132,7 +132,7 @@ export function CustomerOrderingSection() {
 
           <div className="flex-1 space-y-3">
             <div>
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Ordering Link</label>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest">Appointment Link</label>
               <div className="mt-1 break-all rounded-2xl bg-slate-50 p-3 text-xs font-bold text-slate-700">{orderingUrl}</div>
             </div>
 
@@ -224,7 +224,7 @@ export function CustomerOrderingSection() {
           disabled={saving || loading}
           className="rounded-2xl bg-[#E2F33C] px-6 py-3 text-sm font-black text-black disabled:opacity-50"
         >
-          {saving ? 'Saving...' : 'Save Ordering Settings'}
+          {saving ? 'Saving...' : 'Save Appointment Settings'}
         </button>
         {savedMessage ? <span className="text-sm font-black text-emerald-600">{savedMessage}</span> : null}
       </div>
