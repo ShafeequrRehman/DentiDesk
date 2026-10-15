@@ -4,6 +4,7 @@ import { ShoppingCart, Plus, Minus, X, CheckCircle2, AlertCircle, MapPin, Downlo
 import { getProductImageUrl } from '@/lib/asset-path';
 import {
   createPublicOrder,
+  fetchPublicBookedSlots,
   fetchPublicCustomerStatus,
   fetchPublicMenu,
   fetchPublicOrderStatus,
@@ -17,6 +18,7 @@ import {
   type PublicChangeRequest,
 } from '@/lib/public-order-api';
 import { getApiBaseCandidates } from '@/lib/api';
+import { buildTimeSlots, formatSlot, isDoctorProduct, isSlotInPast, todayISO } from '@/lib/appointments';
 
 // A plain numbered table ("5") still needs the "Table " prefix to read as
 // a table at all - a custom label already reads fine on its own. Only ever
@@ -923,6 +925,14 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   const [customerAddress, setCustomerAddress] = useState('');
   const [note, setNote] = useState('');
   const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Online' | 'JazzCash' | 'EasyPaisa'>('Cash');
+  // Dr appointment slot - same picker as the staff POS screen. Booked
+  // times come from the server (times only, never who booked them).
+  const [appointmentDate, setAppointmentDate] = useState(() => todayISO());
+  const [appointmentTime, setAppointmentTime] = useState('');
+  const [bookedSlots, setBookedSlots] = useState<Set<string>>(new Set());
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
+  const timeSlots = useMemo(() => buildTimeSlots(), []);
 
   const [activeOrderWarning, setActiveOrderWarning] = useState<{ id: string; orderType: string; table: string; dailyOrderNumber: number } | null>(null);
   const phoneCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1023,6 +1033,32 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   const cartLines = Array.from(cart.values());
   const cartCount = cartLines.reduce((sum, line) => sum + line.quantity, 0);
   const cartTotal = cartLines.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
+  const doctorName = cartLines.find((line) => isDoctorProduct(line.product))?.product.name || '';
+
+  useEffect(() => {
+    if (!doctorName || !appointmentDate) {
+      setBookedSlots(new Set());
+      return;
+    }
+    let cancelled = false;
+    setSlotsLoading(true);
+    fetchPublicBookedSlots(shopId, doctorName, appointmentDate)
+      .then((booked) => {
+        if (cancelled) return;
+        const set = new Set(booked);
+        setBookedSlots(set);
+        setAppointmentTime((current) => (current && set.has(current) ? '' : current));
+      })
+      .catch(() => {
+        if (!cancelled) setBookedSlots(new Set());
+      })
+      .finally(() => {
+        if (!cancelled) setSlotsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [shopId, doctorName, appointmentDate, slotsRefreshKey]);
 
   function cartKey(product: PublicMenuProduct) {
     return `${product.name}::${product.variation}`;
@@ -1068,7 +1104,8 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
     menu?.isOpen &&
     customerName.trim().length >= 2 &&
     phoneDigits.length >= 10 &&
-    (orderType !== 'Delivery' || customerAddress.trim().length >= 5);
+    (orderType !== 'Delivery' || customerAddress.trim().length >= 5) &&
+    (!doctorName || (!!appointmentTime && !bookedSlots.has(appointmentTime) && !isSlotInPast(appointmentDate, appointmentTime)));
 
   async function handlePlaceOrder() {
     if (!canSubmit || placing) return;
@@ -1096,6 +1133,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
         note: note.trim(),
         items: cartLines.map((line) => ({ name: line.product.name, variation: line.product.variation, quantity: line.quantity })),
         location,
+        ...(doctorName ? { appointmentDate, appointmentTime } : {}),
       });
 
       // Remembered immediately (not just once the status panel mounts) so
@@ -1112,8 +1150,12 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
 
       setPlacedOrder(result);
     } catch (err) {
-      const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setPlaceError(message || 'Could not place your appointment - please try again.');
+      const data = (err as { response?: { data?: { message?: string; reason?: string } } })?.response?.data;
+      if (data?.reason === 'slot_taken') {
+        setAppointmentTime('');
+        setSlotsRefreshKey((key) => key + 1);
+      }
+      setPlaceError(data?.message || 'Could not place your appointment - please try again.');
     } finally {
       setPlacing(false);
     }
@@ -1294,6 +1336,57 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
               <span>Total</span>
               <span>Rs {formatter.format(cartTotal)}</span>
             </div>
+
+            {doctorName ? (
+              <div className="mt-5 space-y-2">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-400">Appointment Date</p>
+                <input
+                  type="date"
+                  value={appointmentDate}
+                  min={todayISO()}
+                  onChange={(event) => {
+                    setAppointmentDate(event.target.value || todayISO());
+                    setAppointmentTime('');
+                  }}
+                  className="w-full rounded-xl border border-white/60 bg-white/50 px-4 py-3 text-sm font-bold shadow-inner outline-none focus:border-[#D6E332]"
+                />
+                <p className="pt-1 text-xs font-black uppercase tracking-[0.14em] text-gray-400">Time Slot - {doctorName}</p>
+                <div className="grid max-h-48 grid-cols-3 gap-1.5 overflow-y-auto pr-0.5 sm:grid-cols-4">
+                  {timeSlots.map((slot) => {
+                    const booked = bookedSlots.has(slot);
+                    const past = isSlotInPast(appointmentDate, slot);
+                    const selected = appointmentTime === slot;
+                    return (
+                      <button
+                        key={slot}
+                        type="button"
+                        disabled={booked || past || slotsLoading}
+                        onClick={() => setAppointmentTime(selected ? '' : slot)}
+                        title={booked ? 'Already booked' : past ? 'This time has passed' : formatSlot(slot)}
+                        className={`rounded-lg border px-1 py-2 text-[11px] font-black transition ${
+                          selected
+                            ? 'border-[#D6E332] bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] text-black shadow'
+                            : booked
+                              ? 'cursor-not-allowed border-rose-200 bg-rose-50 text-rose-400 line-through'
+                              : past
+                                ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-300'
+                                : 'border-white/60 bg-white/60 text-gray-700 hover:border-[#D6E332]'
+                        }`}
+                      >
+                        {formatSlot(slot)}
+                      </button>
+                    );
+                  })}
+                </div>
+                <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500">
+                  <span className="flex items-center gap-1">
+                    <Clock size={12} />
+                    {slotsLoading ? 'Checking free times...' : appointmentTime ? `Selected: ${formatSlot(appointmentTime)}` : 'Pick a free time'}
+                  </span>
+                  <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-rose-300" />Booked</span>
+                </div>
+              </div>
+            ) : null}
 
             <div className="mt-5 space-y-3">
               <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-400">Appointment Type</p>

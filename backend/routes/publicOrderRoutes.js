@@ -28,6 +28,7 @@ router.use("/:shopId", requireShopOrderable);
 
 router.get("/:shopId/manifest.json", readLimiter, ctrl.getManifest);
 router.get("/:shopId/menu", readLimiter, ctrl.getMenu);
+router.get("/:shopId/booked-slots", readLimiter, ctrl.getBookedSlots);
 router.get("/:shopId/customer-status", readLimiter, ctrl.getCustomerStatus);
 router.get("/:shopId/orders/:orderId", readLimiter, ctrl.getOrderStatus);
 router.post("/:shopId/orders", orderLimiter, ctrl.createOrder);

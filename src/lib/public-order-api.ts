@@ -133,6 +133,9 @@ export interface PublicOrderPayload {
   // captureLocation. Omitted/undefined if the browser declined or the
   // order isn't Delivery.
   location?: { lat: number; lng: number; accuracy?: number };
+  // Required when the cart has a Dr - see publicOrderController.js.
+  appointmentDate?: string; // YYYY-MM-DD
+  appointmentTime?: string; // HH:mm
 }
 
 export interface PublicOrderResult {
@@ -151,6 +154,12 @@ export interface PublicOrderResult {
 // Errors here carry a `reason` code (see publicOrderController.js) - the
 // page reads err.response?.data on failure to show the backend's own
 // specific message instead of a generic "something went wrong".
+// Booked times (HH:mm) for one Dr on one date - never who booked them.
+export async function fetchPublicBookedSlots(shopId: string, doctor: string, date: string): Promise<string[]> {
+  const response = await api.get<{ booked: string[] }>(`/public/${shopId}/booked-slots`, { params: { doctor, date } });
+  return response.data.booked || [];
+}
+
 export async function createPublicOrder(shopId: string, payload: PublicOrderPayload): Promise<PublicOrderResult> {
   const response = await api.post<PublicOrderResult>(`/public/${shopId}/orders`, payload);
   return response.data;

@@ -256,6 +256,44 @@ exports.getOrderStatus = async (req, res) => {
 // body: { orderType, table?, customer: { name, phone, address? },
 //         paymentMethod, paymentApp?, note?, items: [{ name, variation, quantity }],
 //         location?: { lat, lng, accuracy } }
+// --- Clinic appointment slots (same rule as orderController.js) --------
+// A Dr is a menu item whose category reads like "Dr"/"Drs"/"Doctor" or
+// whose name starts with "Dr." - see src/lib/appointments.ts.
+function isDoctorProduct(product) {
+  if (!product) return false;
+  if (/\b(drs?|doctors?)\b/i.test(product.category || "")) return true;
+  return /^dr\.?\s/i.test(product.name || "");
+}
+
+function slotTakenQuery(shopId, doctorName, appointmentDate, appointmentTime) {
+  const query = {
+    shopId,
+    doctorName,
+    appointmentDate,
+    status: { $ne: "cancelled" },
+    checkupStatus: { $ne: "done" },
+  };
+  if (appointmentTime) query.appointmentTime = appointmentTime;
+  else query.appointmentTime = { $ne: "" };
+  return query;
+}
+
+// GET /public/:shopId/booked-slots?doctor=&date=YYYY-MM-DD
+// Only the booked times - never who booked them.
+exports.getBookedSlots = async (req, res) => {
+  try {
+    const doctor = String(req.query.doctor || "").trim();
+    const date = String(req.query.date || "").trim();
+    if (!doctor || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
+      return res.json({ booked: [] });
+    }
+    const orders = await Order.find(slotTakenQuery(req.shop._id, doctor, date)).select("appointmentTime").lean();
+    res.json({ booked: [...new Set(orders.map((order) => order.appointmentTime).filter(Boolean))] });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 exports.createOrder = async (req, res) => {
   try {
     const shopId = req.shop._id;
@@ -349,6 +387,22 @@ exports.createOrder = async (req, res) => {
     // real order to status "completed" - i.e. still status: "pending".
     // Keeps CustomerOrderPage.tsx's on-device tracking session
     // unambiguous too - there's only ever one order worth remembering.
+    // A Dr appointment needs a free date + time slot for that Dr.
+    let slotFields = {};
+    const doctorItem = items.find((item) => isDoctorProduct(byKey.get(`${item.name}::${item.variation}`) || byKey.get(item.name)));
+    if (doctorItem) {
+      const appointmentDate = String(payload.appointmentDate || "").trim();
+      const appointmentTime = String(payload.appointmentTime || "").trim();
+      if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDate) || !/^\d{2}:\d{2}$/.test(appointmentTime)) {
+        return res.status(400).json({ message: `Please pick a date and time slot for ${doctorItem.name}.`, reason: "slot_required" });
+      }
+      const taken = await Order.findOne(slotTakenQuery(shopId, doctorItem.name, appointmentDate, appointmentTime)).select("_id").lean();
+      if (taken) {
+        return res.status(409).json({ message: `That time is already booked for ${doctorItem.name}. Please pick another time.`, reason: "slot_taken" });
+      }
+      slotFields = { doctorName: doctorItem.name, appointmentDate, appointmentTime, checkupStatus: "waiting" };
+    }
+
     const existingActiveForPhone = await Order.findOne({ shopId, "customer.phone": customerPhone, status: "pending" })
       .select("dailyOrderNumber orderType table")
       .lean();
@@ -421,6 +475,7 @@ exports.createOrder = async (req, res) => {
       trackingStatus: "awaiting_confirmation",
       paymentStatus: isGatewayPayment ? "awaiting_confirmation" : "unpaid",
       deliveryLocation,
+      ...slotFields,
     });
 
     // Best-effort contact sync - never allowed to fail the order itself.
