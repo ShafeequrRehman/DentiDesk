@@ -195,7 +195,6 @@ export default function POSPage() {
   // The "service options dropdown" (Dine-In/Takeaway/Delivery) - Down Arrow
   // from the Product Code box jumps straight here, per the Hotkey
   // Navigation Order Flow requirement.
-  const orderTypeSelectRef = useRef<HTMLSelectElement>(null);
 
   // Loads the product grid + waiter dropdown from the local hub's cached
   // reference data instead of the cloud - what makes the POS screen itself
@@ -594,12 +593,11 @@ export default function POSPage() {
       }
       return;
     }
-    // Hotkey Navigation Order Flow: right after a code-based add, the next
-    // natural step is picking Dine-In/Takeaway/Delivery - Down Arrow jumps
-    // straight to that dropdown instead of needing a mouse click.
+    // Down Arrow after a code-based add jumps straight to the patient's
+    // phone number - the next field to fill.
     if (event.key === 'ArrowDown') {
       event.preventDefault();
-      orderTypeSelectRef.current?.focus();
+      phoneInputRef.current?.focus();
     }
   }
 
@@ -1456,11 +1454,6 @@ export default function POSPage() {
           </div>
 
           <div className="space-y-3 border-b border-white/40 bg-white/25 p-4">
-            <select ref={orderTypeSelectRef} name="orderType" value={orderFormData.orderType} onChange={handleFormChange} className="w-full rounded-xl border border-white/60 bg-white/50 px-3 py-2 text-sm shadow-inner outline-none">
-              <option value="TakeAway">{t('pos.orderType.takeAway')}</option>
-              <option value="Delivery">{t('pos.orderType.delivery')}</option>
-            </select>
-
             <div className="relative space-y-3">
               <FormField label={t('pos.phoneNumberLabel')}>
                 <input ref={phoneInputRef} name="phone" value={orderFormData.phone} onChange={handlePhoneChange} onFocus={() => (suggestions.length > 0 || showNewCustomerPrompt) && setShowSuggestions(true)} placeholder={t('pos.phonePlaceholder')} className={`w-full rounded-xl border border-white/60 bg-white/50 px-3 py-2 text-sm shadow-inner outline-none transition-colors duration-300${deliveryFlashClass('phone')}`} />

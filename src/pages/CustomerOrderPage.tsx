@@ -916,7 +916,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   const [cart, setCart] = useState<Map<string, CartLine>>(new Map());
   const [showCart, setShowCart] = useState(false);
 
-  const [orderType, setOrderType] = useState<OrderType>('TakeAway');
+  const [orderType] = useState<OrderType>('TakeAway');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
@@ -1307,7 +1307,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
 
       {showCart ? (
         <div className="glass-overlay fixed inset-0 z-30 flex items-end sm:items-center sm:justify-center">
-          <div className="glass-strong max-h-[90vh] w-full overflow-y-auto rounded-t-[28px] p-6 sm:max-w-md sm:rounded-[28px]">
+          <div className="max-h-[90vh] w-full overflow-y-auto rounded-t-[28px] bg-white p-6 shadow-2xl ring-1 ring-black/5 sm:max-w-md sm:rounded-[28px]">
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-lg font-black text-gray-900">Your Appointment</h2>
               <button type="button" onClick={() => setShowCart(false)}><X size={20} className="text-gray-400" /></button>
@@ -1315,19 +1315,19 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
 
             <div className="space-y-3">
               {cartLines.map((line) => (
-                <div key={cartKey(line.product)} className="flex items-center justify-between rounded-xl bg-white/50 p-3 shadow-inner">
+                <div key={cartKey(line.product)} className="flex items-center justify-between rounded-xl bg-gray-50 p-3 ring-1 ring-gray-100">
                   <div>
                     <p className="text-sm font-black text-gray-900">{line.product.name}</p>
                     <p className="text-xs text-gray-400">Rs {formatter.format(line.product.price)}</p>
                   </div>
-                  <button type="button" onClick={() => changeQuantity(line.product, -line.quantity)} className="glass-pill flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-black text-rose-600 transition hover:bg-white/70">
+                  <button type="button" onClick={() => changeQuantity(line.product, -line.quantity)} className="flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-black text-rose-600 transition hover:bg-rose-100">
                     <X size={13} /> Remove
                   </button>
                 </div>
               ))}
             </div>
 
-            <div className="mt-4 flex justify-between border-t border-white/50 pt-4 text-sm font-black">
+            <div className="mt-4 flex justify-between border-t border-gray-100 pt-4 text-sm font-black">
               <span>Total</span>
               <span>Rs {formatter.format(cartTotal)}</span>
             </div>
@@ -1343,7 +1343,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                     setAppointmentDate(event.target.value || todayISO());
                     setAppointmentTime('');
                   }}
-                  className="w-full rounded-xl border border-white/60 bg-white/50 px-4 py-3 text-sm font-bold shadow-inner outline-none focus:border-[#D6E332]"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold shadow-inner outline-none focus:border-[#D6E332]"
                 />
                 <p className="pt-1 text-xs font-black uppercase tracking-[0.14em] text-gray-400">Time Slot - {doctorName}</p>
                 <div className="grid max-h-48 grid-cols-3 gap-1.5 overflow-y-auto pr-0.5 sm:grid-cols-4">
@@ -1365,7 +1365,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                               ? 'cursor-not-allowed border-rose-200 bg-rose-50 text-rose-400 line-through'
                               : past
                                 ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-300'
-                                : 'border-white/60 bg-white/60 text-gray-700 hover:border-[#D6E332]'
+                                : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-[#D6E332]'
                         }`}
                       >
                         {formatSlot(slot)}
@@ -1384,25 +1384,11 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
             ) : null}
 
             <div className="mt-5 space-y-3">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-400">Appointment Type</p>
-              <div className="flex gap-2">
-                {(['TakeAway', 'Delivery'] as OrderType[]).map((type) => (
-                  <button
-                    key={type}
-                    type="button"
-                    onClick={() => setOrderType(type)}
-                    className={`flex-1 rounded-xl border px-2.5 py-2.5 text-xs font-black transition ${orderType === type ? 'border-[#D6E332] bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(132,144,10,0.4)]' : 'border-white/50 bg-white/50 text-gray-500 shadow-inner hover:border-[#E2F33C]/70'}`}
-                  >
-                    {type}
-                  </button>
-                ))}
-              </div>
-
-              <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Your name" className="w-full rounded-xl border border-white/60 bg-white/50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" />
-              <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/[^\d]/g, ''))} placeholder="Phone number" inputMode="numeric" className="w-full rounded-xl border border-white/60 bg-white/50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" />
+              <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Your name" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" />
+              <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/[^\d]/g, ''))} placeholder="Phone number" inputMode="numeric" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" />
               {orderType === 'Delivery' ? (
                 <div>
-                  <input value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Delivery address" className="w-full rounded-xl border border-white/60 bg-white/50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" />
+                  <input value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Delivery address" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" />
                   <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-700">
                     <MapPin size={12} /> We'll ask to share your live location when you place the appointment - this is required for delivery so the rider can find you.
                   </p>
@@ -1431,7 +1417,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
 
               <p className="text-[11px] font-semibold text-gray-500">Payment is made at the clinic.</p>
 
-              <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Any special instructions..." className="w-full rounded-xl border border-white/60 bg-white/50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" rows={2} />
+              <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Any special instructions..." className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" rows={2} />
 
               {placeError ? <p className="text-xs font-bold text-rose-600">{placeError}</p> : null}
 
