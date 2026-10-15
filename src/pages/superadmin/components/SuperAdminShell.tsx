@@ -32,7 +32,7 @@ export default function SuperAdminShell() {
     <div className="flex min-h-screen bg-[#0F1115] font-sans text-white">
       <aside className="flex w-60 flex-col gap-6 border-r border-white/10 p-4">
         <div className="flex items-center gap-2 px-2">
-          <div className="rounded-lg bg-[#E2F33C] p-1.5">
+          <div className="rounded-lg bg-[#00B0C7] p-1.5">
             <ShieldCheck size={16} className="text-black" />
           </div>
           <div>
@@ -68,7 +68,7 @@ export default function SuperAdminShell() {
 
 function NavItem({ icon, label, href, active }: { icon: React.ReactNode; label: string; href: string; active?: boolean }) {
   const className = `flex items-center gap-2.5 rounded-full px-3 py-2.5 text-sm transition-all ${
-    active ? 'bg-[#E2F33C] font-bold text-black shadow-sm' : 'text-gray-300 hover:bg-white/10'
+    active ? 'bg-[#00B0C7] font-bold text-black shadow-sm' : 'text-gray-300 hover:bg-white/10'
   }`;
 
   return (

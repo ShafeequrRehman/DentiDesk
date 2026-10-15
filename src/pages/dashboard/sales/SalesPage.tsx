@@ -1243,7 +1243,7 @@ export default function SalesPage() {
             <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
               <div className="relative w-full lg:max-w-md">
                 <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400 rtl:left-auto rtl:right-4" size={18} />
-                <input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={handleOrderSearchKeyDown} placeholder={t('sales.searchPlaceholder')} className="w-full rounded-full border border-white/60 bg-white/50 py-4 pl-12 pr-4 shadow-inner outline-none focus:border-[#D6E332] rtl:pl-4 rtl:pr-12" />
+                <input value={search} onChange={(event) => setSearch(event.target.value)} onKeyDown={handleOrderSearchKeyDown} placeholder={t('sales.searchPlaceholder')} className="w-full rounded-full border border-white/60 bg-white/50 py-4 pl-12 pr-4 shadow-inner outline-none focus:border-[#009AAE] rtl:pl-4 rtl:pr-12" />
               </div>
               <div className="flex flex-wrap items-center gap-3">
                 <p className="max-w-xs text-xs font-bold text-gray-500">
@@ -1307,7 +1307,7 @@ export default function SalesPage() {
                   }}
                   className={`min-w-0 overflow-hidden rounded-[28px] border bg-gradient-to-br backdrop-blur-xl backdrop-saturate-150 text-left transition-all duration-200 ${
                     isSelected
-                      ? '-translate-y-1 border-[#D6E332] from-[#FBFDEB]/80 to-white/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-4px_10px_rgba(214,227,50,0.3)] ring-1 ring-[#E2F33C]/60'
+                      ? '-translate-y-1 border-[#009AAE] from-[#EBFAFC]/80 to-white/40 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-4px_10px_rgba(0,154,174,0.3)] ring-1 ring-[#00B0C7]/60'
                       : `${STATUS_BORDER[order.status] ?? 'border-gray-200'} ${STATUS_CARD_BG[order.status] ?? 'from-white/60 to-white/25'} shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-4px_10px_rgba(15,23,42,0.14)] hover:-translate-y-1.5 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-5px_12px_rgba(15,23,42,0.2)]`
                   }`}
                 >
@@ -1708,7 +1708,7 @@ export default function SalesPage() {
                 // field is cleared (and the tick with it) or filled up to
                 // the full amount.
                 disabled={(Boolean(paymentAmount) && Number(paymentAmount) < payable) || confirmPending}
-                className="rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] px-4 py-3 text-sm font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(132,144,10,0.4)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+                className="rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] px-4 py-3 text-sm font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,110,125,0.4)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {t('sales.payFull')}
               </button>

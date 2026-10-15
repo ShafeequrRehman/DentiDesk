@@ -1302,7 +1302,7 @@ export default function POSPage() {
             <div className="flex items-center gap-2 sm:gap-4">
               <div className="relative min-w-0 flex-1 lg:max-w-md">
                 <Search className="absolute left-4 rtl:left-auto rtl:right-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-                <input ref={productSearchInputRef} type="text" value={productSearchQuery} onChange={(event) => setProductSearchQuery(event.target.value)} placeholder={t('pos.searchPlaceholder')} className="w-full rounded-full border border-white/60 bg-white/50 py-3 pl-12 pr-4 rtl:pl-4 rtl:pr-12 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" />
+                <input ref={productSearchInputRef} type="text" value={productSearchQuery} onChange={(event) => setProductSearchQuery(event.target.value)} placeholder={t('pos.searchPlaceholder')} className="w-full rounded-full border border-white/60 bg-white/50 py-3 pl-12 pr-4 rtl:pl-4 rtl:pr-12 text-sm shadow-inner outline-none transition focus:border-[#009AAE]" />
               </div>
               <div className="glass-pill flex shrink-0 items-center gap-2 rounded-full p-1.5">
                 <IconToggleButton active={viewMode === 'grid'} onClick={() => setViewMode('grid')}><Grid size={18} /></IconToggleButton>
@@ -1325,7 +1325,7 @@ export default function POSPage() {
                 onChange={(event) => handleProductCodeChange(event.target.value)}
                 onKeyDown={handleProductCodeKeyDown}
                 placeholder={t('pos.productCodePlaceholder')}
-                className="w-full rounded-full border border-white/60 bg-white/50 py-3 pl-12 pr-4 rtl:pl-4 rtl:pr-12 text-sm shadow-inner outline-none transition focus:border-[#D6E332]"
+                className="w-full rounded-full border border-white/60 bg-white/50 py-3 pl-12 pr-4 rtl:pl-4 rtl:pr-12 text-sm shadow-inner outline-none transition focus:border-[#009AAE]"
               />
             </div>
             {/* Wraps onto as many lines as needed instead of scrolling
@@ -1367,7 +1367,7 @@ export default function POSPage() {
               // card to the cart.
               const isKeyboardFocused = viewMode === 'grid' && groupIndex === focusedProductIndex;
               return (
-                <button key={group.key} type="button" onClick={() => { handleGroupClick(group); setFocusedProductIndex(groupIndex); }} className={`group overflow-hidden rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-br from-white/70 to-white/30 p-2.5 text-left rtl:text-right backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-3px_8px_rgba(15,23,42,0.12)] transition hover:-translate-y-0.5 hover:border-[#E2F33C]/70 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-4px_10px_rgba(214,227,50,0.35)] ${isKeyboardFocused ? 'ring-2 ring-[#D6E332] ring-offset-2' : ''} ${viewMode === 'list' ? 'flex items-center gap-3' : 'flex h-[266px] flex-col'}`}>
+                <button key={group.key} type="button" onClick={() => { handleGroupClick(group); setFocusedProductIndex(groupIndex); }} className={`group overflow-hidden rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-br from-white/70 to-white/30 p-2.5 text-left rtl:text-right backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-3px_8px_rgba(15,23,42,0.12)] transition hover:-translate-y-0.5 hover:border-[#00B0C7]/70 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-4px_10px_rgba(0,154,174,0.35)] ${isKeyboardFocused ? 'ring-2 ring-[#009AAE] ring-offset-2' : ''} ${viewMode === 'list' ? 'flex items-center gap-3' : 'flex h-[266px] flex-col'}`}>
                   <div className={`relative overflow-hidden rounded-[14px] bg-slate-100 shrink-0 shadow-inner ${viewMode === 'list' ? 'h-16 w-16' : 'mb-2 h-[110px] w-full'}`}>
                     <img src={resolveProductImage(group)} alt={group.name} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-110" />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
@@ -1419,7 +1419,7 @@ export default function POSPage() {
                         part) was the one getting truncated ("From PKR ..."). */}
                     <div className={`${viewMode === 'list' ? '' : 'mt-3 pt-2 border-t border-gray-50'}`}>
                       <p className="truncate text-[12px] font-black text-gray-900">{hasVariations ? t('pos.fromPrice', { price: cheapestPrice }) : `$${group.variations[0].price}`}</p>
-                      <span className="mt-1.5 inline-flex w-fit shrink-0 items-center justify-center rounded-[8px] bg-black h-[22px] px-2.5 text-[9px] font-bold text-white transition group-hover:bg-[#E2F33C] group-hover:text-black">{hasVariations ? t('pos.select') : t('common.add')}</span>
+                      <span className="mt-1.5 inline-flex w-fit shrink-0 items-center justify-center rounded-[8px] bg-black h-[22px] px-2.5 text-[9px] font-bold text-white transition group-hover:bg-[#00B0C7] group-hover:text-black">{hasVariations ? t('pos.select') : t('common.add')}</span>
                     </div>
                   </div>
                 </button>
@@ -1673,7 +1673,7 @@ export default function POSPage() {
               ) : null}
               <div className="flex items-center justify-between pt-1.5 text-base font-black text-gray-900"><span>{t('pos.totalPayable')}</span><span className="text-emerald-600">${Math.round(total)}</span></div>
             </div>
-            <button type="button" onClick={() => void handleSaveOrder()} disabled={isSavingOrder || cart.length === 0 || getMissingDeliveryField() !== null} className="w-full flex items-center justify-center gap-2 rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] px-5 py-3 text-base font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(132,144,10,0.4)] transition hover:brightness-105 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50">
+            <button type="button" onClick={() => void handleSaveOrder()} disabled={isSavingOrder || cart.length === 0 || getMissingDeliveryField() !== null} className="w-full flex items-center justify-center gap-2 rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] px-5 py-3 text-base font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,110,125,0.4)] transition hover:brightness-105 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50">
               {isSavingOrder ? <Loader2 size={18} className="animate-spin" /> : null} {isSavingOrder ? t('pos.savingOrder') : t('pos.saveOrder')}
             </button>
           </div>
@@ -1765,7 +1765,7 @@ function VariationPickerModal({ group, onSelect, onClose }: { group: ProductGrou
               key={variation.id}
               type="button"
               onClick={() => onSelect(variation)}
-              className="flex w-full items-center justify-between rounded-2xl border border-white/50 bg-white/50 px-4 py-3 text-left rtl:text-right shadow-inner transition hover:border-[#E2F33C]/70 hover:bg-[#FBFDEB]/70"
+              className="flex w-full items-center justify-between rounded-2xl border border-white/50 bg-white/50 px-4 py-3 text-left rtl:text-right shadow-inner transition hover:border-[#00B0C7]/70 hover:bg-[#EBFAFC]/70"
             >
               <div className="min-w-0">
                 <p className="truncate text-sm font-black text-gray-900">{variation.variation || t('pos.standardVariation')}</p>
@@ -1785,7 +1785,7 @@ function VariationPickerModal({ group, onSelect, onClose }: { group: ProductGrou
 
 function PaymentButton({ icon, label, active, onClick }: { icon: React.ReactNode; label: string; active: boolean; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className={`rounded-xl border px-2.5 py-2.5 transition ${active ? 'border-[#D6E332] bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(132,144,10,0.4)]' : 'border-white/50 bg-white/50 text-gray-500 shadow-inner hover:border-[#E2F33C]/70'}`}>
+    <button type="button" onClick={onClick} className={`rounded-xl border px-2.5 py-2.5 transition ${active ? 'border-[#009AAE] bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(0,110,125,0.4)]' : 'border-white/50 bg-white/50 text-gray-500 shadow-inner hover:border-[#00B0C7]/70'}`}>
       <div className="flex flex-col items-center gap-1.5">
         {icon}
         <span className="text-[9px] font-bold uppercase tracking-wide">{label}</span>
@@ -1799,7 +1799,7 @@ function PaymentButton({ icon, label, active, onClick }: { icon: React.ReactNode
 // sit four-across in the delivery checkout panel.
 function DeliveryFeeButton({ label, active, onClick }: { label: string; active: boolean; onClick: () => void }) {
   return (
-    <button type="button" onClick={onClick} className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${active ? 'border-[#D6E332] bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(132,144,10,0.4)]' : 'border-white/50 bg-white/50 text-gray-500 shadow-inner hover:border-[#E2F33C]/70'}`}>
+    <button type="button" onClick={onClick} className={`rounded-xl border px-3 py-1.5 text-xs font-bold transition ${active ? 'border-[#009AAE] bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(0,110,125,0.4)]' : 'border-white/50 bg-white/50 text-gray-500 shadow-inner hover:border-[#00B0C7]/70'}`}>
       {label}
     </button>
   );

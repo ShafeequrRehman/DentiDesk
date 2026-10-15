@@ -327,7 +327,7 @@ export default function EditOrderPage() {
         </div>
         <div className="flex gap-2">
           <Link to={`/dashboard/sales/print/${order.id}`} className="rounded-2xl bg-black px-4 py-3 text-sm font-black text-white">Print Center</Link>
-          <button type="button" onClick={() => void saveOrder()} className="rounded-2xl bg-[#E2F33C] px-4 py-3 text-sm font-black text-black">
+          <button type="button" onClick={() => void saveOrder()} className="rounded-2xl bg-[#00B0C7] px-4 py-3 text-sm font-black text-black">
             <Save size={16} className="mr-2 inline" />
             Save Changes
           </button>

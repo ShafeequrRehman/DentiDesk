@@ -249,7 +249,7 @@ function VariationPickerSheet({ group, onSelect, onClose }: { group: ProductGrou
               key={variation.id}
               type="button"
               onClick={() => onSelect(variation)}
-              className="flex w-full items-center justify-between rounded-2xl border border-white/50 bg-white/50 px-4 py-3 text-left shadow-inner transition hover:border-[#E2F33C]/70 hover:bg-[#FBFDEB]/70"
+              className="flex w-full items-center justify-between rounded-2xl border border-white/50 bg-white/50 px-4 py-3 text-left shadow-inner transition hover:border-[#00B0C7]/70 hover:bg-[#EBFAFC]/70"
             >
               <p className="truncate text-sm font-black text-gray-900">{variation.variation || 'Standard'}</p>
               <span className="shrink-0 text-sm font-black text-gray-900">${formatter.format(variation.price)}</span>
@@ -511,7 +511,7 @@ function ChangeRequestModal({
           onChange={(e) => setNote(e.target.value)}
           placeholder="Anything else to tell the clinic about this request..."
           rows={2}
-          className="w-full rounded-xl border border-white/60 bg-white/50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]"
+          className="w-full rounded-xl border border-white/60 bg-white/50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE]"
         />
 
         {error ? <p className="mt-3 text-xs font-bold text-rose-600">{error}</p> : null}
@@ -520,7 +520,7 @@ function ChangeRequestModal({
           type="button"
           onClick={() => void submit()}
           disabled={!canSubmit}
-          className="mt-4 w-full rounded-2xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] py-3.5 text-sm font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(132,144,10,0.4)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
+          className="mt-4 w-full rounded-2xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] py-3.5 text-sm font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,110,125,0.4)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
           {submitting ? 'Sending Request...' : 'Send Request to Clinic'}
         </button>
@@ -772,7 +772,7 @@ function CustomerShell({
           type="button"
           onClick={() => setTab('menu')}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black transition ${
-            tab === 'menu' ? 'bg-[#E2F33C] text-black' : 'text-white/60 hover:text-white'
+            tab === 'menu' ? 'bg-[#00B0C7] text-black' : 'text-white/60 hover:text-white'
           }`}
         >
           <UtensilsCrossed size={14} /> Drs/Services
@@ -781,7 +781,7 @@ function CustomerShell({
           type="button"
           onClick={() => setTab('track')}
           className={`flex flex-1 items-center justify-center gap-1.5 rounded-xl py-2.5 text-xs font-black transition ${
-            tab === 'track' ? 'bg-[#E2F33C] text-black' : 'text-white/60 hover:text-white'
+            tab === 'track' ? 'bg-[#00B0C7] text-black' : 'text-white/60 hover:text-white'
           }`}
         >
           <Clock size={14} /> Track Appointment
@@ -1267,7 +1267,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
               <p className="text-[11px] text-gray-400">{hasVariations ? `${group.variations.length} sizes/options` : single.variation}</p>
               <p className="mt-1 text-sm font-black text-gray-900">{hasVariations ? `From $${formatter.format(cheapest)}` : `$${formatter.format(single.price)}`}</p>
               {hasVariations ? (
-                <button type="button" onClick={() => handleGroupTap(group)} className="mt-2 w-full rounded-xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] py-2 text-xs font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(132,144,10,0.4)] transition hover:brightness-105">
+                <button type="button" onClick={() => handleGroupTap(group)} className="mt-2 w-full rounded-xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] py-2 text-xs font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(0,110,125,0.4)] transition hover:brightness-105">
                   {groupCartCount > 0 ? `${groupCartCount} in cart - Select` : 'Select'}
                 </button>
               ) : line ? (
@@ -1275,7 +1275,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                   <Check size={14} /> Added · Remove
                 </button>
               ) : (
-                <button type="button" onClick={() => handleGroupTap(group)} className="mt-2 w-full rounded-xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] py-2 text-xs font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(132,144,10,0.4)] transition hover:brightness-105">Add</button>
+                <button type="button" onClick={() => handleGroupTap(group)} className="mt-2 w-full rounded-xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] py-2 text-xs font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(0,110,125,0.4)] transition hover:brightness-105">Add</button>
               )}
             </div>
           );
@@ -1343,7 +1343,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                     setAppointmentDate(event.target.value || todayISO());
                     setAppointmentTime('');
                   }}
-                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold shadow-inner outline-none focus:border-[#D6E332]"
+                  className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold shadow-inner outline-none focus:border-[#009AAE]"
                 />
                 <p className="pt-1 text-xs font-black uppercase tracking-[0.14em] text-gray-400">Time Slot - {doctorName}</p>
                 <div className="grid max-h-48 grid-cols-3 gap-1.5 overflow-y-auto pr-0.5 sm:grid-cols-4">
@@ -1360,12 +1360,12 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                         title={booked ? 'Already booked' : past ? 'This time has passed' : formatSlot(slot)}
                         className={`rounded-lg border px-1 py-2 text-[11px] font-black transition ${
                           selected
-                            ? 'border-[#D6E332] bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] text-black shadow'
+                            ? 'border-[#009AAE] bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] text-black shadow'
                             : booked
                               ? 'cursor-not-allowed border-rose-200 bg-rose-50 text-rose-400 line-through'
                               : past
                                 ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-300'
-                                : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-[#D6E332]'
+                                : 'border-gray-200 bg-gray-50 text-gray-700 hover:border-[#009AAE]'
                         }`}
                       >
                         {formatSlot(slot)}
@@ -1384,11 +1384,11 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
             ) : null}
 
             <div className="mt-5 space-y-3">
-              <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Your name" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" />
-              <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/[^\d]/g, ''))} placeholder="Phone number" inputMode="numeric" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" />
+              <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Your name" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE]" />
+              <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/[^\d]/g, ''))} placeholder="Phone number" inputMode="numeric" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE]" />
               {orderType === 'Delivery' ? (
                 <div>
-                  <input value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Delivery address" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" />
+                  <input value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Delivery address" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE]" />
                   <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-700">
                     <MapPin size={12} /> We'll ask to share your live location when you place the appointment - this is required for delivery so the rider can find you.
                   </p>
@@ -1417,7 +1417,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
 
               <p className="text-[11px] font-semibold text-gray-500">Payment is made at the clinic.</p>
 
-              <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Any special instructions..." className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" rows={2} />
+              <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Any special instructions..." className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE]" rows={2} />
 
               {placeError ? <p className="text-xs font-bold text-rose-600">{placeError}</p> : null}
 
@@ -1425,7 +1425,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                 type="button"
                 onClick={() => void handlePlaceOrder()}
                 disabled={!canSubmit || placing || Boolean(activeOrderWarning)}
-                className="w-full rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] py-4 text-sm font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(132,144,10,0.4)] transition hover:brightness-105 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
+                className="w-full rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] py-4 text-sm font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,110,125,0.4)] transition hover:brightness-105 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {placing ? (orderType === 'Delivery' ? 'Getting Your Location...' : 'Placing Appointment...') : `Place Appointment · $${formatter.format(cartTotal)}`}
               </button>

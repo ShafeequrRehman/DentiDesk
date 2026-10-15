@@ -75,7 +75,7 @@ export default function SettingsPage() {
 
         {saved ? <div className="rounded-lg border border-green-500/30 bg-green-500/10 p-2 text-sm text-green-200">Saved.</div> : null}
 
-        <button type="button" disabled={saving} onClick={save} className="rounded-full bg-[#E2F33C] px-4 py-2 text-sm font-bold text-black disabled:opacity-50">
+        <button type="button" disabled={saving} onClick={save} className="rounded-full bg-[#00B0C7] px-4 py-2 text-sm font-bold text-black disabled:opacity-50">
           {saving ? "Saving..." : "Save Settings"}
         </button>
       </div>

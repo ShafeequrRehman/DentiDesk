@@ -53,7 +53,7 @@ export default function ShopsPage() {
         <button
           type="button"
           onClick={() => setShowCreate(true)}
-          className="flex items-center gap-2 rounded-full bg-[#E2F33C] px-4 py-2.5 text-sm font-bold text-black transition hover:brightness-95"
+          className="flex items-center gap-2 rounded-full bg-[#00B0C7] px-4 py-2.5 text-sm font-bold text-black transition hover:brightness-95"
         >
           <Plus size={16} /> New Clinic
         </button>
@@ -245,7 +245,7 @@ function CreateShopModal({ plans, onClose, onCreated }: { plans: PlanSummary[]; 
           <div><span className="text-gray-500">Password: </span><span className="font-mono">{credentials.password}</span></div>
           <div><span className="text-gray-500">Cancel Appointment Key: </span><span className="font-mono">{credentials.cancelOrderKey}</span></div>
         </div>
-        <button type="button" onClick={onClose} className="w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black">Done</button>
+        <button type="button" onClick={onClose} className="w-full rounded-lg bg-[#00B0C7] py-2 font-bold text-black">Done</button>
       </ModalShell>
     );
   }
@@ -296,7 +296,7 @@ function CreateShopModal({ plans, onClose, onCreated }: { plans: PlanSummary[]; 
         type="button"
         disabled={submitting || !form.shopName || !form.ownerUsername || !form.ownerPassword || form.cancelOrderKey.length < 4}
         onClick={submit}
-        className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black disabled:opacity-50"
+        className="mt-4 w-full rounded-lg bg-[#00B0C7] py-2 font-bold text-black disabled:opacity-50"
       >
         {submitting ? "Creating..." : "Create Clinic"}
       </button>
@@ -415,7 +415,7 @@ function EditShopModal({ shop, plans, onClose, onSaved }: { shop: ShopSummary; p
               type="date"
               value={form.licenseExpiry}
               onChange={(e) => update("licenseExpiry", e.target.value)}
-              className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#E2F33C]"
+              className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00B0C7]"
             />
             <p className="mt-1 text-xs text-gray-500">
               Sets the exact date (can move it earlier or later). To just add renewal months on top of the current date instead, use "Extend license" from the table.
@@ -447,7 +447,7 @@ function EditShopModal({ shop, plans, onClose, onSaved }: { shop: ShopSummary; p
         type="button"
         disabled={submitting || !form.name}
         onClick={submit}
-        className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black disabled:opacity-50"
+        className="mt-4 w-full rounded-lg bg-[#00B0C7] py-2 font-bold text-black disabled:opacity-50"
       >
         {submitting ? "Saving..." : "Save Changes"}
       </button>
@@ -482,7 +482,7 @@ function ExtendLicenseModal({ shop, onClose, onDone }: { shop: ShopSummary; onCl
         <Field label="Note (optional)" value={note} onChange={setNote} />
       </div>
       {error ? <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-200">{error}</div> : null}
-      <button type="button" disabled={submitting} onClick={submit} className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black disabled:opacity-50">
+      <button type="button" disabled={submitting} onClick={submit} className="mt-4 w-full rounded-lg bg-[#00B0C7] py-2 font-bold text-black disabled:opacity-50">
         {submitting ? "Extending..." : "Extend License"}
       </button>
     </ModalShell>
@@ -512,7 +512,7 @@ function ResetPasswordModal({ shop, onClose }: { shop: ShopSummary; onClose: () 
     return (
       <ModalShell title="Password Reset" onClose={onClose}>
         <p className="text-sm text-gray-300">The Clinic Owner's password has been updated. Share it with them securely.</p>
-        <button type="button" onClick={onClose} className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black">Done</button>
+        <button type="button" onClick={onClose} className="mt-4 w-full rounded-lg bg-[#00B0C7] py-2 font-bold text-black">Done</button>
       </ModalShell>
     );
   }
@@ -521,7 +521,7 @@ function ResetPasswordModal({ shop, onClose }: { shop: ShopSummary; onClose: () 
     <ModalShell title={`Reset Password — ${shop.owner?.username || shop.name}`} onClose={onClose}>
       <Field label="New Password" value={newPassword} onChange={setNewPassword} type="password" />
       {error ? <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-200">{error}</div> : null}
-      <button type="button" disabled={submitting || newPassword.length < 6} onClick={submit} className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black disabled:opacity-50">
+      <button type="button" disabled={submitting || newPassword.length < 6} onClick={submit} className="mt-4 w-full rounded-lg bg-[#00B0C7] py-2 font-bold text-black disabled:opacity-50">
         {submitting ? "Saving..." : "Reset Password"}
       </button>
     </ModalShell>
@@ -554,7 +554,7 @@ function ResetCancelKeyModal({ shop, onClose }: { shop: ShopSummary; onClose: ()
           The Cancel Appointment Key for "{shop.name}" is now: <span className="font-mono text-white">{newKey}</span>
         </p>
         <p className="mt-2 text-xs text-gray-500">Share it with the Clinic Owner securely. It won't be shown again after this screen.</p>
-        <button type="button" onClick={onClose} className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black">Done</button>
+        <button type="button" onClick={onClose} className="mt-4 w-full rounded-lg bg-[#00B0C7] py-2 font-bold text-black">Done</button>
       </ModalShell>
     );
   }
@@ -564,7 +564,7 @@ function ResetCancelKeyModal({ shop, onClose }: { shop: ShopSummary; onClose: ()
       <p className="mb-3 text-xs text-gray-500">This is the secret the Clinic Owner (or an employee with cancel permission) must enter in the POS to cancel an appointment. Not their login password.</p>
       <Field label="New Cancel Appointment Key" value={newKey} onChange={setNewKey} type="password" />
       {error ? <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-200">{error}</div> : null}
-      <button type="button" disabled={submitting || newKey.length < 4} onClick={submit} className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black disabled:opacity-50">
+      <button type="button" disabled={submitting || newKey.length < 4} onClick={submit} className="mt-4 w-full rounded-lg bg-[#00B0C7] py-2 font-bold text-black disabled:opacity-50">
         {submitting ? "Saving..." : "Set Cancel Appointment Key"}
       </button>
     </ModalShell>
@@ -602,7 +602,7 @@ function ResetPageVisibilityKeyModal({ shop, onClose }: { shop: ShopSummary; onC
           The Page Visibility Key for "{shop.name}" is now: <span className="font-mono text-white">{newKey}</span>
         </p>
         <p className="mt-2 text-xs text-gray-500">Share it with the Clinic Owner securely. It won't be shown again after this screen.</p>
-        <button type="button" onClick={onClose} className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black">Done</button>
+        <button type="button" onClick={onClose} className="mt-4 w-full rounded-lg bg-[#00B0C7] py-2 font-bold text-black">Done</button>
       </ModalShell>
     );
   }
@@ -615,7 +615,7 @@ function ResetPageVisibilityKeyModal({ shop, onClose }: { shop: ShopSummary; onC
       </p>
       <Field label="New Page Visibility Key" value={newKey} onChange={setNewKey} type="password" />
       {error ? <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-200">{error}</div> : null}
-      <button type="button" disabled={submitting || newKey.length < 4} onClick={submit} className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black disabled:opacity-50">
+      <button type="button" disabled={submitting || newKey.length < 4} onClick={submit} className="mt-4 w-full rounded-lg bg-[#00B0C7] py-2 font-bold text-black disabled:opacity-50">
         {submitting ? "Saving..." : "Set Page Visibility Key"}
       </button>
     </ModalShell>
@@ -630,7 +630,7 @@ function Field({ label, value, onChange, type = "text" }: { label: string; value
         type={type}
         value={value}
         onChange={(e) => onChange(e.target.value)}
-        className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#E2F33C]"
+        className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2 text-white focus:outline-none focus:ring-2 focus:ring-[#00B0C7]"
       />
     </div>
   );

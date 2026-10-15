@@ -651,7 +651,7 @@ function NavItem({
 }) {
   const className = `flex items-center gap-2.5 rounded-full px-3 py-2.5 transition-all ${
     active
-      ? 'border-[0.5px] border-white/50 bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] font-bold text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(132,144,10,0.4)]'
+      ? 'border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] font-bold text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(0,110,125,0.4)]'
       : 'text-gray-500 hover:bg-white/50'
   }`;
 

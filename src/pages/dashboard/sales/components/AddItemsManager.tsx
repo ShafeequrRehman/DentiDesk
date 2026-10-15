@@ -27,7 +27,7 @@ export default function AddItemsManager({
     category: 'Deals',
     variation: '',
     image: '/products/family-deal.svg',
-    color: 'bg-lime-50',
+    color: 'bg-cyan-50',
     description: '',
   });
   const [editingProductId, setEditingProductId] = useState<string | number | null>(null);
@@ -78,7 +78,7 @@ export default function AddItemsManager({
       category: 'Deals',
       variation: '',
       image: '/products/family-deal.svg',
-      color: 'bg-lime-50',
+      color: 'bg-cyan-50',
       description: '',
     });
   }
@@ -111,7 +111,7 @@ export default function AddItemsManager({
                 there's some width (sm), 3 once there's plenty (lg). */}
             <div className="grid max-h-[360px] grid-cols-1 gap-3 overflow-y-auto pr-1 sm:grid-cols-2 lg:grid-cols-3">
               {visibleProducts.map((product) => (
-                <button key={product.id} type="button" onClick={() => addDraft({ name: product.name, price: product.price, quantity: 1, variation: product.variation, image: product.image })} className="group flex items-center gap-3 rounded-[24px] border border-transparent bg-[#FAFBFC] p-3 text-left transition hover:border-[#D6E332]">
+                <button key={product.id} type="button" onClick={() => addDraft({ name: product.name, price: product.price, quantity: 1, variation: product.variation, image: product.image })} className="group flex items-center gap-3 rounded-[24px] border border-transparent bg-[#FAFBFC] p-3 text-left transition hover:border-[#009AAE]">
                   <div className="relative h-16 w-16 shrink-0 overflow-hidden rounded-2xl bg-slate-100 shadow-inner">
                     <img src={resolveProductImage(product)} alt={product.name} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-110" />
                   </div>
@@ -159,7 +159,7 @@ export default function AddItemsManager({
               </select>
             </div>
             <textarea value={productForm.description} onChange={(event) => setProductForm((previous) => ({ ...previous, description: event.target.value }))} placeholder="Description" className="min-h-24 w-full rounded-2xl border border-slate-300 focus:border-slate-400 px-4 py-3 outline-none" />
-            <button type="button" onClick={() => void saveProduct()} className="rounded-full bg-[#E2F33C] px-4 py-2 text-sm font-black text-black">
+            <button type="button" onClick={() => void saveProduct()} className="rounded-full bg-[#00B0C7] px-4 py-2 text-sm font-black text-black">
               {editingProductId ? 'Update Drs/Service' : 'Create Drs/Service'}
             </button>
 

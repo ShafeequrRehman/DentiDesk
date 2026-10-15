@@ -53,7 +53,7 @@ export default function PaymentsPage() {
           <h1 className="text-2xl font-bold">Payments</h1>
           <p className="text-sm text-gray-400">Internal record of payments received from clinics (no gateway integration).</p>
         </div>
-        <button type="button" onClick={() => setShowForm((v) => !v)} className="flex items-center gap-2 rounded-full bg-[#E2F33C] px-4 py-2.5 text-sm font-bold text-black">
+        <button type="button" onClick={() => setShowForm((v) => !v)} className="flex items-center gap-2 rounded-full bg-[#00B0C7] px-4 py-2.5 text-sm font-bold text-black">
           <Plus size={16} /> Record Payment
         </button>
       </div>
@@ -73,7 +73,7 @@ export default function PaymentsPage() {
             <input placeholder="Note" value={form.note} onChange={(e) => setForm({ ...form, note: e.target.value })} className="col-span-2 rounded-lg border border-white/10 bg-black/30 px-3 py-2" />
           </div>
           {error ? <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-200">{error}</div> : null}
-          <button type="button" disabled={submitting || !form.shopId || !form.amount} onClick={submit} className="mt-4 rounded-full bg-[#E2F33C] px-4 py-2 text-sm font-bold text-black disabled:opacity-50">
+          <button type="button" disabled={submitting || !form.shopId || !form.amount} onClick={submit} className="mt-4 rounded-full bg-[#00B0C7] px-4 py-2 text-sm font-bold text-black disabled:opacity-50">
             {submitting ? "Saving..." : "Save Payment"}
           </button>
         </div>

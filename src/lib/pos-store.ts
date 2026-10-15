@@ -12,7 +12,7 @@ const products: Product[] = [
   { id: 9, name: 'Chicken Tikka Pizza', price: 1590, stock: 20, category: 'Pizza', variation: 'Large', image: '/products/chicken-tikka-pizza.svg', color: 'bg-rose-50', description: 'Spiced chicken tikka pizza with mozzarella and green peppers.' },
   { id: 10, name: 'Zinger Shawarma', price: 540, stock: 28, category: 'Shawarma', variation: 'Single wrap', image: '/products/zinger-shawarma.svg', color: 'bg-yellow-50', description: 'Crispy chicken shawarma with garlic mayo and lettuce.' },
   { id: 11, name: 'Malai Boti Paratha Roll', price: 590, stock: 22, category: 'Paratha Roll', variation: 'Single roll', image: '/products/malai-boti-roll.svg', color: 'bg-amber-50', description: 'Soft paratha roll packed with malai boti and mint sauce.' },
-  { id: 12, name: 'Family Deal 1', price: 2490, stock: 12, category: 'Deals', variation: 'Serves 4', image: '/products/family-deal.svg', color: 'bg-lime-50', description: 'Family combo with pizza, fries, drinks, and dipping sauces.' },
+  { id: 12, name: 'Family Deal 1', price: 2490, stock: 12, category: 'Deals', variation: 'Serves 4', image: '/products/family-deal.svg', color: 'bg-cyan-50', description: 'Family combo with pizza, fries, drinks, and dipping sauces.' },
   { id: 13, name: 'Beef Burger Combo', price: 780, stock: 18, category: 'Deals', variation: 'Burger + fries + drink', image: '/products/beef-burger-combo.svg', color: 'bg-orange-50', description: 'Branch combo meal built for lunch and evening rush.' },
 ];
 

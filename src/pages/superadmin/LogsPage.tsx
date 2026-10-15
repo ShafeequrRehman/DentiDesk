@@ -47,7 +47,7 @@ export default function LogsPage() {
                 <tr key={idx} className="hover:bg-white/5">
                   <td className="px-4 py-3 text-gray-400">{new Date(log.date).toLocaleString()}</td>
                   <td className="px-4 py-3">
-                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${log.type === "payment" ? "bg-[#E2F33C]/20 text-[#E2F33C]" : "bg-blue-500/20 text-blue-300"}`}>
+                    <span className={`rounded-full px-2 py-0.5 text-xs font-semibold ${log.type === "payment" ? "bg-[#00B0C7]/20 text-[#00B0C7]" : "bg-blue-500/20 text-blue-300"}`}>
                       {log.type === "payment" ? "Payment" : "License Renewal"}
                     </span>
                   </td>

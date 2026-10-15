@@ -66,7 +66,7 @@ export default function PlansPage() {
               <span className="font-bold">{plan.name}</span>
               <button type="button" onClick={() => remove(plan)} className="text-gray-500 hover:text-red-400"><Trash2 size={14} /></button>
             </div>
-            <div className="text-2xl font-bold text-[#E2F33C]">{plan.currency} {plan.price}</div>
+            <div className="text-2xl font-bold text-[#00B0C7]">{plan.currency} {plan.price}</div>
             <div className="mt-1 text-xs text-gray-400">{plan.durationMonths} month(s) · up to {plan.maxEmployees} employees</div>
             <button
               type="button"
@@ -93,7 +93,7 @@ export default function PlansPage() {
           type="button"
           disabled={submitting || !form.name}
           onClick={createPlan}
-          className="mt-4 rounded-full bg-[#E2F33C] px-4 py-2 text-sm font-bold text-black disabled:opacity-50"
+          className="mt-4 rounded-full bg-[#00B0C7] px-4 py-2 text-sm font-bold text-black disabled:opacity-50"
         >
           {submitting ? "Creating..." : "Create Plan"}
         </button>

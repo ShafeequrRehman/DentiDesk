@@ -333,7 +333,7 @@ export default function CompleteOrderModal({
             // auto-unticks it above) to get Pay Full back.
             disabled={saving || confirmPending}
             onClick={() => void settle(true)}
-            className="rounded-[20px] bg-[#E2F33C] px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-50"
+            className="rounded-[20px] bg-[#00B0C7] px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-50"
           >
             {t('record.actions.payFull')}
           </button>

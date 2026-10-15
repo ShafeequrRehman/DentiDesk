@@ -1024,7 +1024,7 @@ export default function RecordPage() {
             type="button"
             onClick={exportCsv}
             disabled={filteredOrders.length === 0}
-            className="flex items-center gap-2 rounded-full bg-[#D6E332] px-4 py-2 text-xs font-black text-gray-900 shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
+            className="flex items-center gap-2 rounded-full bg-[#009AAE] px-4 py-2 text-xs font-black text-gray-900 shadow-sm transition hover:brightness-95 disabled:cursor-not-allowed disabled:opacity-50"
           >
             <Download size={14} /> {t('record.actions.exportCsv')}
           </button>
@@ -1094,14 +1094,14 @@ export default function RecordPage() {
               value={rangeFrom}
               max={todayKey}
               onChange={(event) => setRangeFrom(event.target.value)}
-              className="w-full min-w-0 rounded-full border border-white/60 bg-white/50 px-2.5 py-2 text-xs font-semibold shadow-inner outline-none transition focus:border-[#D6E332]"
+              className="w-full min-w-0 rounded-full border border-white/60 bg-white/50 px-2.5 py-2 text-xs font-semibold shadow-inner outline-none transition focus:border-[#009AAE]"
             />
             <input
               type="date"
               value={rangeTo}
               max={todayKey}
               onChange={(event) => setRangeTo(event.target.value)}
-              className="w-full min-w-0 rounded-full border border-white/60 bg-white/50 px-2.5 py-2 text-xs font-semibold shadow-inner outline-none transition focus:border-[#D6E332]"
+              className="w-full min-w-0 rounded-full border border-white/60 bg-white/50 px-2.5 py-2 text-xs font-semibold shadow-inner outline-none transition focus:border-[#009AAE]"
             />
           </div>
         </div>
@@ -1111,7 +1111,7 @@ export default function RecordPage() {
           <select
             value={searchField}
             onChange={(event) => setSearchField(event.target.value as SearchField)}
-            className="w-full rounded-full border border-white/60 bg-white/50 px-3 py-2 text-xs font-semibold shadow-inner outline-none transition focus:border-[#D6E332]"
+            className="w-full rounded-full border border-white/60 bg-white/50 px-3 py-2 text-xs font-semibold shadow-inner outline-none transition focus:border-[#009AAE]"
           >
             <option value="all">{t('record.filters.allFields')}</option>
             <option value="name">{t('record.filters.customerName')}</option>
@@ -1128,7 +1128,7 @@ export default function RecordPage() {
               value={search}
               onChange={(event) => setSearch(event.target.value)}
               placeholder={t('record.filters.searchPlaceholder')}
-              className="w-full rounded-full border border-white/60 bg-white/50 py-2 pl-11 pr-4 rtl:pl-4 rtl:pr-11 text-sm shadow-inner outline-none transition focus:border-[#D6E332]"
+              className="w-full rounded-full border border-white/60 bg-white/50 py-2 pl-11 pr-4 rtl:pl-4 rtl:pr-11 text-sm shadow-inner outline-none transition focus:border-[#009AAE]"
             />
           </div>
         </div>

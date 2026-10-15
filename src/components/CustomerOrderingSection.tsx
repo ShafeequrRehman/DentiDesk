@@ -222,7 +222,7 @@ export function CustomerOrderingSection() {
           type="button"
           onClick={() => void handleSave()}
           disabled={saving || loading}
-          className="rounded-2xl bg-[#E2F33C] px-6 py-3 text-sm font-black text-black disabled:opacity-50"
+          className="rounded-2xl bg-[#00B0C7] px-6 py-3 text-sm font-black text-black disabled:opacity-50"
         >
           {saving ? 'Saving...' : 'Save Appointment Settings'}
         </button>
