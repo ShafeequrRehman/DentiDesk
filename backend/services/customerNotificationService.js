@@ -57,24 +57,24 @@ function orderNumberOf(order) {
 function buildOrderPlacedMessage(order, shop) {
   const shopName = shop?.name || "";
   return [
-    `Order Placed`,
+    `Appointment Placed`,
     `Hello ${order.customer?.name || "there"}`,
-    `Thank you for placing your order with ${shopName}`,
-    `Your order has been successfully placed and is now being processed.`,
-    `Order Details`,
+    `Thank you for placing your appointment with ${shopName}`,
+    `Your appointment has been successfully placed and is now being processed.`,
+    `Appointment Details`,
     `------------------------`,
-    `Order No: ${orderNumberOf(order)}`,
+    `Appointment No: ${orderNumberOf(order)}`,
     `Date: ${formatDate(order.createdAt)}`,
     `Items:`,
     formatItems(order.items),
     `Subtotal: Rs. ${formatMoney(order.subtotal)}`,
     `Other Charges: Rs. ${otherCharges(order)}`,
-    `Order Total: Rs. ${formatMoney(order.total)}`,
+    `Appointment Total: Rs. ${formatMoney(order.total)}`,
     `Payment Status: Pending`,
     `Amount: Rs. ${formatMoney(order.paidAmount)}`,
     `------------------------`,
-    `Order Status: Processing`,
-    `We appreciate your trust in ${shopName} and will keep you updated about your order.`,
+    `Appointment Status: Processing`,
+    `We appreciate your trust in ${shopName} and will keep you updated about your appointment.`,
     `Thank you for choosing us!`,
     `${shop?.phone || "-"}`,
     `${shop?.address || "-"}`,
@@ -88,13 +88,13 @@ function buildOrderCompletedMessage(order, shop) {
   const remaining = Number(order.remainingAmount || 0);
   const paymentStatus = remaining > 0 ? `Rs. ${formatMoney(remaining)} Remaining` : `Fully Paid`;
   return [
-    `Order Completed`,
+    `Appointment Completed`,
     `Hello ${order.customer?.name || "there"}`,
     `Great news!`,
-    `Your order from ${shopName} has been successfully completed.`,
-    `Order Details`,
+    `Your appointment from ${shopName} has been successfully completed.`,
+    `Appointment Details`,
     `------------------------`,
-    `Order No: ${orderNumberOf(order)}`,
+    `Appointment No: ${orderNumberOf(order)}`,
     `Date: ${formatDate(order.createdAt)}`,
     `Items:`,
     formatItems(order.items),
@@ -105,7 +105,7 @@ function buildOrderCompletedMessage(order, shop) {
     `Paid Amount: Rs. ${formatMoney(order.paidAmount)}`,
     paymentStatus,
     `------------------------`,
-    `Order Status: Completed`,
+    `Appointment Status: Completed`,
     `Thank you so much for shopping with ${shopName}!`,
     `Your support means a lot to us. We look forward to serving you again.`,
     `${shop?.phone || "-"}`,
@@ -122,7 +122,7 @@ async function sendCustomerMessage(order, shop, message) {
     await service.sendMessage(order.customer.phone, message);
     return true;
   } catch (error) {
-    console.error(`Non-fatal: customer WhatsApp notification failed for order ${order?._id}`, error.message);
+    console.error(`Non-fatal: patient WhatsApp notification failed for appointment ${order?._id}`, error.message);
     return false;
   }
 }

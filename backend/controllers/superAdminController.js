@@ -68,7 +68,7 @@ exports.listShops = async (req, res) => {
 
     res.json(result);
   } catch (error) {
-    res.status(500).json({ message: "Failed to load shops", detail: error.message });
+    res.status(500).json({ message: "Failed to load clinics", detail: error.message });
   }
 };
 
@@ -76,7 +76,7 @@ exports.listShops = async (req, res) => {
 exports.getShop = async (req, res) => {
   try {
     const shop = await Shop.findById(req.params.id).populate("planId");
-    if (!shop) return res.status(404).json({ message: "Shop not found" });
+    if (!shop) return res.status(404).json({ message: "Clinic not found" });
 
     const [license, owner, employees] = await Promise.all([
       License.findOne({ shopId: shop._id }),
@@ -91,7 +91,7 @@ exports.getShop = async (req, res) => {
       employees: employees.map(safeUser),
     });
   } catch (error) {
-    res.status(500).json({ message: "Failed to load shop", detail: error.message });
+    res.status(500).json({ message: "Failed to load clinic", detail: error.message });
   }
 };
 
@@ -188,7 +188,7 @@ exports.createShop = async (req, res) => {
     });
   } catch (error) {
     console.error("[createShop] Failed:", error);
-    res.status(500).json({ message: "Failed to create shop", detail: error.message });
+    res.status(500).json({ message: "Failed to create clinic", detail: error.message });
   } finally {
     session.endSession();
   }
@@ -199,7 +199,7 @@ exports.updateShop = async (req, res) => {
   try {
     const { name, phone, email, address, notes, planId } = req.body;
     const shop = await Shop.findById(req.params.id);
-    if (!shop) return res.status(404).json({ message: "Shop not found" });
+    if (!shop) return res.status(404).json({ message: "Clinic not found" });
 
     if (name !== undefined) shop.name = name;
     if (phone !== undefined) shop.phone = phone;
@@ -211,7 +211,7 @@ exports.updateShop = async (req, res) => {
     await shop.save();
     res.json(shop);
   } catch (error) {
-    res.status(500).json({ message: "Failed to update shop", detail: error.message });
+    res.status(500).json({ message: "Failed to update clinic", detail: error.message });
   }
 };
 
@@ -220,7 +220,7 @@ exports.updateShopOwner = async (req, res) => {
   try {
     const { name, email, phone, username } = req.body;
     const owner = await User.findOne({ shopId: req.params.id, role: "shopowner" });
-    if (!owner) return res.status(404).json({ message: "Shop Owner not found for this shop" });
+    if (!owner) return res.status(404).json({ message: "Clinic Owner not found for this clinic" });
 
     if (username && username !== owner.username) {
       const clash = await User.findOne({ username, _id: { $ne: owner._id } });
@@ -234,7 +234,7 @@ exports.updateShopOwner = async (req, res) => {
     await owner.save();
     res.json(safeUser(owner));
   } catch (error) {
-    res.status(500).json({ message: "Failed to update shop owner", detail: error.message });
+    res.status(500).json({ message: "Failed to update clinic owner", detail: error.message });
   }
 };
 
@@ -247,7 +247,7 @@ exports.updateShopOwner = async (req, res) => {
 exports.deleteShop = async (req, res) => {
   try {
     const shop = await Shop.findById(req.params.id);
-    if (!shop) return res.status(404).json({ message: "Shop not found" });
+    if (!shop) return res.status(404).json({ message: "Clinic not found" });
 
     await Promise.all([
       User.deleteMany({ shopId: shop._id }),
@@ -257,9 +257,9 @@ exports.deleteShop = async (req, res) => {
     ]);
     invalidateLicenseCache(shop._id);
 
-    res.json({ message: "Shop and its accounts have been deleted. Business records (products, sales, etc.) were preserved." });
+    res.json({ message: "Clinic and its accounts have been deleted. Business records (Drs/Services, sales, etc.) were preserved." });
   } catch (error) {
-    res.status(500).json({ message: "Failed to delete shop", detail: error.message });
+    res.status(500).json({ message: "Failed to delete clinic", detail: error.message });
   }
 };
 
@@ -271,14 +271,14 @@ exports.setShopStatus = async (req, res) => {
       return res.status(400).json({ message: "status must be 'active' or 'suspended'", reason: "validation_error" });
     }
     const shop = await Shop.findById(req.params.id);
-    if (!shop) return res.status(404).json({ message: "Shop not found" });
+    if (!shop) return res.status(404).json({ message: "Clinic not found" });
 
     shop.status = status;
     await shop.save();
     invalidateLicenseCache(shop._id);
     res.json(shop);
   } catch (error) {
-    res.status(500).json({ message: "Failed to update shop status", detail: error.message });
+    res.status(500).json({ message: "Failed to update clinic status", detail: error.message });
   }
 };
 
@@ -290,7 +290,7 @@ exports.resetShopOwnerPassword = async (req, res) => {
       return res.status(400).json({ message: "newPassword must be at least 6 characters", reason: "validation_error" });
     }
     const owner = await User.findOne({ shopId: req.params.id, role: "shopowner" });
-    if (!owner) return res.status(404).json({ message: "Shop Owner not found for this shop" });
+    if (!owner) return res.status(404).json({ message: "Clinic Owner not found for this clinic" });
 
     owner.password = await bcrypt.hash(newPassword, 10);
     owner.failedLoginAttempts = 0;
@@ -299,7 +299,7 @@ exports.resetShopOwnerPassword = async (req, res) => {
     owner.refreshTokenExpiresAt = null;
     await owner.save();
 
-    res.json({ message: "Shop Owner password has been reset", username: owner.username });
+    res.json({ message: "Clinic Owner password has been reset", username: owner.username });
   } catch (error) {
     res.status(500).json({ message: "Failed to reset password", detail: error.message });
   }
@@ -318,14 +318,14 @@ exports.resetCancelOrderKey = async (req, res) => {
       return res.status(400).json({ message: "newKey must be at least 4 characters", reason: "validation_error" });
     }
     const shop = await Shop.findById(req.params.id);
-    if (!shop) return res.status(404).json({ message: "Shop not found" });
+    if (!shop) return res.status(404).json({ message: "Clinic not found" });
 
     shop.cancelOrderKeyHash = await bcrypt.hash(String(newKey), 10);
     await shop.save();
 
-    res.json({ message: "Cancel Order Key has been set", cancelOrderKey: newKey });
+    res.json({ message: "Cancel Appointment Key has been set", cancelOrderKey: newKey });
   } catch (error) {
-    res.status(500).json({ message: "Failed to set Cancel Order Key", detail: error.message });
+    res.status(500).json({ message: "Failed to set Cancel Appointment Key", detail: error.message });
   }
 };
 
@@ -343,7 +343,7 @@ exports.resetPageVisibilityKey = async (req, res) => {
       return res.status(400).json({ message: "newKey must be at least 4 characters", reason: "validation_error" });
     }
     const shop = await Shop.findById(req.params.id);
-    if (!shop) return res.status(404).json({ message: "Shop not found" });
+    if (!shop) return res.status(404).json({ message: "Clinic not found" });
 
     shop.pageVisibilityKeyHash = await bcrypt.hash(String(newKey), 10);
     await shop.save();
@@ -367,7 +367,7 @@ exports.extendLicense = async (req, res) => {
     }
 
     const license = await License.findOne({ shopId: req.params.id });
-    if (!license) return res.status(404).json({ message: "License not found for this shop" });
+    if (!license) return res.status(404).json({ message: "License not found for this clinic" });
 
     const previousExpiry = license.expiryDate;
     // Extend from "now" if already expired, otherwise stack on top of the
@@ -411,7 +411,7 @@ exports.setLicenseExpiry = async (req, res) => {
     }
 
     const license = await License.findOne({ shopId: req.params.id });
-    if (!license) return res.status(404).json({ message: "License not found for this shop" });
+    if (!license) return res.status(404).json({ message: "License not found for this clinic" });
 
     const previousExpiry = license.expiryDate;
     const approxMonths = Math.round((newExpiry.getTime() - (previousExpiry?.getTime() || Date.now())) / (30 * DAY_MS));
@@ -444,7 +444,7 @@ exports.setLicenseStatus = async (req, res) => {
       return res.status(400).json({ message: "Invalid license status", reason: "validation_error" });
     }
     const license = await License.findOne({ shopId: req.params.id });
-    if (!license) return res.status(404).json({ message: "License not found for this shop" });
+    if (!license) return res.status(404).json({ message: "License not found for this clinic" });
 
     license.status = status;
     await license.save();
@@ -506,7 +506,7 @@ exports.deletePlan = async (req, res) => {
   try {
     const inUse = await Shop.exists({ planId: req.params.id });
     if (inUse) {
-      return res.status(400).json({ message: "Cannot delete a plan that is still assigned to a shop. Deactivate it instead.", reason: "plan_in_use" });
+      return res.status(400).json({ message: "Cannot delete a plan that is still assigned to a clinic. Deactivate it instead.", reason: "plan_in_use" });
     }
     await Plan.deleteOne({ _id: req.params.id });
     res.json({ message: "Plan deleted" });

@@ -9,8 +9,8 @@ export const reports = {
   },
   to: "تا",
 
-  orderCount: "{{count}} آرڈر",
-  orderCountPlural: "{{count}} آرڈرز",
+  orderCount: "{{count}} اپائنٹمنٹ",
+  orderCountPlural: "{{count}} اپائنٹمنٹس",
   entryCount: "{{count}} اندراج",
   entryCountPlural: "{{count}} اندراجات",
 
@@ -22,10 +22,10 @@ export const reports = {
 
   tableHeaders: {
     company: "کمپنی",
-    product: "پروڈکٹ",
+    product: "ڈاکٹر/سروس",
     paid: "ادا شدہ",
     due: "باقی",
-    order: "آرڈر",
+    order: "اپائنٹمنٹ",
     type: "قسم",
   },
 
@@ -47,7 +47,7 @@ export const reports = {
     subtitle: "آمدنی، خام مال کی لاگت، اور اخراجات - آپ کے منتخب کردہ عرصے کا خالص منافع۔",
 
     totalRevenue: "کل آمدنی",
-    productCost: "پروڈکٹ لاگت (COGS)",
+    productCost: "ڈاکٹر/سروس لاگت (COGS)",
     ingredientsConsumed: "استعمال شدہ اجزاء",
     otherExpenses: "دیگر اخراجات",
     expenseCountLogged: "{{count}} درج شدہ",
@@ -77,26 +77,26 @@ export const reports = {
   mySales: {
     loadError: "آپ کی سیلز رپورٹ لوڈ کرنے میں ناکامی۔",
     title: "میری روزانہ سیلز",
-    subtitle: "صرف وہ آرڈرز جو آپ نے خود دیے، ایک دن کے حساب سے۔",
+    subtitle: "صرف وہ اپائنٹمنٹس جو آپ نے خود دیے، ایک دن کے حساب سے۔",
 
     myRevenue: "میری آمدنی",
     collected: "وصول شدہ",
     cashReceived: "موصولہ نقدی",
     stillDue: "ابھی باقی",
-    acrossYourOrders: "آپ کے تمام آرڈرز میں",
+    acrossYourOrders: "آپ کے تمام اپائنٹمنٹس میں",
     cancelled: "منسوخ شدہ",
     notCountedAbove: "اوپر شمار نہیں کیا گیا",
 
-    yourOrdersTitle: "آپ کے آرڈرز",
-    noOrders: "اس دن کوئی آرڈر نہیں۔",
+    yourOrdersTitle: "آپ کے اپائنٹمنٹس",
+    noOrders: "اس دن کوئی اپائنٹمنٹ نہیں۔",
   },
 
   inventory: {
     loadError: "انوینٹری رپورٹ لوڈ کرنے میں ناکامی۔",
     title: "اسٹاک اور سپلائر رپورٹ",
-    subtitle: "آپ کے منتخب کردہ عرصے کے کچن اسٹاک خریداری لاگ اور سپلائر واجبات۔",
+    subtitle: "آپ کے منتخب کردہ عرصے کے میڈیسن اسٹاک خریداری لاگ اور سپلائر واجبات۔",
 
-    kitchenStockPurchased: "کچن اسٹاک خریدا گیا",
+    kitchenStockPurchased: "میڈیسن اسٹاک خریدا گیا",
     batchesLogged: "{{count}} کھیپیں درج شدہ",
     totalSupplierDue: "کل سپلائر واجبات",
     allTimeEveryCompany: "ہر کمپنی، اب تک",
@@ -107,7 +107,7 @@ export const reports = {
     supplierDuesSubtitle: "ہر کمپنی کا اب تک کا بقایا",
     nothingDue: "کسی کمپنی کا کچھ واجب نہیں۔",
 
-    kitchenStockLogTitle: "کچن اسٹاک لاگ",
+    kitchenStockLogTitle: "میڈیسن اسٹاک لاگ",
     kitchenStockLogSubtitle: "اس عرصے میں درج ہر کھیپ",
     noPurchases: "اس عرصے میں کوئی خریداری درج نہیں ہوئی۔",
     dueSuffix: "باقی",

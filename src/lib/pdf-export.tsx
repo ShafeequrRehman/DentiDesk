@@ -156,7 +156,7 @@ export function ReportPdfDocument({
   // current the instant Settings saves a new name via updateCachedShopName)
   // so a stale name is never baked into a PDF someone downloaded before an
   // edit synced.
-  const restaurantName = getAuthShop()?.name || 'Shop';
+  const restaurantName = getAuthShop()?.name || 'Clinic';
   return (
     <Document>
       <Page size="A4" orientation="landscape" style={styles.page} wrap>

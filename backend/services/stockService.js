@@ -350,7 +350,7 @@ async function deductStockForItems(items, shopId) {
 
     const warnings = [];
     if (shortages.length > 0) {
-      warnings.push(`This order used more of some ingredients than were in stock: ${shortages.join("; ")}. Please restock soon.`);
+      warnings.push(`This appointment used more of some ingredients than were in stock: ${shortages.join("; ")}. Please restock soon.`);
     }
     if (driftedIngredientNames.length > 0) {
       warnings.push(`These ingredients' recipe lines are out of date (unit changed since the recipe was saved) and may have deducted the wrong amount: ${driftedIngredientNames.join(", ")}. Ask your admin to check the backend logs.`);
@@ -359,8 +359,8 @@ async function deductStockForItems(items, shopId) {
     result.costPrice = Math.round(result.costPrice * 100) / 100;
     return result;
   } catch (error) {
-    console.error("Non-fatal: stock deduction failed while placing an order", error);
-    result.warning = "The order was saved, but ingredient stock could not be updated automatically. Ask your admin to check the backend logs.";
+    console.error("Non-fatal: stock deduction failed while placing an appointment", error);
+    result.warning = "The appointment was saved, but medicine stock could not be updated automatically. Ask your admin to check the backend logs.";
     return result;
   }
 }
@@ -394,7 +394,7 @@ async function restoreStockForOrder(order) {
       await ingredient.save();
     }
   } catch (error) {
-    console.error("Non-fatal: stock restore failed while cancelling an order", order?._id, error);
+    console.error("Non-fatal: stock restore failed while cancelling an appointment", order?._id, error);
   }
 }
 
@@ -440,7 +440,7 @@ async function restoreStockForItems(items, shopId) {
     result.creditValue = Math.round(result.creditValue * 100) / 100;
     return result;
   } catch (error) {
-    console.error("Non-fatal: stock restore failed while editing an order", error);
+    console.error("Non-fatal: stock restore failed while editing an appointment", error);
     return result;
   }
 }

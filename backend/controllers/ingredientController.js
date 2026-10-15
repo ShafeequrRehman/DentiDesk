@@ -216,7 +216,7 @@ exports.deleteIngredient = async (req, res) => {
       { $set: { linkedIngredientId: null } }
     );
   } catch (error) {
-    console.error("[Product->Stock auto-link] Failed to clear dangling Stock link:", error.message);
+    console.error("[Drs/Service->Stock auto-link] Failed to clear dangling Stock link:", error.message);
   }
   res.json({ message: "Ingredient deleted", id: req.params.id });
 };
@@ -278,8 +278,8 @@ exports.getIngredientLedger = async (req, res) => {
       entries.push({
         date: order.createdAt,
         type: "sale",
-        label: `Order #${order.dailyOrderNumber ?? order.shopSequenceNumber ?? String(order._id).slice(-4)}`,
-        detail: order.customer?.name || "Walk-in Customer",
+        label: `Appointment #${order.dailyOrderNumber ?? order.shopSequenceNumber ?? String(order._id).slice(-4)}`,
+        detail: order.customer?.name || "Walk-in Patient",
         quantity: Number(deduction.quantity || 0),
         direction: "out",
       });

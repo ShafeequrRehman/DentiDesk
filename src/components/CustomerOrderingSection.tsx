@@ -100,7 +100,7 @@ export function CustomerOrderingSection() {
   if (!shopId) {
     return (
       <div className="rounded-[28px] border border-slate-200 bg-white p-6">
-        <p className="text-sm font-bold text-slate-500">Sign in again to load your shop details before generating a QR code.</p>
+        <p className="text-sm font-bold text-slate-500">Sign in again to load your clinic details before generating a QR code.</p>
       </div>
     );
   }
@@ -110,12 +110,12 @@ export function CustomerOrderingSection() {
       <div className="rounded-[28px] border border-indigo-100 bg-indigo-50/70 p-6">
         <div className="flex items-center gap-2">
           <QrCodeIcon size={18} className="text-indigo-600" />
-          <h3 className="text-lg font-black text-slate-900">Customer Self-Ordering QR Code</h3>
+          <h3 className="text-lg font-black text-slate-900">Patient Self-Ordering QR Code</h3>
         </div>
         <p className="mt-2 max-w-2xl text-sm text-slate-600">
-          Print this and place it on tables or your counter. A customer scans it with their phone's camera - no app
+          Print this and place it on tables or your counter. A patient scans it with their phone's camera - no app
           needed - to see your menu, pick Dine-In / Takeaway / Delivery, choose a free table for Dine-In, and place
-          their order directly. It lands in your system exactly like a staff-placed order, and they can even add it
+          their appointment directly. It lands in your system exactly like a staff-placed appointment, and they can even add it
           to their home screen like a real app.
         </p>
       </div>
@@ -124,7 +124,7 @@ export function CustomerOrderingSection() {
         <div className="flex flex-col items-center gap-4 sm:flex-row sm:items-start">
           <div className="flex h-64 w-64 shrink-0 items-center justify-center rounded-2xl bg-slate-50">
             {qrDataUrl ? (
-              <img src={qrDataUrl} alt="Customer ordering QR code" className="h-56 w-56 rounded-xl bg-white p-2" />
+              <img src={qrDataUrl} alt="Patient ordering QR code" className="h-56 w-56 rounded-xl bg-white p-2" />
             ) : (
               <span className="text-xs font-bold text-slate-400">Generating...</span>
             )}
@@ -168,8 +168,8 @@ export function CustomerOrderingSection() {
       <div className="rounded-[28px] border border-slate-200 bg-white p-6">
         <h3 className="text-sm font-black text-slate-900">Delivery Rider WhatsApp Number(s)</h3>
         <p className="mt-1 max-w-2xl text-xs font-bold text-slate-500">
-          The moment a Delivery order is confirmed, this number gets a WhatsApp message with the customer's name,
-          phone, address, and a Google Maps link to their location - using your shop's own WhatsApp connection (see
+          The moment a Delivery appointment is confirmed, this number gets a WhatsApp message with the patient's name,
+          phone, address, and a Google Maps link to their location - using your clinic's own WhatsApp connection (see
           the WhatsApp page). Leave empty to skip rider notifications.
         </p>
 
@@ -198,7 +198,7 @@ export function CustomerOrderingSection() {
 
       <div className="rounded-[28px] border border-slate-200 bg-white p-6">
         <h3 className="text-sm font-black text-slate-900">JazzCash Merchant Account</h3>
-        <p className="mt-1 text-xs font-bold text-slate-500">Leave blank to keep JazzCash hidden from customers - Cash stays available either way.</p>
+        <p className="mt-1 text-xs font-bold text-slate-500">Leave blank to keep JazzCash hidden from patients - Cash stays available either way.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <LabeledInput label="Merchant ID" value={jazzCash.merchantId || ''} onChange={(v) => setJazzCash((p) => ({ ...p, merchantId: v }))} />
           <LabeledInput label="Password" type="password" value={jazzCash.password || ''} onChange={(v) => setJazzCash((p) => ({ ...p, password: v }))} />
@@ -209,7 +209,7 @@ export function CustomerOrderingSection() {
 
       <div className="rounded-[28px] border border-slate-200 bg-white p-6">
         <h3 className="text-sm font-black text-slate-900">EasyPaisa Merchant Account</h3>
-        <p className="mt-1 text-xs font-bold text-slate-500">Leave blank to keep EasyPaisa hidden from customers - Cash stays available either way.</p>
+        <p className="mt-1 text-xs font-bold text-slate-500">Leave blank to keep EasyPaisa hidden from patients - Cash stays available either way.</p>
         <div className="mt-4 grid grid-cols-1 gap-4 sm:grid-cols-2">
           <LabeledInput label="Store ID" value={easyPaisa.storeId || ''} onChange={(v) => setEasyPaisa((p) => ({ ...p, storeId: v }))} />
           <LabeledInput label="Hash Key" type="password" value={easyPaisa.hashKey || ''} onChange={(v) => setEasyPaisa((p) => ({ ...p, hashKey: v }))} />

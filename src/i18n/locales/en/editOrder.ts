@@ -2,36 +2,36 @@
 // sent to the kitchen) - see
 // src/pages/dashboard/sales/EditOrderPage.tsx.
 export const editOrder = {
-  loadingOrderEditor: "Loading order editor...",
+  loadingOrderEditor: "Loading appointment editor...",
   offlineUnavailable:
-    "This order isn't in this till's local cache yet (it's either older than the 14-day offline cache window, or this till hasn't synced since it was placed). Use the order card's Add Items / Complete Payment instead, or try again once back online.",
-  orderNotFound: "Order not found.",
+    "This appointment isn't in this till's local cache yet (it's either older than the 14-day offline cache window, or this till hasn't synced since it was placed). Use the appointment card's Add Items / Complete Payment instead, or try again once back online.",
+  orderNotFound: "Appointment not found.",
 
   backToSales: "Back to Sales",
-  pageTitle: "Edit Order #{{orderNumber}}",
+  pageTitle: "Edit Appointment #{{orderNumber}}",
   printCenter: "Print Center",
   saveChanges: "Save Changes",
 
-  orderItems: "Order Items",
-  orderMeta: "Order Meta",
+  orderItems: "Appointment Items",
+  orderMeta: "Appointment Meta",
 
-  customerNamePlaceholder: "Customer name",
+  customerNamePlaceholder: "Patient name",
   phonePlaceholder: "Phone",
-  searchingCustomers: "Searching customers...",
+  searchingCustomers: "Searching patients...",
   duePrefix: "Due PKR {{amount}}",
   addressPlaceholder: "Address",
   waiterPlaceholder: "Waiter",
   tablePlaceholder: "Table",
-  orderNotePlaceholder: "Order note",
+  orderNotePlaceholder: "Appointment note",
 
-  quickAddProduct: "Quick Add Product",
+  quickAddProduct: "Quick Add Drs/Service",
   searchMenuItemsPlaceholder: "Search menu items",
   priceDisplay: "Rs {{price}}",
   addCustomItem: "Add Custom Item",
   customItemDefaultName: "Custom Item",
 
   couldNotSaveChange: "Could not save this change.",
-  orderSavedSyncing: "Order {{orderId}} saved. Syncing to the cloud...",
-  orderSavedOffline: "Order {{orderId}} saved. Will sync once back online.",
-  orderSavedSuccessfully: "Order {{orderId}} saved successfully.",
+  orderSavedSyncing: "Appointment {{orderId}} saved. Syncing to the cloud...",
+  orderSavedOffline: "Appointment {{orderId}} saved. Will sync once back online.",
+  orderSavedSuccessfully: "Appointment {{orderId}} saved successfully.",
 } as const;

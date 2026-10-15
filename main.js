@@ -734,7 +734,7 @@ if (!gotTheLock) {
 
     h += 45; // Date, Time, Type
     if (orderData?.customer?.name) h += 15;
-    const cashierCustomerShown = type === "cashier" && orderData?.customer?.name && orderData.customer.name !== "Walk-in Customer";
+    const cashierCustomerShown = type === "cashier" && orderData?.customer?.name && !["Walk-in Customer", "Walk-in Patient"].includes(orderData.customer.name);
     if (cashierCustomerShown && orderData.customer.phone && orderData.customer.phone !== "03000000000") h += 15;
     if (type === "cashier" && orderData?.customer?.address) h += 15;
     if (orderData?.table) h += 15;
@@ -899,7 +899,7 @@ if (!gotTheLock) {
       const pageHeight = estimateReceiptHeightPt(orderData, type, false);
       return h(Document, null,
         h(Page, { size: [RECEIPT_WIDTH_PT, pageHeight], style: receiptStyles.page },
-          h(Text, { style: receiptStyles.orderLabel }, "ORDER NO."),
+          h(Text, { style: receiptStyles.orderLabel }, "APPOINTMENT NO."),
           h(Text, { style: receiptStyles.orderNumber }, orderNumber)
         )
       );
@@ -935,24 +935,24 @@ if (!gotTheLock) {
           settings?.receiptPaymentInfo ? h(Text, { style: receiptStyles.small }, settings.receiptPaymentInfo) : null
         ),
         h(View, { style: receiptStyles.rule }),
-        h(Text, { style: receiptStyles.orderLabel }, "ORDER NO."),
+        h(Text, { style: receiptStyles.orderLabel }, "APPOINTMENT NO."),
         h(Text, { style: (type === "kitchen" || type === "kitchen-cancel" || type === "kitchen-remove") ? receiptStyles.orderNumberKitchen : receiptStyles.orderNumber }, orderNumber),
         type === "kitchen" ? h(Text, { style: receiptStyles.ticketLabel }, "*** KITCHEN TICKET ***") : null,
-        type === "kitchen-cancel" ? h(Text, { style: receiptStyles.ticketLabelCancel }, "*** ORDER CANCELLED ***") : null,
+        type === "kitchen-cancel" ? h(Text, { style: receiptStyles.ticketLabelCancel }, "*** APPOINTMENT CANCELLED ***") : null,
         type === "kitchen-cancel" ? h(Text, { style: receiptStyles.ticketLabel }, "STOP PREPARATION / DISCARD ITEMS") : null,
         type === "kitchen-cancel" && orderData?.cancelReason ? h(Text, { style: receiptStyles.cancelReason }, `REASON: ${String(orderData.cancelReason).toUpperCase()}`) : null,
         // The order itself is still active here - only these specific
         // items were edited out - so the wording deliberately does NOT
         // say "ORDER CANCELLED" (that would wrongly tell the kitchen to
         // stop the whole ticket, see kitchen-cancel above).
-        type === "kitchen-remove" ? h(Text, { style: receiptStyles.ticketLabelCancel }, "*** ITEMS REMOVED FROM ORDER ***") : null,
+        type === "kitchen-remove" ? h(Text, { style: receiptStyles.ticketLabelCancel }, "*** ITEMS REMOVED FROM APPOINTMENT ***") : null,
         type === "kitchen-remove" ? h(Text, { style: receiptStyles.ticketLabel }, "DO NOT PREPARE / DISCARD BELOW ITEMS") : null,
         h(View, { style: receiptStyles.rule }),
         h(View, { style: receiptStyles.meta },
           h(Text, null, `DATE: ${formatReceiptDate(orderData?.createdAt)}`),
           h(Text, null, `TIME: ${formatReceiptTime(orderData?.createdAt)}`),
           h(Text, null, `TYPE: ${String(orderData?.orderType || "").toUpperCase()}`),
-          orderData?.customer?.name ? h(Text, null, `CUSTOMER: ${String(orderData.customer.name).toUpperCase()}`) : null,
+          orderData?.customer?.name ? h(Text, null, `PATIENT: ${String(orderData.customer.name).toUpperCase()}`) : null,
           // Phone/address only belong on the customer's own copy, not the
           // kitchen ticket - see estimateReceiptHeightPt above for the
           // matching height budget. Same "Walk-in Customer" gate as the
@@ -967,7 +967,7 @@ if (!gotTheLock) {
           // a Delivery order can be placed with an address but no typed
           // name, and the address is exactly what the delivery needs, so it
           // still has to print even then.
-          type === "cashier" && orderData?.customer?.name && orderData.customer.name !== "Walk-in Customer" && orderData.customer.phone && orderData.customer.phone !== "03000000000" ? h(Text, null, `PHONE: ${orderData.customer.phone}`) : null,
+          type === "cashier" && orderData?.customer?.name && !["Walk-in Customer", "Walk-in Patient"].includes(orderData.customer.name) && orderData.customer.phone && orderData.customer.phone !== "03000000000" ? h(Text, null, `PHONE: ${orderData.customer.phone}`) : null,
           type === "cashier" && orderData?.customer?.address ? h(Text, null, `ADDRESS: ${orderData.customer.address}`) : null,
           orderData?.table ? h(Text, null, `TABLE: ${orderData.table}`) : null,
           orderData?.waiter ? h(Text, null, `WAITER: ${String(orderData.waiter).toUpperCase()}`) : null,
@@ -1168,14 +1168,14 @@ if (!gotTheLock) {
           orderData?.orderType === "DineIn" && orderData?.table ? h(Text, { style: altReceiptStyles.metaRow }, `Table: ${orderData.table}`) : null,
           h(Text, { style: altReceiptStyles.metaRow }, `M/S: ${String(orderData?.paymentMethod || "Cash").toUpperCase()}`),
           orderData?.waiter ? h(Text, { style: altReceiptStyles.metaRow }, `Waiter: ${orderData.waiter}`) : null,
-          orderData?.customer?.name && orderData.customer.name !== "Walk-in Customer" ? h(Text, { style: altReceiptStyles.metaRow }, `Customer: ${orderData.customer.name}`) : null,
+          orderData?.customer?.name && !["Walk-in Customer", "Walk-in Patient"].includes(orderData.customer.name) ? h(Text, { style: altReceiptStyles.metaRow }, `Patient: ${orderData.customer.name}`) : null,
           // Same customer/Walk-in gate as the name line above - walk-in
           // placeholder phone (03000000000) excluded since it was never a
           // real number the customer gave. Address is deliberately NOT
           // gated on name being present - a Delivery order can be placed
           // with an address but no typed name, and the address is exactly
           // what the delivery needs, so it still has to print even then.
-          orderData?.customer?.name && orderData.customer.name !== "Walk-in Customer" && orderData.customer.phone && orderData.customer.phone !== "03000000000" ? h(Text, { style: altReceiptStyles.metaRow }, `Phone: ${orderData.customer.phone}`) : null,
+          orderData?.customer?.name && !["Walk-in Customer", "Walk-in Patient"].includes(orderData.customer.name) && orderData.customer.phone && orderData.customer.phone !== "03000000000" ? h(Text, { style: altReceiptStyles.metaRow }, `Phone: ${orderData.customer.phone}`) : null,
           orderData?.customer?.address ? h(Text, { style: altReceiptStyles.metaRow }, `Address: ${orderData.customer.address}`) : null,
           // Electricity Bill / Cash special-product details - only ever set
           // on an order whose cart had the matching special item in it (see
@@ -1336,7 +1336,7 @@ if (!gotTheLock) {
     h += 55; // store name/sub/address/contact
     h += 25; // "Bill" title + boxed type
     h += 45 + 16 + 24; // meta block (order#/date, table, M/S, waiter, customer) + its extra top/bottom margin + per-row spacing
-    const billCustomerShown = orderData?.customer?.name && orderData.customer.name !== "Walk-in Customer";
+    const billCustomerShown = orderData?.customer?.name && !["Walk-in Customer", "Walk-in Patient"].includes(orderData.customer.name);
     if (billCustomerShown && orderData?.customer?.phone && orderData.customer.phone !== "03000000000") h += 14;
     if (orderData?.customer?.address) h += 14;
     // Electricity Bill / Cash special-product details.
@@ -1413,57 +1413,6 @@ if (!gotTheLock) {
     });
   }
 
-  ipcMain.handle("print-kitchen-receipt-data", async (_event, orderData, printerName, printLogo, settings) => {
-    if (!printerName) {
-      return { success: false, error: "No kitchen printer configured" };
-    }
-
-    try {
-      const result = await createReceiptPdfFromOrderData(orderData, "kitchen", "kitchen_receipt", printLogo, settings);
-      await printReceiptPdfFile(result.pdfPath, printerName);
-      fs.unlink(result.pdfPath, () => {});
-      logRuntime(`ReactPDF kitchen receipt printed on ${printerName}`);
-      return { success: true };
-    } catch (error) {
-      logRuntime(`ReactPDF kitchen receipt print failed: ${error}`);
-      return { success: false, error: error.toString() };
-    }
-  });
-
-  ipcMain.handle("print-kitchen-cancel-receipt-data", async (_event, orderData, printerName, printLogo, settings) => {
-    if (!printerName) {
-      return { success: false, error: "No kitchen printer configured" };
-    }
-
-    try {
-      const result = await createReceiptPdfFromOrderData(orderData, "kitchen-cancel", "kitchen_cancel_receipt", printLogo, settings);
-      await printReceiptPdfFile(result.pdfPath, printerName);
-      fs.unlink(result.pdfPath, () => {});
-      logRuntime(`ReactPDF kitchen cancel receipt printed on ${printerName}`);
-      return { success: true };
-    } catch (error) {
-      logRuntime(`ReactPDF kitchen cancel receipt print failed: ${error}`);
-      return { success: false, error: error.toString() };
-    }
-  });
-
-  ipcMain.handle("print-kitchen-remove-receipt-data", async (_event, orderData, printerName, printLogo, settings) => {
-    if (!printerName) {
-      return { success: false, error: "No kitchen printer configured" };
-    }
-
-    try {
-      const result = await createReceiptPdfFromOrderData(orderData, "kitchen-remove", "kitchen_remove_receipt", printLogo, settings);
-      await printReceiptPdfFile(result.pdfPath, printerName);
-      fs.unlink(result.pdfPath, () => {});
-      logRuntime(`ReactPDF kitchen remove-items receipt printed on ${printerName}`);
-      return { success: true };
-    } catch (error) {
-      logRuntime(`ReactPDF kitchen remove-items receipt print failed: ${error}`);
-      return { success: false, error: error.toString() };
-    }
-  });
-
   ipcMain.handle("print-order-token-data", async (_event, orderData, printerName, printLogo, settings) => {
     if (!printerName) {
       return { success: false, error: "No cashier printer configured" };
@@ -1473,10 +1422,10 @@ if (!gotTheLock) {
       const result = await createReceiptPdfFromOrderData(orderData, "token", "order_token", printLogo, settings);
       await printReceiptPdfFile(result.pdfPath, printerName);
       fs.unlink(result.pdfPath, () => {});
-      logRuntime(`ReactPDF order-number token printed on ${printerName}`);
+      logRuntime(`ReactPDF appointment-number token printed on ${printerName}`);
       return { success: true };
     } catch (error) {
-      logRuntime(`ReactPDF order-number token print failed: ${error}`);
+      logRuntime(`ReactPDF appointment-number token print failed: ${error}`);
       return { success: false, error: error.toString() };
     }
   });
@@ -1511,7 +1460,7 @@ if (!gotTheLock) {
       fs.unlink(result.pdfPath, () => {});
       return { ...result, fileBase64 };
     } catch (error) {
-      logRuntime(`ReactPDF customer receipt creation failed: ${error}`);
+      logRuntime(`ReactPDF patient receipt creation failed: ${error}`);
       return { success: false, error: error.toString() };
     }
   });

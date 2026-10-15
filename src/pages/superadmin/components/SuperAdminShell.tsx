@@ -15,7 +15,7 @@ export default function SuperAdminShell() {
 
   const navItems = [
     { icon: <LayoutDashboard size={18} />, label: 'Overview', href: '/superadmin' },
-    { icon: <Store size={18} />, label: 'Shops', href: '/superadmin/shops' },
+    { icon: <Store size={18} />, label: 'Clinics', href: '/superadmin/shops' },
     { icon: <CreditCard size={18} />, label: 'Plans', href: '/superadmin/plans' },
     { icon: <Banknote size={18} />, label: 'Payments', href: '/superadmin/payments' },
     { icon: <ScrollText size={18} />, label: 'Logs', href: '/superadmin/logs' },

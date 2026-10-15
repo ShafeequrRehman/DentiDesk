@@ -116,7 +116,7 @@ export default function WhatsAppManager() {
         await new Promise(resolve => setTimeout(resolve, delayMs));
     }
     
-    toast.success(`Promotion sent to ${sentCount} customers!`);
+    toast.success(`Promotion sent to ${sentCount} patients!`);
     setIsSendingPromo(false);
     setPromoMessage('');
   };
@@ -193,7 +193,7 @@ export default function WhatsAppManager() {
               
               <form onSubmit={handleSendManual} className="space-y-4">
                 <div>
-                  <label className="block text-sm font-medium text-gray-700 mb-1">Customer Phone Number</label>
+                  <label className="block text-sm font-medium text-gray-700 mb-1">Patient Phone Number</label>
                   <div className="relative">
                     <div className="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none">
                       <Phone size={16} className="text-gray-400" />
@@ -243,11 +243,11 @@ export default function WhatsAppManager() {
                 <Users className="text-orange-600" />
                 <h2 className="text-lg font-bold">Marketing Blast</h2>
               </div>
-              <p className="text-sm text-gray-500 mb-4">Send a promotional message or deal to your entire customer database.</p>
+              <p className="text-sm text-gray-500 mb-4">Send a promotional message or deal to your entire patient database.</p>
               
               <div className="bg-gray-50 p-4 rounded-lg mb-4 border text-sm">
                 <span className="font-semibold text-gray-700">Audience: </span>
-                <span className="text-indigo-600 font-bold">{customers.length}</span> Customers with registered valid phone numbers
+                <span className="text-indigo-600 font-bold">{customers.length}</span> Patients with registered valid phone numbers
               </div>
 
               <form onSubmit={handleSendPromo}>
@@ -260,7 +260,7 @@ export default function WhatsAppManager() {
                     className="block w-full rounded-md border border-gray-300 shadow-sm focus:border-orange-500 focus:ring-orange-500 sm:text-sm p-3"
                     placeholder="Hi! Check out our new weekend deals at The Heaven Slice! 🔥🍕"
                   />
-                  <p className="text-xs text-gray-500 mt-2">To prevent spam blocks, messages are sent one at a time with a random 1-2 second gap between each customer.</p>
+                  <p className="text-xs text-gray-500 mt-2">To prevent spam blocks, messages are sent one at a time with a random 1-2 second gap between each patient.</p>
                 </div>
 
                 {isSendingPromo ? (
@@ -280,7 +280,7 @@ export default function WhatsAppManager() {
                     className="w-full bg-orange-600 text-white rounded-md py-2.5 px-4 font-medium hover:bg-orange-700 focus:outline-none focus:ring-2 focus:ring-orange-500 focus:ring-offset-2 disabled:bg-gray-300 flex justify-center items-center gap-2"
                   >
                     <Send size={18} />
-                    Blast to {customers.length} Customers
+                    Blast to {customers.length} Patients
                   </button>
                 )}
               </form>

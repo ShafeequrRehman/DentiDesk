@@ -16,9 +16,8 @@ import {
   cancelIngredientPurchase,
   deleteDuesHistoryEntry,
   fetchBanks,
-  fetchGrains,
 } from '@/lib/pos-api';
-import { LedgerCustomer, LedgerPurchase, SavedOrder, DuesHistoryEntry, Bank, Grain, DuesPaymentOption } from '@/lib/pos-types';
+import { LedgerCustomer, LedgerPurchase, SavedOrder, DuesHistoryEntry, Bank, DuesPaymentOption } from '@/lib/pos-types';
 import { isDesktopApp } from '@/lib/api';
 import { writeOrderReceiptToWindow, writePurchaseReceiptToWindow, writeDuesEntryReceiptToWindow } from '@/lib/order-receipt-print';
 import { isConnectivityFailure, loadCustomersFromLocalHub, queueCreateCustomerOffline, queueAddDueOffline, queueSettleDueOffline } from '@/lib/offline-dues-helpers';
@@ -50,11 +49,6 @@ export default function CustomerDuesPage() {
   // CustomerCard's Cash/Bank payment-method picker can offer the same
   // up-to-date list without each card fetching it separately.
   const [banks, setBanks] = useState<Bank[]>([]);
-  // The shop's own grain stock (see GrainStockPage.tsx) - same idea as
-  // banks above, so every CustomerCard's Cash/Bank/Grain Stock
-  // payment-method picker can offer whichever grains the shop has added
-  // (Rice, Gandam, ...) without each card fetching its own list.
-  const [grains, setGrains] = useState<Grain[]>([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
@@ -72,7 +66,6 @@ export default function CustomerDuesPage() {
     loadCustomers();
     checkWhatsapp();
     void loadBanks();
-    void loadGrains();
     // WhatsApp's socket can take a few seconds to finish (re)connecting
     // after the backend starts, so the very first status check right after
     // this page mounts can catch it mid-handshake and report "not
@@ -136,7 +129,7 @@ export default function CustomerDuesPage() {
       // refresh (offline, or too slow) shouldn't blank the page or scare
       // the shop owner with an error on top of data that's already there.
       if (!paintedFromCache) {
-        setErrorMessage(error instanceof Error ? error.message : 'Failed to load customers.');
+        setErrorMessage(error instanceof Error ? error.message : 'Failed to load patients.');
       }
     } finally {
       setLoading(false);
@@ -150,15 +143,6 @@ export default function CustomerDuesPage() {
       if (data) setBanks(data);
     } catch {
       // Non-fatal - a card just falls back to Cash-only if this fails.
-    }
-  };
-
-  const loadGrains = async () => {
-    try {
-      const data = await fetchGrains();
-      if (data) setGrains(data);
-    } catch {
-      // Non-fatal - a card just falls back to Cash/Bank-only if this fails.
     }
   };
 
@@ -185,7 +169,7 @@ export default function CustomerDuesPage() {
     try {
       const created = await createCustomer(payload);
       if (!created) {
-        toast.error('Could not add customer.');
+        toast.error('Could not add patient.');
         return;
       }
       setShowAddCustomer(false);
@@ -216,7 +200,7 @@ export default function CustomerDuesPage() {
           // locally, fall through to the normal error below.
         }
       }
-      toast.error(error instanceof Error ? error.message : 'Could not add customer.');
+      toast.error(error instanceof Error ? error.message : 'Could not add patient.');
     } finally {
       setIsAddingCustomer(false);
     }
@@ -263,17 +247,7 @@ export default function CustomerDuesPage() {
   const handleAddManualDue = async (phone: string, amount: number, note: string, payment?: DuesPaymentOption, printWindow?: Window | null): Promise<boolean> => {
     const customer = customers.find(c => c.phone === phone);
     if (!customer || amount <= 0) return false;
-    // Labour/Munshi are the payment methods where "+ Paid Amount" runs
-    // backwards from every other method: the shop owner treats a
-    // Labour/Munshi-routed "Paid Amount" as the customer's due being
-    // cleared THROUGH that khata (which holds the money on the shop's
-    // behalf, not handed over at the till) - see
-    // customerController.applyUpdateCustomerDues's own comment on this.
-    // So it lowers previousDues instead of raising it, the mirror image
-    // of every other method here.
-    const nextPreviousDues = payment?.method === 'munshi' || payment?.method === 'labour'
-      ? (customer.previousDues || 0) - amount
-      : (customer.previousDues || 0) + amount;
+    const nextPreviousDues = (customer.previousDues || 0) + amount;
 
     try {
       const updated = await updateCustomerDues(phone, nextPreviousDues, note, payment);
@@ -283,7 +257,6 @@ export default function CustomerDuesPage() {
       }
       const fresh = await loadCustomers();
       if (payment?.bankId) await loadBanks();
-      if (payment?.grainId) await loadGrains();
       toast.success('Dues updated.');
       if (printWindow && !printWindow.closed) {
         const freshCustomer = fresh?.find((c) => c.phone === phone);
@@ -306,8 +279,6 @@ export default function CustomerDuesPage() {
             note,
             paymentMethod: payment?.method || 'cash',
             bankId: payment?.bankId,
-            grainId: payment?.grainId,
-            grainKg: payment?.grainKg,
           });
           setCustomers((previous) => previous.map((c) => (c.phone === phone ? patched : c)));
           toast.success('Saved offline - will sync automatically once online.');
@@ -350,7 +321,6 @@ export default function CustomerDuesPage() {
       }
       const fresh = await loadCustomers();
       if (payment?.bankId) await loadBanks();
-      if (payment?.grainId) await loadGrains();
       toast.success(`₨${result.appliedAmount} recorded.`);
       if (printWindow && !printWindow.closed) {
         const freshCustomer = fresh?.find((c) => c.phone === phone);
@@ -371,8 +341,6 @@ export default function CustomerDuesPage() {
             note,
             paymentMethod: payment?.method || 'cash',
             bankId: payment?.bankId,
-            grainId: payment?.grainId,
-            grainKg: payment?.grainKg,
           });
           setCustomers((previous) => previous.map((c) => (c.phone === phone ? patched : c)));
           toast.success(`₨${amount} saved offline - will sync automatically once online.`);
@@ -401,11 +369,11 @@ export default function CustomerDuesPage() {
       return;
     }
     if (!hasRealPhone(customer.phone)) {
-      toast.error('This customer has no phone number saved - add one (Edit) before sending a reminder.');
+      toast.error('This patient has no phone number saved - add one (Edit) before sending a reminder.');
       return;
     }
     if (!customer.totalDue || customer.totalDue <= 0) {
-      toast.info('Customer has no dues.');
+      toast.info('Patient has no dues.');
       return;
     }
 
@@ -469,7 +437,7 @@ export default function CustomerDuesPage() {
             Unified Khata <DollarSign className="text-indigo-600" size={32} />
           </h1>
           <p className="text-slate-500 font-bold">
-            Customer dues, plus any purchases linked to a contact - netted into one balance per person.
+            Patient dues, plus any purchases linked to a contact - netted into one balance per person.
           </p>
         </div>
         <div className="flex items-center gap-3">
@@ -485,7 +453,7 @@ export default function CustomerDuesPage() {
             onClick={() => setShowAddCustomer(true)}
             className="flex items-center gap-2 px-6 py-3 border-[0.5px] border-white/20 bg-black text-white rounded-2xl font-black hover:bg-slate-800 transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-3px_7px_rgba(0,0,0,0.5)]"
           >
-            <Plus size={18} /> Add Customer
+            <Plus size={18} /> Add Patient
           </button>
         </div>
       </div>
@@ -496,7 +464,7 @@ export default function CustomerDuesPage() {
           type="text"
           value={searchQuery}
           onChange={e => setSearchQuery(e.target.value)}
-          placeholder="Search customers by name or phone..."
+          placeholder="Search patients by name or phone..."
           className="w-full rounded-2xl border border-slate-200 bg-white py-3 pl-11 pr-10 text-sm font-bold text-slate-800 outline-none focus:ring-2 focus:ring-indigo-500"
         />
         {searchQuery ? (
@@ -528,7 +496,7 @@ export default function CustomerDuesPage() {
       {showAddCustomer && (
         <div className="bg-white p-6 rounded-[28px] border border-slate-200 shadow-sm space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-black">New Customer</h2>
+            <h2 className="text-lg font-black">New Patient</h2>
             <button onClick={() => setShowAddCustomer(false)} className="text-slate-400 hover:text-red-500"><X size={20} /></button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -561,16 +529,16 @@ export default function CustomerDuesPage() {
               onChange={e => setNewCustomer({...newCustomer, isVendor: e.target.checked})}
               className="h-4 w-4 rounded border-slate-300 text-indigo-600 focus:ring-indigo-500"
             />
-            Is this a vendor? (someone the shop also buys stock from)
+            Is this a vendor? (someone the clinic also buys stock from)
           </label>
           <button onClick={handleAddCustomer} disabled={isAddingCustomer} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed">
-            {isAddingCustomer ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {isAddingCustomer ? 'Saving...' : 'Save Customer'}
+            {isAddingCustomer ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {isAddingCustomer ? 'Saving...' : 'Save Patient'}
           </button>
         </div>
       )}
 
       {loading ? (
-        <div className="text-center p-10 text-slate-500 font-bold">Loading customers...</div>
+        <div className="text-center p-10 text-slate-500 font-bold">Loading patients...</div>
       ) : (
         <div className="space-y-8">
           <div>
@@ -583,7 +551,6 @@ export default function CustomerDuesPage() {
                   key={c.id}
                   customer={c}
                   banks={banks}
-                  grains={grains}
                   onAddManual={handleAddManualDue}
                   onSettlePayment={handleSettlePayment}
                   onRemind={() => handleSendReminder(c)}
@@ -594,7 +561,7 @@ export default function CustomerDuesPage() {
               ))}
               {customersWithDues.length === 0 && (
                 <p className="text-slate-400 font-bold col-span-full">
-                  {query ? 'No matching customers with pending dues.' : 'No customers have pending dues. Great!'}
+                  {query ? 'No matching patients with pending dues.' : 'No patients have pending dues. Great!'}
                 </p>
               )}
             </div>
@@ -613,7 +580,7 @@ export default function CustomerDuesPage() {
 
           <div>
             <h2 className="text-xl font-black text-slate-800 mb-4 flex items-center gap-2">
-              <User size={20} className="text-green-500" /> All Other Customers
+              <User size={20} className="text-green-500" /> All Other Patients
             </h2>
             <div className="grid grid-cols-[repeat(auto-fill,minmax(260px,1fr))] gap-6">
               {visibleOther.map(c => (
@@ -621,7 +588,6 @@ export default function CustomerDuesPage() {
                   key={c.id}
                   customer={c}
                   banks={banks}
-                  grains={grains}
                   onAddManual={handleAddManualDue}
                   onSettlePayment={handleSettlePayment}
                   onRemind={() => handleSendReminder(c)}
@@ -675,7 +641,7 @@ function todayDateInputValue() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, onRemind, onOrderCancelled, onCustomerChanged, whatsappConnected }: { customer: LedgerCustomer, banks: Bank[], grains: Grain[], onAddManual: (phone: string, amount: number, note: string, payment?: DuesPaymentOption, printWindow?: Window | null) => Promise<boolean>, onSettlePayment: (phone: string, amount: number, note: string, payment?: DuesPaymentOption, printWindow?: Window | null) => Promise<boolean>, onRemind: () => void, onOrderCancelled: () => void, onCustomerChanged: () => void, whatsappConnected: boolean }) {
+function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind, onOrderCancelled, onCustomerChanged, whatsappConnected }: { customer: LedgerCustomer, banks: Bank[], onAddManual: (phone: string, amount: number, note: string, payment?: DuesPaymentOption, printWindow?: Window | null) => Promise<boolean>, onSettlePayment: (phone: string, amount: number, note: string, payment?: DuesPaymentOption, printWindow?: Window | null) => Promise<boolean>, onRemind: () => void, onOrderCancelled: () => void, onCustomerChanged: () => void, whatsappConnected: boolean }) {
   const { confirm, toast } = useToast();
   // Edit Customer - a small inline form toggled from the header's Pencil
   // icon, reusing the exact same name/phone/address/isVendor shape the
@@ -705,14 +671,14 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
         isVendor: editCustomer.isVendor,
       });
       if (!updated) {
-        toast.error('Could not update customer.');
+        toast.error('Could not update patient.');
         return;
       }
       toast.success(`"${updated.name}" updated.`);
       setShowEditCustomer(false);
       onCustomerChanged();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not update customer.');
+      toast.error(error instanceof Error ? error.message : 'Could not update patient.');
     } finally {
       setIsSavingEdit(false);
     }
@@ -720,8 +686,8 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
 
   async function handleDeleteCustomer() {
     const confirmed = await confirm(
-      `Delete ${customer.name}? This removes them from Customer Dues entirely - their past orders/purchases keep their own record, but this contact and its dues history will be gone for good.`,
-      { title: 'Delete customer', confirmText: 'Delete', tone: 'danger' }
+      `Delete ${customer.name}? This removes them from Patient Dues entirely - their past appointments/purchases keep their own record, but this contact and its dues history will be gone for good.`,
+      { title: 'Delete patient', confirmText: 'Delete', tone: 'danger' }
     );
     if (!confirmed) return;
     setIsDeletingCustomer(true);
@@ -730,7 +696,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
       toast.success(`"${customer.name}" deleted.`);
       onCustomerChanged();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not delete customer.');
+      toast.error(error instanceof Error ? error.message : 'Could not delete patient.');
     } finally {
       setIsDeletingCustomer(false);
     }
@@ -750,26 +716,15 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
   // move this card between the Pending Dues/All Other Customers
   // sections, unmounting/remounting it and orphaning anything a
   // component-local ref/effect here tried to hold onto).
-  // Cash vs Bank vs Grain Stock - "+ Add Dues" via Bank/Grain Stock means
-  // the shop handed the customer that credit out of the picked bank/grain
-  // (its balance goes down); "- Pay Dues"/"Clear" via Bank/Grain Stock
-  // means the customer's payment landed IN the picked bank/grain (its
-  // balance goes up) - see
-  // customerController.applyUpdateCustomerDues/applySettleCustomerDues.
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank' | 'grain' | 'labour' | 'munshi'>('cash');
+  // Cash vs Bank - "+ Add Dues" via Bank means the clinic handed the
+  // patient that credit out of the picked bank (its balance goes down);
+  // "- Pay Dues"/"Clear" via Bank means the payment landed IN the picked
+  // bank - see customerController.applyUpdateCustomerDues/applySettleCustomerDues.
+  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank'>('cash');
   const [bankId, setBankId] = useState<string>('');
-  const [grainId, setGrainId] = useState<string>('');
-  const [grainKg, setGrainKg] = useState<string>('');
-  const grainKgValue = Number(grainKg) || 0;
-  // Labour/Munshi need no extra id/picker - each shop only ever has ONE of
-  // each (a single running khata, not a list of named accounts like
-  // Bank/Grain Stock - see LabourPage.tsx/MunshiPage.tsx's own comment).
   const paymentOption: DuesPaymentOption =
-    paymentMethod === 'bank' ? { method: 'bank', bankId }
-    : paymentMethod === 'grain' ? { method: 'grain', grainId, grainKg: grainKgValue }
-    : { method: paymentMethod };
-  const paymentIncomplete =
-    (paymentMethod === 'bank' && !bankId) || (paymentMethod === 'grain' && (!grainId || grainKgValue <= 0));
+    paymentMethod === 'bank' ? { method: 'bank', bankId } : { method: 'cash' };
+  const paymentIncomplete = paymentMethod === 'bank' && !bankId;
   // Dues Statement PDF (Download/Send): a full, printable record of
   // everything that makes up this customer's balance - same historyEntries
   // trail already shown in the on-screen History dropdown below, just as a
@@ -839,12 +794,6 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
         ? 'Payment received'
         : entry.paymentMethod === 'bank' && entry.bankName
         ? `${entry.note ? `${entry.note} - ` : ''}via ${entry.bankName}`
-        : entry.paymentMethod === 'grain' && entry.grainName
-        ? `${entry.note ? `${entry.note} - ` : ''}via ${entry.grainName} (${entry.grainKg || 0}kg)`
-        : entry.paymentMethod === 'labour'
-        ? `${entry.note ? `${entry.note} - ` : ''}via Labour`
-        : entry.paymentMethod === 'munshi'
-        ? `${entry.note ? `${entry.note} - ` : ''}via Munshi`
         : (entry.note || 'No note'),
       tone: entry.type === 'add' ? 'text-red-600' : 'text-green-600',
       by: entry.createdBy,
@@ -871,7 +820,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
     ...customer.orders.map((order) => {
         const isCancelled = order.status === 'cancelled';
         const paidStatus = isCancelled
-          ? `Cancelled order for ${customer.name}`
+          ? `Cancelled appointment for ${customer.name}`
           : order.remainingAmount > 0 ? `Rs ${order.remainingAmount} still due (paid Rs ${order.paidAmount})` : 'Fully paid';
         // Electricity Bill / Cash special-product details - only ever set
         // on an order whose cart had the matching special item in it (see
@@ -886,7 +835,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
         return {
           key: `order-${order.id}`,
           date: order.createdAt,
-          label: `${isCancelled ? 'Cancelled Order' : 'Order'} #${order.dailyOrderNumber ?? order.id.slice(-4)} - Rs ${order.total}`,
+          label: `${isCancelled ? 'Cancelled Appointment' : 'Appointment'} #${order.dailyOrderNumber ?? order.id.slice(-4)} - Rs ${order.total}`,
           detail: specialDetails ? `${paidStatus} · ${specialDetails}` : paidStatus,
           tone: isCancelled ? 'text-slate-400 line-through' : order.remainingAmount > 0 ? 'text-amber-600' : 'text-slate-400',
           by: '',
@@ -1005,7 +954,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
       const fullOrder = await fetchOrder(orderId);
       setViewOrder(fullOrder);
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not load this order.');
+      toast.error(error instanceof Error ? error.message : 'Could not load this appointment.');
     } finally {
       setBusy(`view-order-${orderId}`, false);
     }
@@ -1058,7 +1007,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
       writeOrderReceiptToWindow(printWindow, order, previousDues);
     } catch (error) {
       if (!printWindow.closed) printWindow.close();
-      toast.error(error instanceof Error ? error.message : 'Could not load this order to print.');
+      toast.error(error instanceof Error ? error.message : 'Could not load this appointment to print.');
     }
   }
 
@@ -1072,10 +1021,10 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
     setBusy(key, true);
     try {
       await cancelOrder(orderId, {});
-      toast.success('Order cancelled.');
+      toast.success('Appointment cancelled.');
       onOrderCancelled();
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Could not cancel this order.');
+      toast.error(error instanceof Error ? error.message : 'Could not cancel this appointment.');
     } finally {
       setBusy(key, false);
     }
@@ -1210,11 +1159,11 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
     const balanceByKey = computeRunningBalances();
     return (
       <ReportPdfDocument
-        title="Customer Dues Statement"
+        title="Patient Dues Statement"
         subtitle={`${customer.name}${hasRealPhone(customer.phone) ? ` · ${customer.phone}` : ''} · ${historyRangeLabel}`}
         stats={[
           { label: 'Current Dues', value: `Rs ${totalDue}` },
-          { label: 'From Unpaid Orders', value: `Rs ${fromOrders}` },
+          { label: 'From Unpaid Appointments', value: `Rs ${fromOrders}` },
           { label: 'Manual Adjustments', value: `Rs ${fromLumpSum}` },
         ]}
         tables={[
@@ -1257,7 +1206,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
                 formatBalanceCell(balance),
               ];
             }),
-            emptyMessage: `No dues activity recorded for this customer in ${historyRangeLabel}.`,
+            emptyMessage: `No dues activity recorded for this patient in ${historyRangeLabel}.`,
           },
         ]}
       />
@@ -1276,7 +1225,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
       return;
     }
     if (!hasRealPhone(customer.phone)) {
-      toast.error('This customer has no phone number saved - add one (Edit) before sending on WhatsApp.');
+      toast.error('This patient has no phone number saved - add one (Edit) before sending on WhatsApp.');
       return;
     }
     try {
@@ -1306,7 +1255,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
             <button
               type="button"
               onClick={() => { setEditCustomer({ name: customer.name, phone: hasRealPhone(customer.phone) ? customer.phone : '', address: customer.address, isVendor: Boolean(customer.isVendor) }); setShowEditCustomer((previous) => !previous); }}
-              title="Edit customer"
+              title="Edit patient"
               className="p-1.5 rounded-lg text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 transition-colors"
             >
               <Pencil size={14} />
@@ -1315,7 +1264,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
               type="button"
               onClick={() => void handleDeleteCustomer()}
               disabled={isDeletingCustomer}
-              title="Delete customer"
+              title="Delete patient"
               className="p-1.5 rounded-lg text-slate-400 hover:text-red-600 hover:bg-red-50 disabled:opacity-50 transition-colors"
             >
               <Trash2 size={14} />
@@ -1427,7 +1376,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
             <button
               type="button"
               onClick={() => void handleDownloadDuesPdf()}
-              title="Download this customer's dues statement for the selected range as a PDF"
+              title="Download this patient's dues statement for the selected range as a PDF"
               className="flex items-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-700 px-2.5 py-1.5 rounded-xl font-bold text-[11px] transition-colors shadow-sm"
             >
               <Download size={13} /> PDF
@@ -1436,7 +1385,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
               type="button"
               onClick={() => void handleSendDuesPdf()}
               disabled={isSendingPdf}
-              title="Send this customer's dues statement for the selected range as a PDF on WhatsApp"
+              title="Send this patient's dues statement for the selected range as a PDF on WhatsApp"
               className="flex items-center gap-1.5 bg-indigo-100 hover:bg-indigo-200 text-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed px-2.5 py-1.5 rounded-xl font-bold text-[11px] transition-colors shadow-sm"
             >
               <FileText size={13} /> {isSendingPdf ? 'Sending...' : 'Send PDF'}
@@ -1448,7 +1397,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
       <div className="space-y-2 pt-2">
         {isPending ? (
           <p className="text-[11px] font-bold text-slate-400 leading-snug">
-            "+ Add Dues" charges something new. "- Pay Dues" / "Clear" record an actual payment - it settles the manual balance first, then any unpaid orders, and marks an order paid off if it covers one fully.
+            "+ Add Dues" charges something new. "- Pay Dues" / "Clear" record an actual payment - it settles the manual balance first, then any unpaid appointments, and marks an appointment paid off if it covers one fully.
           </p>
         ) : null}
         <input
@@ -1466,56 +1415,23 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
           className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-semibold outline-none focus:border-indigo-500"
         />
 
-        {/* Cash vs Bank vs Grain Stock vs Labour vs Munshi - only shows the
-            relevant picker once "Bank"/"Grain Stock" is chosen, and only if
-            the shop has added at least one bank/grain. Defaults back to
-            Cash whenever none is available, so this never blocks Add/Pay
-            Dues for a shop that hasn't set one up yet. Labour/Munshi need
-            no such picker - each shop only has ONE of each (see
-            LabourPage.tsx/MunshiPage.tsx) - and unlike Bank/Grain Stock,
-            picking them still moves Cash in Hand too (see
-            customerController.js's own comment on why).  */}
+        {/* Cash vs Bank - the bank picker only shows once "Bank" is chosen. */}
         <div className="flex flex-wrap gap-2">
           <button
             type="button"
-            onClick={() => { setPaymentMethod('cash'); setBankId(''); setGrainId(''); setGrainKg(''); }}
+            onClick={() => { setPaymentMethod('cash'); setBankId(''); }}
             className={`flex-1 min-w-[64px] py-2 rounded-xl font-bold text-xs transition-colors ${paymentMethod === 'cash' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
           >
             Cash
           </button>
           <button
             type="button"
-            onClick={() => { setPaymentMethod('bank'); setGrainId(''); setGrainKg(''); }}
+            onClick={() => setPaymentMethod('bank')}
             disabled={banks.length === 0}
             title={banks.length === 0 ? 'Add a bank on the Bank page first' : 'This payment goes through a bank'}
             className={`flex-1 min-w-[64px] py-2 rounded-xl font-bold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${paymentMethod === 'bank' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
           >
             Bank
-          </button>
-          <button
-            type="button"
-            onClick={() => { setPaymentMethod('grain'); setBankId(''); }}
-            disabled={grains.length === 0}
-            title={grains.length === 0 ? 'Add a grain on the Grain Stock page first' : 'This payment goes through grain stock (kg + amount)'}
-            className={`flex-1 min-w-[64px] py-2 rounded-xl font-bold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed ${paymentMethod === 'grain' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-          >
-            Grain Stock
-          </button>
-          <button
-            type="button"
-            onClick={() => { setPaymentMethod('labour'); setBankId(''); setGrainId(''); setGrainKg(''); }}
-            title="This payment also moves the Labour Khata, on top of Cash in Hand"
-            className={`flex-1 min-w-[64px] py-2 rounded-xl font-bold text-xs transition-colors ${paymentMethod === 'labour' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-          >
-            Labour
-          </button>
-          <button
-            type="button"
-            onClick={() => { setPaymentMethod('munshi'); setBankId(''); setGrainId(''); setGrainKg(''); }}
-            title="This payment also moves the Munshi Khata, on top of Cash in Hand"
-            className={`flex-1 min-w-[64px] py-2 rounded-xl font-bold text-xs transition-colors ${paymentMethod === 'munshi' ? 'bg-slate-800 text-white' : 'bg-slate-100 text-slate-500 hover:bg-slate-200'}`}
-          >
-            Munshi
           </button>
         </div>
         {paymentMethod === 'bank' ? (
@@ -1529,27 +1445,6 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
               <option key={b.id} value={b.id}>{b.name} (₨{b.balance.toLocaleString()})</option>
             ))}
           </select>
-        ) : null}
-        {paymentMethod === 'grain' ? (
-          <div className="space-y-2">
-            <select
-              value={grainId}
-              onChange={e => setGrainId(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-amber-500"
-            >
-              <option value="">Select grain...</option>
-              {grains.map(g => (
-                <option key={g.id} value={g.id}>{g.name} ({g.totalKg.toLocaleString()} kg)</option>
-              ))}
-            </select>
-            <input
-              type="number"
-              placeholder="Kg of grain..."
-              value={grainKg}
-              onChange={e => setGrainKg(e.target.value)}
-              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-amber-500"
-            />
-          </div>
         ) : null}
 
         <div className="flex gap-2">
@@ -1570,7 +1465,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
               const ok = await onAddManual(customer.phone, amountValue, note.trim(), paymentOption, printWindow);
               setSaving(false);
               if (ok) {
-                setAmount(''); setNote(''); setGrainKg('');
+                setAmount(''); setNote('');
               } else if (printWindow && !printWindow.closed) {
                 printWindow.close();
               }
@@ -1592,7 +1487,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
               const ok = await onSettlePayment(customer.phone, amountValue, note.trim(), paymentOption, printWindow);
               setSaving(false);
               if (ok) {
-                setAmount(''); setNote(''); setGrainKg('');
+                setAmount(''); setNote('');
               } else if (printWindow && !printWindow.closed) {
                 printWindow.close();
               }
@@ -1605,7 +1500,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
           </button>
           <button
             onClick={async () => {
-              const confirmed = await confirm(`Record a full payment of ₨${totalDue} for this customer?`, { title: 'Clear dues', confirmText: 'Clear', tone: 'danger' });
+              const confirmed = await confirm(`Record a full payment of ₨${totalDue} for this patient?`, { title: 'Clear dues', confirmText: 'Clear', tone: 'danger' });
               if (!confirmed) return;
               const printWindow = window.open('', '_blank', 'width=380,height=500');
               if (printWindow) {
@@ -1617,14 +1512,14 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
               const ok = await onSettlePayment(customer.phone, totalDue, note.trim(), paymentOption, printWindow);
               setSaving(false);
               if (ok) {
-                setAmount(''); setNote(''); setGrainKg('');
+                setAmount(''); setNote('');
               } else if (printWindow && !printWindow.closed) {
                 printWindow.close();
               }
             }}
             disabled={saving || totalDue <= 0 || paymentIncomplete}
             className="px-3 flex items-center justify-center gap-1.5 bg-slate-100 hover:bg-slate-200 text-slate-600 py-2 rounded-xl font-bold text-xs transition-colors disabled:opacity-50 disabled:cursor-not-allowed"
-            title="Record a full payment, clearing everything this customer owes"
+            title="Record a full payment, clearing everything this patient owes"
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : 'Clear'}
           </button>
@@ -1693,7 +1588,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
                           onClick={() => void handleViewOrder(entry.viewOrderId as string)}
                           disabled={busyKeys.has(`view-order-${entry.viewOrderId}`)}
                           className="flex items-center gap-1 text-[10px] font-black text-slate-500 hover:text-slate-700 disabled:opacity-50"
-                          title="View this order"
+                          title="View this appointment"
                         >
                           <Eye size={11} /> {busyKeys.has(`view-order-${entry.viewOrderId}`) ? 'Loading...' : 'View'}
                         </button>
@@ -1703,7 +1598,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
                           type="button"
                           onClick={() => void handlePrintOrder(entry.viewOrderId as string)}
                           className="flex items-center gap-1 text-[10px] font-black text-slate-500 hover:text-slate-700"
-                          title="Print this order's receipt"
+                          title="Print this appointment's receipt"
                         >
                           <Printer size={11} /> Print
                         </button>
@@ -1714,7 +1609,7 @@ function CustomerCard({ customer, banks, grains, onAddManual, onSettlePayment, o
                           onClick={() => void handleDeleteOrderClick(entry.orderId as string)}
                           disabled={busyKeys.has(`order-${entry.orderId}`)}
                           className="flex items-center gap-1 text-[10px] font-black text-rose-500 hover:text-rose-700 disabled:opacity-50"
-                          title="Cancel this order and restore its stock"
+                          title="Cancel this appointment and restore its stock"
                         >
                           <Trash2 size={11} />
                           {busyKeys.has(`order-${entry.orderId}`) ? 'Loading...' : 'Delete'}

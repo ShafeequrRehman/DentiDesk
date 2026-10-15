@@ -53,7 +53,7 @@ function invalidate(shopId) {
 module.exports = async function requireLicenseValid(req, res, next) {
   try {
     if (!req.user || !req.user.shopId) {
-      return res.status(403).json({ message: "No shop associated with this account" });
+      return res.status(403).json({ message: "No clinic associated with this account" });
     }
 
     const shopId = String(req.user.shopId);
@@ -77,14 +77,14 @@ module.exports = async function requireLicenseValid(req, res, next) {
     ]);
 
     if (!shop) {
-      const body = { message: "Shop not found", reason: "shop_not_found" };
+      const body = { message: "Clinic not found", reason: "shop_not_found" };
       cacheSet(shopId, { ok: false, status: 404, body });
       return res.status(404).json(body);
     }
 
     if (shop.status === "suspended") {
       const body = {
-        message: "This shop has been suspended by the software provider. Please contact support.",
+        message: "This clinic has been suspended by the software provider. Please contact support.",
         reason: "shop_suspended",
       };
       cacheSet(shopId, { ok: false, status: 402, body });
@@ -93,7 +93,7 @@ module.exports = async function requireLicenseValid(req, res, next) {
 
     if (!license) {
       const body = {
-        message: "No license found for this shop. Please contact the software provider.",
+        message: "No license found for this clinic. Please contact the software provider.",
         reason: "license_missing",
       };
       cacheSet(shopId, { ok: false, status: 402, body });

@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { AlertCircle, Banknote, Barcode, CreditCard, Grid, List, Loader2, Minus, Plus, Search, ShoppingBag, Trash2, UserPlus, Wallet } from 'lucide-react';
-import { ApiError, checkPendingOrder, claimKitchenPrint, createOrder, fetchCustomerSearch, fetchIngredients, fetchOrders, fetchProducts, fetchWaiters, isAuthenticated, updateCustomer, sendWhatsappMessage, openShopSession } from '@/lib/pos-api';
+import { AlertCircle, CalendarDays, Clock, Banknote, Barcode, CreditCard, Grid, List, Loader2, Minus, Plus, Search, ShoppingBag, Trash2, UserPlus, Wallet } from 'lucide-react';
+import { ApiError, checkPendingOrder, createOrder, fetchCustomerSearch, fetchIngredients, fetchOrders, fetchProducts, fetchWaiters, isAuthenticated, updateCustomer, sendWhatsappMessage, openShopSession } from '@/lib/pos-api';
 import { CartItem, Customer, OrderFormData, OrderPayload, Product, Waiter } from '@/lib/pos-types';
 import { resolveProductImage } from '@/lib/food-images';
 import { getStoreSettings } from '@/lib/pos-settings';
@@ -12,20 +12,13 @@ import { useNotifications } from '@/lib/notifications';
 import { useNetworkStatus } from '@/lib/network-status';
 import { isDesktopApp } from '@/lib/api';
 import { createLocalOrder, getReferenceData, pushReferenceData, isLocalHubReachable, getLocalHubStartDiagnostics, getSyncStatus, syncOrderCounter, reserveLocalOrderNumber, reserveLifetimeOrderNumber, syncLifetimeCounter, getOrdersCache, pushOrdersCache, getPendingLocalOrders } from '@/lib/local-hub-api';
-import { reportPrintOutcome, listenForPrintSentMessages } from '@/lib/print-notify';
-import { buildCategoryLookup, dispatchKitchenPrints, isCategoryPrintRoutingEnabled } from '@/lib/kitchen-print-routing';
+import { listenForPrintSentMessages } from '@/lib/print-notify';
 import { Store } from 'lucide-react';
 import { isTypingTarget, useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { useLanguage } from '@/i18n';
 import CompleteOrderModal from '@/components/CompleteOrderModal';
+import { buildTimeSlots, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, todayISO } from '@/lib/appointments';
 
-type ElectronWindow = Window & typeof globalThis & {
-  require?: (moduleName: 'electron') => {
-    ipcRenderer: {
-      invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
-    };
-  };
-};
 
 // A "product group" is every Product record that shares the same name +
 // category - which is exactly how ProductManagementSection.tsx's "Add
@@ -73,6 +66,14 @@ export default function POSPage() {
   const [activeCategory, setActiveCategory] = useState('All');
   const [productSearchQuery, setProductSearchQuery] = useState('');
   const [cart, setCart] = useState<CartItem[]>([]);
+  // Clinic appointment slot - see lib/appointments.ts. The Dr is whichever
+  // cart item is a Dr (by category or "Dr." name); booked slots for that
+  // Dr on the picked date are greyed out so nobody can double-book them.
+  const [appointmentDate, setAppointmentDate] = useState(() => todayISO());
+  const [appointmentTime, setAppointmentTime] = useState('');
+  const [bookedSlots, setBookedSlots] = useState<Map<string, string>>(new Map());
+  const [slotsLoading, setSlotsLoading] = useState(false);
+  const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
   const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'Cash' | 'Card' | 'E-Wallet'>('Cash');
   const [statusMessage, setStatusMessage] = useState<{ tone: 'success' | 'error' | 'info'; text: string } | null>(null);
@@ -87,7 +88,7 @@ export default function POSPage() {
   // checked/set synchronously, closing that gap.
   const isSavingOrderRef = useRef(false);
   const [orderFormData, setOrderFormData] = useState<OrderFormData>({ orderType: 'TakeAway', phone: '', customer: '', address: '', previousDues: 0, note: '', waiter: '' });
-  const [printReadyUrl, setPrintReadyUrl] = useState<string | null>(null);
+  const [printReadyUrl] = useState<string | null>(null);
   // Shows the same Complete Payment popup RecordPage's own Complete Order
   // action uses, right after Save - see the user request this was built
   // for: skip the extra trip through Sales just to collect payment on an
@@ -318,7 +319,7 @@ export default function POSPage() {
         });
         setIngredientStockByName(next);
       } catch (error) {
-        console.error('Failed to load ingredient stock for POS cards:', error);
+        console.error('Failed to load medicine stock for POS cards:', error);
         // Leave the last-known map in place - the cards just fall back to
         // each product's own stock figure until the next successful load.
       }
@@ -367,6 +368,41 @@ export default function POSPage() {
       setStatusMessage({ tone: 'info', text: t('pos.status.loginTokenMissing') });
     }
   }, []);
+
+  const doctorName = useMemo(() => {
+    for (const item of cart) {
+      const product = products.find((p) => p.id === item.id);
+      if (isDoctorProduct(product || { name: item.name })) return item.name;
+    }
+    return '';
+  }, [cart, products]);
+
+  const timeSlots = useMemo(() => buildTimeSlots(), []);
+
+  useEffect(() => {
+    if (!doctorName || !appointmentDate) {
+      setBookedSlots(new Map());
+      return;
+    }
+    let cancelled = false;
+    setSlotsLoading(true);
+    void loadBookedSlots(doctorName, appointmentDate)
+      .then((booked) => {
+        if (cancelled) return;
+        setBookedSlots(booked);
+        // The picked slot was just taken by someone else - clear it.
+        setAppointmentTime((current) => (current && booked.has(current) ? '' : current));
+      })
+      .catch(() => {
+        if (!cancelled) setBookedSlots(new Map());
+      })
+      .finally(() => {
+        if (!cancelled) setSlotsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
+  }, [doctorName, appointmentDate, slotsRefreshKey]);
 
   const productGroups = useMemo<ProductGroup[]>(() => {
     const map = new Map<string, ProductGroup>();
@@ -675,6 +711,7 @@ export default function POSPage() {
     setIsManualEntry(false);
     setShowSuggestions(false);
     setSelectedPaymentMethod('Cash');
+    setAppointmentTime('');
   }
 
   function handleIncreaseQty(index: number) {
@@ -776,7 +813,7 @@ export default function POSPage() {
         setShowSuggestions(query.trim().length >= 3);
       }
     } catch (error) {
-      shopToast.error(error instanceof Error ? error.message : 'Failed to search customers.');
+      shopToast.error(error instanceof Error ? error.message : 'Failed to search patients.');
       setSuggestions([]);
       setShowNewCustomerPrompt(false);
       setShowSuggestions(false);
@@ -870,6 +907,14 @@ export default function POSPage() {
   function validateOrderForm() {
     if (cart.length === 0) return showValidationError(t('pos.addProductBeforeSaving'));
 
+    // A Dr appointment needs a date and a free time slot.
+    if (doctorName) {
+      if (!appointmentDate) return showValidationError(t('pos.appointmentDateRequired'));
+      if (!appointmentTime) return showValidationError(t('pos.appointmentTimeRequired'));
+      if (bookedSlots.has(appointmentTime)) return showValidationError(t('pos.appointmentSlotTaken'));
+      if (isSlotInPast(appointmentDate, appointmentTime)) return showValidationError(t('pos.appointmentSlotPast'));
+    }
+
     // Strict Delivery Field Validation: unlike TakeAway (name/phone/
     // address optional below), a Delivery order can't be handed to a rider
     // with no idea who to deliver to or where - Customer Name, Phone, and
@@ -939,7 +984,7 @@ export default function POSPage() {
       // otherwise ignored.
       if (!(isDesktopApp() && !isOnline)) {
         void updateExistingCustomerIfNeeded().catch((err) => {
-          console.error('Background customer profile update failed (order still proceeds):', err);
+          console.error('Background patient profile update failed (appointment still proceeds):', err);
         });
 
         // A customer is allowed to place a new order even while an older
@@ -970,7 +1015,7 @@ export default function POSPage() {
       // SalesPage.tsx's own label() functions), and an empty phone falls
       // back to the walk-in placeholder number (03000000000) that Customer
       // Dues/Ledger already knows to exclude from tracking.
-      const customerName = orderFormData.customer.trim() || 'Walk-in Customer';
+      const customerName = orderFormData.customer.trim() || 'Walk-in Patient';
       const customerPhone = orderFormData.phone || '03000000000';
       const now = new Date().toISOString();
       const clientSyncId = crypto.randomUUID();
@@ -1000,6 +1045,7 @@ export default function POSPage() {
         address: orderFormData.address,
         note: orderFormData.note,
         waiter: orderFormData.waiter,
+        ...(doctorName ? { doctorName, appointmentDate, appointmentTime } : {}),
         status: 'pending',
         paymentMethod: selectedPaymentMethod,
         createdAt: now,
@@ -1024,26 +1070,9 @@ export default function POSPage() {
         // cloud record as already-printed, so DashboardShell.tsx's
         // background KitchenPrintWatcher/ReceiptPrintWatcher don't print
         // this same order a second time the moment it syncs.
-        const printSettings = getStoreSettings();
-        const isElectronNow = typeof window !== 'undefined' && navigator.userAgent.includes('Electron');
-        // receipt is always false here now - every order type, TakeAway
-        // included, only ever prints its kitchen ticket at placement (see
-        // this function's own header comment below and the removed
-        // TakeAway-specific block further down this file). The customer
-        // receipt prints once, at Complete Order, same as DineIn/Delivery.
-        // Either printer counts here ONLY for Urban Crunch (the one shop
-        // with category-based counter routing enabled - see
-        // kitchen-print-routing.ts) - its orders might route entirely to
-        // the counter printer (Ice Cream/Drinks/Shwarma) with no kitchen-
-        // printer item at all, but the till still handles all of this
-        // order's kitchen-side printing itself at placement below, so the
-        // background watcher must stay hands-off either way. Every other
-        // shop still only ever prints to kitchenPrinter, so only that flag
-        // should count for them.
-        const printFlags = {
-          kitchen: isElectronNow && !!(printSettings.kitchenPrinter || (isCategoryPrintRoutingEnabled() && printSettings.counterPrinter)),
-          receipt: false,
-        };
+        // Nothing prints at placement any more (no ticket printing), so
+        // there is nothing to mark as already printed.
+        const printFlags = { kitchen: false, receipt: false };
         const localRecord = await createLocalOrder(orderPayload, { name: getAuthUser()?.name || getAuthUser()?.username }, printFlags);
         return {
           ...orderPayload,
@@ -1127,10 +1156,13 @@ export default function POSPage() {
           savedOrder = await Promise.race([
             createOrder(orderPayload) as Promise<SavedOrder>,
             new Promise<never>((_, reject) => {
-              setTimeout(() => reject(new Error('Cloud order create timed out')), 4000);
+              setTimeout(() => reject(new Error('Cloud appointment create timed out')), 4000);
             }),
           ]);
-        } catch {
+        } catch (err) {
+          // The slot was taken on another till a moment ago - don't queue
+          // a double booking offline, show the error instead.
+          if (err instanceof ApiError && err.reason === 'slot_taken') throw err;
           savedOrder = await queueLocally();
           isOfflineOrder = true;
         }
@@ -1184,6 +1216,7 @@ export default function POSPage() {
 
       setCart([]);
       resetOrderForm();
+      setSlotsRefreshKey((key) => key + 1);
       orderFinalized = true;
       // Bring up the Complete Payment popup right away for this order -
       // see completePaymentTarget's own comment above for why.
@@ -1192,7 +1225,7 @@ export default function POSPage() {
       // pretending everything went perfectly - the order itself is still
       // saved fine either way.
       const savedOrderLabel = t('pos.orderSavedLabel', { number: savedOrder.dailyOrderNumber || savedOrder.id });
-      const contextLine = t('pos.kitchenReceiptPrinting');
+      const contextLine = '';
 
       // No blocking pop-ups here by design - the notification bar/bell
       // (see lib/notifications.tsx) is now the sole confirmation surface
@@ -1210,85 +1243,11 @@ export default function POSPage() {
         : t('pos.orderSaved', { label: savedOrderLabel, context: contextLine });
       notify('order_saved', confirmationMessage, { orderId: savedOrder.id, navigateToPos: true });
 
-      const isElectron = typeof window !== 'undefined' && navigator.userAgent.includes('Electron');
-      if (isElectron) {
-        try {
-          const electronRequire = (window as ElectronWindow).require;
-          const { ipcRenderer } = electronRequire('electron');
-          const settings = getStoreSettings();
-          const printLogo = localStorage.getItem('preferred-print-logo');
-
-          // An offline order has no cloud record yet (nothing to claim,
-          // and nothing else could possibly be racing to print it - no
-          // other till/process can even see it until it syncs), so this
-          // till just prints straight away instead of claiming first.
-          const claimKitchen = isOfflineOrder ? Promise.resolve() : claimKitchenPrint(savedOrder.id);
-
-          if (settings.kitchenPrinter || settings.counterPrinter) {
-            // Claim before printing, same rule the background poll follows
-            // (see DashboardShell.tsx) - guarantees this order can never
-            // get printed twice even if this till's own immediate-print
-            // path and the poll loop somehow race on the same order.
-            claimKitchen
-              .then(() => {
-                // Ice Cream/Drinks and Shwarma items print on the counter
-                // printer (Ice Cream+Drinks combined on one slip, Shwarma
-                // on its own separate slip) - everything else still prints
-                // on the kitchen printer, same as before this split
-                // existed. See kitchen-print-routing.ts.
-                const categoryLookup = buildCategoryLookup(products);
-                void dispatchKitchenPrints(
-                  savedOrder.items,
-                  categoryLookup,
-                  settings,
-                  (groupItems, printerName, label) =>
-                    reportPrintOutcome(
-                      ipcRenderer.invoke('print-kitchen-receipt-data', { ...savedOrder, items: groupItems }, printerName, printLogo, settings),
-                      label,
-                      shopToast,
-                    ),
-                );
-              })
-              .catch((err) => {
-                // 409 just means something else already claimed it (the
-                // background poll almost certainly beat this to it by a
-                // few hundred ms) - not an error, nothing to do.
-                if (!(err instanceof ApiError) || err.status !== 409) {
-                  console.error('Kitchen print claim failed:', err);
-                }
-              });
-          } else {
-            console.warn("No kitchen printer configured in settings.");
-          }
-
-          // Every order type - TakeAway included - only ever prints its
-          // kitchen ticket right here at placement now. The customer/
-          // cashier receipt (and, previously, a small order-number token
-          // alongside it) used to print immediately for TakeAway on the
-          // reasoning that "they pay and collect right away" - in
-          // practice that meant an extra token slip AND a full receipt
-          // came out before the order was even paid for. It now prints
-          // exactly once, for every order type alike, at Complete Order on
-          // the Sales page (or via DashboardShell.tsx's ReceiptPrintWatcher
-          // for an order completed from a phone with no printer of its
-          // own) - see orderController.js's getUnprintedReceiptOrders.
-
-          // WhatsApp needs the cloud (the session lives on the server) and
-          // a real order id to link to - skipped for offline orders; the
-          // customer gets notified once this order syncs and creates its
-          // real cloud record instead.
-          if (!isOfflineOrder) {
-            void sendOrderPlacedMessage(savedOrder, settings);
-          }
-        } catch (err) {
-          console.error("Electron print error:", err);
-          if (!isOfflineOrder) {
-            setPrintReadyUrl(`/dashboard/sales/print/${savedOrder.id}?auto=true&type=kitchen`);
-            void sendOrderPlacedMessage(savedOrder, getStoreSettings());
-          }
-        }
-      } else if (!isOfflineOrder) {
-        setPrintReadyUrl(`/dashboard/sales/print/${savedOrder.id}?auto=true&type=kitchen`);
+      // No ticket is printed when an appointment is saved - the patient
+      // receipt prints on demand from the Sales page. WhatsApp needs the
+      // cloud and a real id, so it's skipped for offline appointments
+      // (they notify once they sync).
+      if (!isOfflineOrder) {
         void sendOrderPlacedMessage(savedOrder, getStoreSettings());
       }
     } catch (error) {
@@ -1609,6 +1568,74 @@ export default function POSPage() {
               <input name="note" value={orderFormData.note} onChange={handleFormChange} placeholder={t('pos.orderNotePlaceholder')} className="w-full rounded-xl border border-white/60 bg-white/50 px-3 py-2 text-sm shadow-inner outline-none" />
             </FormField>
 
+            <FormField label={t('pos.appointmentDateLabel')}>
+              <div className="relative">
+                <CalendarDays size={14} className="pointer-events-none absolute left-3 top-1/2 -translate-y-1/2 text-gray-400" />
+                <input
+                  type="date"
+                  value={appointmentDate}
+                  min={todayISO()}
+                  onChange={(event) => {
+                    setAppointmentDate(event.target.value);
+                    setAppointmentTime('');
+                  }}
+                  className="w-full rounded-xl border border-white/60 bg-white/50 py-2 pl-9 pr-3 text-sm shadow-inner outline-none"
+                />
+              </div>
+            </FormField>
+
+            <FormField label={doctorName ? t('pos.appointmentTimeLabelFor', { doctor: doctorName }) : t('pos.appointmentTimeLabel')}>
+              {!doctorName ? (
+                <p className="rounded-xl border border-dashed border-gray-300 bg-white/40 px-3 py-2 text-[11px] font-semibold text-gray-500">
+                  {t('pos.appointmentPickDoctorFirst')}
+                </p>
+              ) : (
+                <div>
+                  <div className="grid max-h-44 grid-cols-4 gap-1.5 overflow-y-auto pr-0.5">
+                    {timeSlots.map((slot) => {
+                      const bookedBy = bookedSlots.get(slot);
+                      const past = isSlotInPast(appointmentDate, slot);
+                      const disabled = !!bookedBy || past || slotsLoading;
+                      const selected = appointmentTime === slot;
+                      return (
+                        <button
+                          key={slot}
+                          type="button"
+                          disabled={disabled}
+                          onClick={() => setAppointmentTime(selected ? '' : slot)}
+                          title={bookedBy ? t('pos.appointmentSlotBookedBy', { name: bookedBy }) : past ? t('pos.appointmentSlotPast') : formatSlot(slot)}
+                          className={`rounded-lg border px-1 py-1.5 text-[10px] font-black transition ${
+                            selected
+                              ? 'border-emerald-500 bg-emerald-500 text-white shadow'
+                              : bookedBy
+                                ? 'cursor-not-allowed border-rose-200 bg-rose-50 text-rose-400 line-through'
+                                : past
+                                  ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-300'
+                                  : 'border-white/70 bg-white/60 text-gray-700 hover:border-emerald-300 hover:bg-emerald-50'
+                          }`}
+                        >
+                          {formatSlot(slot)}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div className="mt-1.5 flex items-center justify-between text-[10px] font-semibold text-gray-500">
+                    <span className="flex items-center gap-1">
+                      <Clock size={11} />
+                      {slotsLoading
+                        ? t('pos.appointmentSlotsLoading')
+                        : appointmentTime
+                          ? t('pos.appointmentSlotSelected', { time: formatSlot(appointmentTime) })
+                          : t('pos.appointmentSlotNone')}
+                    </span>
+                    <span className="flex items-center gap-2">
+                      <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-rose-300" />{t('pos.appointmentLegendBooked')}</span>
+                    </span>
+                  </div>
+                </div>
+              )}
+            </FormField>
+
             {selectedCustomerId ? (
               <div className="rounded-xl border border-sky-200/70 bg-sky-50/60 p-2.5 text-[11px] text-sky-700 shadow-inner">
                 <div className="flex items-start gap-1.5">
@@ -1870,16 +1897,16 @@ async function sendOrderPlacedMessage(order: SavedOrder, settings?: ReturnType<t
   const orderType = order.orderType === 'DineIn' ? 'Dine In' : order.orderType === 'TakeAway' ? 'Take Away' : 'Delivery';
   const lines = [
     `*${header}*`,
-    `Dear ${order.customer.name || 'Customer'}, your order has been placed.`,
-    `Order No: *${orderNumber(order)}*`,
-    `Order Type: ${orderType}`,
+    `Dear ${order.customer.name || 'Patient'}, your appointment has been placed.`,
+    `Appointment No: *${orderNumber(order)}*`,
+    `Appointment Type: ${orderType}`,
     `Total: *PKR ${Math.round(order.total)}*`,
     '',
-    'We will share your receipt when the order is completed.',
+    'We will share your receipt when the appointment is completed.',
     `Thank you for ordering from ${header}.`,
   ];
 
   await sendWhatsappMessage(order.customer.phone, lines.join('\n')).catch((error) => {
-    console.error('Failed to send order placed WhatsApp message:', error);
+    console.error('Failed to send appointment placed WhatsApp message:', error);
   });
 }

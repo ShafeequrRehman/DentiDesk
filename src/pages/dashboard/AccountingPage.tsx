@@ -359,7 +359,7 @@ export default function AccountingPage() {
             { label: 'Total Revenue', value: formatMoney(revenue) },
             { label: 'Op. Expenses', value: formatMoney(otherExpenses) },
             { label: 'Net Profit', value: formatMoney(netProfit) },
-            { label: 'Orders', value: String(orderCount) },
+            { label: 'Appointments', value: String(orderCount) },
           ]}
           tables={[
             {
@@ -398,7 +398,7 @@ export default function AccountingPage() {
         <div>
           <h1 className="text-3xl font-black tracking-tight">Financial Ledger</h1>
           <p className="text-slate-500 font-medium">
-            {rangeFrom === rangeTo ? rangeFrom : `${rangeFrom} → ${rangeTo}`} &middot; {orderCount} order{orderCount === 1 ? '' : 's'}
+            {rangeFrom === rangeTo ? rangeFrom : `${rangeFrom} → ${rangeTo}`} &middot; {orderCount} appointment{orderCount === 1 ? '' : 's'}
           </p>
         </div>
 
@@ -470,7 +470,7 @@ export default function AccountingPage() {
             </div>
             <h2 className="text-4xl font-black">{isLoading ? '...' : formatMoney(netProfit)}</h2>
             <p className={`text-sm font-bold mt-2 flex items-center gap-1 ${netProfit >= 0 ? 'text-emerald-500' : 'text-rose-500'}`}>
-                {netProfit >= 0 ? <ArrowUpCircle size={14}/> : <ArrowDownCircle size={14}/>} {orderCount} order{orderCount === 1 ? '' : 's'} this period
+                {netProfit >= 0 ? <ArrowUpCircle size={14}/> : <ArrowDownCircle size={14}/>} {orderCount} appointment{orderCount === 1 ? '' : 's'} this period
             </p>
         </div>
 
@@ -661,14 +661,14 @@ export default function AccountingPage() {
             <div className="bg-emerald-500 rounded-[40px] p-8 text-white relative overflow-hidden">
                 <div className="relative z-10">
                     <h4 className="text-lg font-black mb-2">Outstanding Dues</h4>
-                    <p className="text-emerald-100 text-sm font-medium mb-6">Still owed to you by customers, as of today.</p>
+                    <p className="text-emerald-100 text-sm font-medium mb-6">Still owed to you by patients, as of today.</p>
                     <div className="text-4xl font-black">{isLoading ? '...' : formatMoney(report?.totalDue ?? 0)}</div>
                     <button
                       type="button"
                       onClick={() => navigate('/dashboard/dues')}
                       className="mt-6 flex items-center gap-2 rounded-[16px] bg-white/15 px-4 py-2.5 text-xs font-black hover:bg-white/25 transition-all"
                     >
-                      View Customer Dues <ChevronRight size={14}/>
+                      View Patient Dues <ChevronRight size={14}/>
                     </button>
                 </div>
                 {/* Visual Flair */}

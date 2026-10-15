@@ -30,7 +30,7 @@ export default function PeopleManagementPage() {
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            {activeTab === 'customers' ? "Customer Relations" : "Team Management"}
+            {activeTab === 'customers' ? "Patient Relations" : "Team Management"}
             {activeTab === 'customers' ?
               <UserCircle2 className="text-teal-500" size={32} /> :
               <Users2 className="text-amber-500" size={32} />
@@ -47,7 +47,7 @@ export default function PeopleManagementPage() {
             onClick={() => setActiveTab('customers')}
             className={`px-6 py-2.5 rounded-2xl text-sm font-black transition-all ${activeTab === 'customers' ? "border-[0.5px] border-white/40 bg-gradient-to-b from-teal-400 to-teal-600 text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.4),inset_0_-3px_7px_rgba(19,78,74,0.45)]" : "text-slate-400 hover:text-slate-600"}`}
           >
-            Customers
+            Patients
           </button>
           <button
             onClick={() => setActiveTab('hr')}
@@ -81,9 +81,9 @@ function CustomerView() {
 
       <div className="glass rounded-[40px] overflow-hidden">
         <div className="p-8 flex flex-col md:flex-row gap-4 justify-between items-center border-b border-white/40">
-          <SearchBar placeholder="Search customers..." focusColor="focus:ring-teal-500" />
+          <SearchBar placeholder="Search patients..." focusColor="focus:ring-teal-500" />
           <button className="flex items-center gap-2 px-6 py-3 border-[0.5px] border-white/40 bg-gradient-to-b from-teal-400 to-teal-600 text-white rounded-2xl font-black text-sm shadow-[inset_0_1px_0_rgba(255,255,255,0.4),inset_0_-3px_7px_rgba(19,78,74,0.45)] hover:brightness-105 hover:scale-105 transition-all">
-            <UserPlus size={18} /> New Customer
+            <UserPlus size={18} /> New Patient
           </button>
         </div>
         {/* overflow-x-auto: 5 columns of px-8 padding badly overflow a
@@ -94,7 +94,7 @@ function CustomerView() {
           <table className="w-full min-w-[560px] text-left">
             <thead className="bg-white/30 text-[10px] font-black text-slate-400 uppercase tracking-widest">
               <tr>
-                <th className="px-8 py-4">Customer</th>
+                <th className="px-8 py-4">Patient</th>
                 <th className="px-8 py-4">Tier</th>
                 <th className="px-8 py-4">Spent</th>
                 <th className="px-8 py-4">Points</th>
@@ -223,16 +223,16 @@ function WaiterRosterReadOnly() {
         <h3 className="text-lg font-black text-slate-900">Waiter & Floor Team</h3>
       </div>
       <p className="mt-2 max-w-2xl text-sm text-slate-500">
-        Waiters and order takers are added from <span className="font-bold text-slate-700">Manage Staff</span>.
+        Waiters and appointment takers are added from <span className="font-bold text-slate-700">Manage Staff</span>.
         Add a staff member there with designation <span className="font-bold text-slate-700">"Waiter"</span> or{' '}
-        <span className="font-bold text-slate-700">"Order Taker"</span> and they'll automatically show up here and in the POS waiter dropdown.
+        <span className="font-bold text-slate-700">"Appointment Taker"</span> and they'll automatically show up here and in the POS waiter dropdown.
       </p>
 
       <div className="mt-6 space-y-2">
         {isLoading ? (
           <div className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-500">Loading...</div>
         ) : waiters.length === 0 ? (
-          <div className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-500">No waiters or order takers yet.</div>
+          <div className="rounded-2xl bg-slate-50 px-4 py-4 text-sm text-slate-500">No waiters or appointment takers yet.</div>
         ) : (
           waiters.map((waiter) => (
             <div key={waiter.id} className="flex items-center justify-between rounded-2xl border border-slate-100 bg-slate-50 px-4 py-3">

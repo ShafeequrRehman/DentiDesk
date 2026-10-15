@@ -2,7 +2,7 @@
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Plus, Package, Edit, Archive, X, Trash2, Search, ChevronDown, ChevronRight, Upload } from "lucide-react";
 import { createProduct, deleteProduct, fetchProducts, updateProduct } from "@/lib/pos-api";
-import { IngredientUnit, INGREDIENT_UNIT_OPTIONS, Product } from "@/lib/pos-types";
+import { IngredientUnit, Product } from "@/lib/pos-types";
 import { useToast } from "@/lib/toast";
 import { resolveProductImage } from "@/lib/food-images";
 import { useLanguage } from "@/i18n";
@@ -403,19 +403,8 @@ export function ProductManagementSection({
           ) : null}
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-5">
-          <div className="space-y-2">
-            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">
-              {t("productManagement.fields.company")}
-            </label>
-            <input
-              type="text"
-              value={company}
-              onChange={(e) => setCompany(e.target.value)}
-              placeholder={t("productManagement.fields.companyPlaceholder")}
-              className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-            />
-          </div>
+        {/* Company field removed - a clinic only needs the Dr & Service name. */}
+        <div className="grid grid-cols-1 gap-5">
           <div className="space-y-2">
             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">
               {t("productManagement.fields.productName")}
@@ -451,29 +440,9 @@ export function ProductManagementSection({
               />
             </div>
           </div>
-          <div className="space-y-2">
-            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t("productManagement.fields.quantity")}</label>
-            <input
-              type="number"
-              value={qty}
-              onChange={(e) => setQty(e.target.value)}
-              placeholder={t("productManagement.fields.quantityPlaceholder")}
-              className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-            />
-          </div>
-          <div className="space-y-2">
-            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t("productManagement.fields.unit")}</label>
-            <select
-              value={unit}
-              onChange={(e) => setUnit(e.target.value as IngredientUnit)}
-              className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
-            >
-              {INGREDIENT_UNIT_OPTIONS.map((opt) => (
-                <option key={opt.value} value={opt.value}>{opt.label}</option>
-              ))}
-            </select>
-            <p className="text-[10px] font-bold text-slate-400 ml-1">{t("productManagement.fields.unitHint")}</p>
-          </div>
+          {/* Quantity and Unit fields removed - Drs/Services are not counted
+              stock. New entries save as unlimited, in the default unit;
+              editing an older entry keeps whatever values it already had. */}
           <div className="space-y-2">
             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t("productManagement.fields.productCode")}</label>
             <input

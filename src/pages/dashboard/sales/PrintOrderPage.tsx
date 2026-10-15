@@ -67,22 +67,14 @@ export default function PrintOrderPage() {
   const params = useParams<{ id: string }>();
   const [searchParams] = useSearchParams();
   const autoPrint = searchParams.get('auto') === 'true';
-  const defaultType = searchParams.get('type') === 'kitchen' ? 'kitchen' : 'cashier';
 
   const [order, setOrder] = useState<SavedOrder | null>(null);
-  // When SalesPage.tsx falls back to this manual-print page for a kitchen
-  // ticket right after "Add Items" (no Electron/kitchen printer available),
-  // it stashes ONLY the newly-added items here under this order's id so
-  // this page doesn't reprint the whole merged order (which would send
-  // already-cooking items back to the kitchen again). Consumed once below.
-  const [kitchenOnlyItems, setKitchenOnlyItems] = useState<SavedOrder['items'] | null>(null);
   // Dues carried forward from the customer's OTHER unpaid orders - fetched
   // separately since it's not part of the order document itself, so a
   // manual/re-print here shows the same "Previous Dues" figure the cashier
   // saw when the bill was completed.
   const [previousDues, setPreviousDues] = useState(0);
-  const [receiptType, setReceiptType] = useState<'kitchen' | 'cashier'>(defaultType);
-  const [kitchenPrinter, setKitchenPrinter] = useState(() => typeof window === 'undefined' ? '' : (window.localStorage.getItem('preferred-kitchen-printer') ?? ''));
+  const receiptType = 'cashier' as const;
   const [cashierPrinter, setCashierPrinter] = useState(() => typeof window === 'undefined' ? '' : (window.localStorage.getItem('preferred-cashier-printer') ?? ''));
   const [logoSrc, setLogoSrc] = useState<string | null>(() => typeof window === 'undefined' ? null : window.localStorage.getItem(PRINT_LOGO_STORAGE_KEY));
 
@@ -141,20 +133,6 @@ export default function PrintOrderPage() {
   }, [params.id]);
 
   useEffect(() => {
-    if (!order || defaultType !== 'kitchen') return;
-    const key = `kitchen-add-items-${order.id}`;
-    const raw = window.sessionStorage.getItem(key);
-    if (!raw) return;
-    window.sessionStorage.removeItem(key);
-    try {
-      setKitchenOnlyItems(JSON.parse(raw));
-    } catch {
-      setKitchenOnlyItems(null);
-    }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order?.id, defaultType]);
-
-  useEffect(() => {
     const phone = order?.customer.phone;
     if (!phone || phone === '03000000000') return setPreviousDues(0);
     void fetchCustomerOutstanding(phone, order?.id).then((result) => {
@@ -199,7 +177,7 @@ export default function PrintOrderPage() {
         // message up to whichever page embedded it instead; if this page
         // is genuinely being viewed on its own (not inside that iframe),
         // just show the toast directly.
-        const label = receiptType === 'kitchen' ? 'Kitchen ticket' : 'Customer receipt';
+        const label = 'Patient receipt';
         if (typeof window !== 'undefined' && window.parent && window.parent !== window) {
           notifyParentPrintSent(label);
         } else {
@@ -211,10 +189,6 @@ export default function PrintOrderPage() {
     void handlePrintReady();
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [order, autoPrint, isSilent, receiptType]);
-
-  useEffect(() => {
-    window.localStorage.setItem('preferred-kitchen-printer', kitchenPrinter);
-  }, [kitchenPrinter]);
 
   useEffect(() => {
     window.localStorage.setItem('preferred-cashier-printer', cashierPrinter);
@@ -238,7 +212,7 @@ export default function PrintOrderPage() {
     return <div className="rounded-[32px] bg-white p-8 text-sm text-gray-500 shadow-sm">Loading receipt...</div>;
   }
 
-  const renderOrder = kitchenOnlyItems ? { ...order, items: kitchenOnlyItems } : order;
+  const renderOrder = order;
 
   // A discount typed into SalesPage.tsx's order-details card only gets
   // saved onto the real order document once Complete Order actually runs
@@ -353,7 +327,7 @@ export default function PrintOrderPage() {
           type="button"
           onClick={() => {
             window.print();
-            toast.success(`${receiptType === 'kitchen' ? 'Kitchen ticket' : 'Customer receipt'} sent to printer.`);
+            toast.success('Patient receipt sent to printer.');
           }}
           className="rounded-2xl bg-black px-4 py-3 text-sm font-black text-white"
         >
@@ -365,16 +339,6 @@ export default function PrintOrderPage() {
       <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)] no-print">
         <aside className="rounded-[32px] bg-white p-6 shadow-sm">
           <div className="space-y-4">
-            <div className="flex gap-2 rounded-full bg-[#F6F7FB] p-1.5">
-              <button type="button" onClick={() => setReceiptType('cashier')} className={`rounded-full px-4 py-2 text-sm font-black ${receiptType === 'cashier' ? 'bg-black text-white' : 'text-gray-500'}`}>Cashier</button>
-              <button type="button" onClick={() => setReceiptType('kitchen')} className={`rounded-full px-4 py-2 text-sm font-black ${receiptType === 'kitchen' ? 'bg-black text-white' : 'text-gray-500'}`}>Kitchen</button>
-            </div>
-
-            <div>
-              <label className="mb-1 block text-sm font-semibold text-gray-700">Kitchen Printer Label</label>
-              <input value={kitchenPrinter} onChange={(event) => setKitchenPrinter(event.target.value)} placeholder="Example: Kitchen Epson" className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none" />
-            </div>
-
             <div>
               <label className="mb-1 block text-sm font-semibold text-gray-700">Cashier Printer Label</label>
               <input value={cashierPrinter} onChange={(event) => setCashierPrinter(event.target.value)} placeholder="Example: Front Counter POS" className="w-full rounded-2xl border border-gray-200 px-4 py-3 outline-none" />

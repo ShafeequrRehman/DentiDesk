@@ -103,36 +103,6 @@ export interface Bank {
   createdAt: string;
 }
 
-// Grain Stock page's own khata - same idea as Bank above, but the shop
-// keeps grain (Rice, Gandam, ...) on hand instead of money, and also
-// tracks its running rupee value the exact same way a bank balance works.
-// history is newest-first (see backend/controllers/grainController.js's
-// serializeGrain). relatedCustomerName/Phone are only ever set on an entry
-// pushed by a Customer Dues "+ Add Dues"/"- Pay Dues" action made "via
-// Grain Stock" - see pos-api.ts's updateCustomerDues/settleCustomerDues
-// grainPayment parameter.
-export interface GrainTransaction {
-  type: 'deposit' | 'withdrawal';
-  kg: number;
-  amount: number;
-  note: string;
-  balanceAfterKg: number;
-  balanceAfter: number;
-  relatedCustomerPhone?: string;
-  relatedCustomerName?: string;
-  createdBy?: string;
-  createdAt: string;
-}
-
-export interface Grain {
-  id: string;
-  name: string;
-  totalKg: number;
-  balance: number;
-  history: GrainTransaction[];
-  createdAt: string;
-}
-
 // "Cash in Hand" - the till's own khata, same shape as BankTransaction
 // above (see backend/models/CashRegister.js). Fed automatically by a
 // Cash-method order payment/due recovery, plus a manual "Adjust Cash"
@@ -207,14 +177,6 @@ export interface DashboardSummary {
   totalRecoveryToday: number;
   cashInHand: number;
   balanceOnBank: number;
-  // Total rupee value of grain currently on hand across every grain the
-  // shop has added (Grain Stock page) - see
-  // backend/controllers/reportController.js's getDashboardSummary.
-  grainStockValue: number;
-  // Each shop's own single running Labour/Munshi khata balance - see
-  // backend/controllers/reportController.js's getDashboardSummary.
-  labourBalance: number;
-  munshiBalance: number;
   stockValue: number;
   vendorBalance: number;
   customerUdharTotal: number;
@@ -325,38 +287,21 @@ export interface DuesHistoryEntry {
   // one of the shop's own Bank accounts (see the Bank page) and bankName
   // says which one. Absent/undefined on older entries recorded before
   // this existed - treat as 'cash'.
-  paymentMethod?: 'cash' | 'bank' | 'grain' | 'labour' | 'munshi';
+  // Older entries may still carry legacy method names from removed
+  // modules - those display as plain cash.
+  paymentMethod?: 'cash' | 'bank' | (string & {});
   bankName?: string;
-  // Set only when paymentMethod is 'grain' - which grain and how many kg
-  // moved, purely for display here (see backend/models/Customer.js's
-  // grainName/grainKg).
-  grainName?: string;
-  grainKg?: number;
 }
 
-// A "+ Add Dues"/"- Pay Dues" action can route through Cash (default),
-// the shop's own Bank, its own Grain Stock, or its single running
-// Labour/Munshi khata - see DuesPage.tsx's CustomerCard payment-method
-// picker and backend/controllers/customerController.js's
-// applyUpdateCustomerDues/applySettleCustomerDues. bankId/grainId+grainKg
-// only apply to their own method; Labour/Munshi need no extra id since
-// each shop only ever has ONE of each (unlike Bank/Grain, which can have
-// several named accounts).
-export type DuesPaymentMethod = 'cash' | 'bank' | 'grain' | 'labour' | 'munshi';
+// A "+ Add Dues"/"- Pay Dues" action can route through Cash (default)
+// or the clinic's own Bank - see DuesPage.tsx's CustomerCard
+// payment-method picker and backend/controllers/customerController.js's
+// applyUpdateCustomerDues/applySettleCustomerDues.
+export type DuesPaymentMethod = 'cash' | 'bank';
 export interface DuesPaymentOption {
   method: DuesPaymentMethod;
   bankId?: string;
-  grainId?: string;
-  grainKg?: number;
 }
-
-// Labour Khata / Munshi Khata - each shop's own single running "in/out"
-// ledger, same shape as Cash in Hand (CashSummary/CashTransaction above)
-// since they track money the exact same way, just kept separately for the
-// owner's own bookkeeping of what moved through each. See
-// backend/models/LabourAccount.js/MunshiAccount.js.
-export type LabourSummary = CashSummary;
-export type MunshiSummary = CashSummary;
 
 // One linked-purchase row on a Unified Khata contact's statement - the
 // purchase-side counterpart to LedgerOrder above. Deliberately a small
@@ -982,6 +927,15 @@ export interface OrderPayload {
   address: string;
   note: string;
   waiter: string;
+  // Clinic appointment slot (see backend/models/Order.js). Empty when the
+  // appointment has no Dr. checkupStatus "done" frees the slot again.
+  appointmentDate?: string; // YYYY-MM-DD
+  appointmentTime?: string; // HH:mm (24h)
+  doctorName?: string;
+  checkupStatus?: '' | 'waiting' | 'done';
+  prescription?: string;
+  checkedAt?: string | null;
+  checkedBy?: string;
   // No longer settable when creating an order (Dining Tables removed from
   // the POS order flow) - stays optional for backward compatibility with
   // historical Dine-In orders that already have one saved.

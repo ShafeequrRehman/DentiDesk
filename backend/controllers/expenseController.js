@@ -59,7 +59,7 @@ exports.createExpense = async (req, res) => {
   if (body.employeeId) {
     const employee = await User.findOne({ _id: body.employeeId, shopId: req.user.shopId, role: "employee" }).select("_id").lean();
     if (!employee) {
-      return res.status(400).json({ error: "Employee not found for this shop" });
+      return res.status(400).json({ error: "Employee not found for this clinic" });
     }
   } else {
     body.employeeId = null;

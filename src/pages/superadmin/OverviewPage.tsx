@@ -15,10 +15,10 @@ export default function OverviewPage() {
 
   const cards = stats
     ? [
-        { label: "Total Shops", value: stats.totalShops, icon: <Store size={20} />, tone: "text-blue-300" },
-        { label: "Active Shops", value: stats.activeShops, icon: <CheckCircle2 size={20} />, tone: "text-green-300" },
-        { label: "Suspended Shops", value: stats.suspendedShops, icon: <XCircle size={20} />, tone: "text-red-300" },
-        { label: "Shop Owners", value: stats.totalOwners, icon: <UserCog size={20} />, tone: "text-purple-300" },
+        { label: "Total Clinics", value: stats.totalShops, icon: <Store size={20} />, tone: "text-blue-300" },
+        { label: "Active Clinics", value: stats.activeShops, icon: <CheckCircle2 size={20} />, tone: "text-green-300" },
+        { label: "Suspended Clinics", value: stats.suspendedShops, icon: <XCircle size={20} />, tone: "text-red-300" },
+        { label: "Clinic Owners", value: stats.totalOwners, icon: <UserCog size={20} />, tone: "text-purple-300" },
         { label: "Employees", value: stats.totalEmployees, icon: <Users size={20} />, tone: "text-cyan-300" },
         { label: "Licenses Expiring Soon", value: stats.licensesExpiringSoon, icon: <AlertTriangle size={20} />, tone: "text-amber-300" },
         { label: "Expired / Suspended Licenses", value: stats.expiredOrSuspendedLicenses, icon: <AlertTriangle size={20} />, tone: "text-red-300" },
@@ -29,7 +29,7 @@ export default function OverviewPage() {
   return (
     <div>
       <h1 className="mb-1 text-2xl font-bold">System Overview</h1>
-      <p className="mb-6 text-sm text-gray-400">Snapshot of every shop running on this software.</p>
+      <p className="mb-6 text-sm text-gray-400">Snapshot of every clinic running on this software.</p>
 
       {error ? <div className="mb-4 rounded-lg border border-red-500/30 bg-red-500/10 p-3 text-sm text-red-200">{error}</div> : null}
 

@@ -1,18 +1,18 @@
 export const sales = {
-  searchPlaceholder: "آرڈرز، ٹیبلز، کسٹمرز، ویٹرز تلاش کریں - چیک آؤٹ کے لیے Enter دبائیں",
-  orderImageAlt: "آرڈر",
+  searchPlaceholder: "اپائنٹمنٹس، ٹیبلز، مریضوں، ویٹرز تلاش کریں - چیک آؤٹ کے لیے Enter دبائیں",
+  orderImageAlt: "اپائنٹمنٹ",
 
   stats: {
-    pendingOrders: "زیر التواء آرڈرز",
+    pendingOrders: "زیر التواء اپائنٹمنٹس",
     completed: "مکمل",
     cancelled: "منسوخ",
     openValue: "کھلی رقم",
   },
 
   shiftContext: {
-    openShift: "موجودہ کھلی شفٹ کے آرڈرز دکھائے جا رہے ہیں - تاریخ کے حساب سے تقسیم نہیں",
-    lastShift: "دکان کی پچھلی شفٹ کے آرڈرز دکھائے جا رہے ہیں - تاریخ کے حساب سے تقسیم نہیں",
-    noShiftRecorded: "ابھی تک کوئی شفٹ ریکارڈ نہیں۔ آرڈر لینے کے لیے دکان کھولیں۔",
+    openShift: "موجودہ کھلی شفٹ کے اپائنٹمنٹس دکھائے جا رہے ہیں - تاریخ کے حساب سے تقسیم نہیں",
+    lastShift: "کلینک کی پچھلی شفٹ کے اپائنٹمنٹس دکھائے جا رہے ہیں - تاریخ کے حساب سے تقسیم نہیں",
+    noShiftRecorded: "ابھی تک کوئی شفٹ ریکارڈ نہیں۔ اپائنٹمنٹ لینے کے لیے کلینک کھولیں۔",
   },
 
   tabs: {
@@ -26,33 +26,36 @@ export const sales = {
     delivery: "ڈیلیوری",
   },
 
-  loadingOrders: "آرڈرز لوڈ ہو رہے ہیں...",
-  noPendingOrdersFiltered: "موجودہ فلٹرز کے مطابق کوئی زیر التواء آرڈر نہیں ملا۔",
-  noCompletedOrdersFiltered: "موجودہ فلٹرز کے مطابق کوئی مکمل آرڈر نہیں ملا۔",
+  loadingOrders: "اپائنٹمنٹس لوڈ ہو رہے ہیں...",
+  noPendingOrdersFiltered: "موجودہ فلٹرز کے مطابق کوئی زیر التواء اپائنٹمنٹ نہیں ملا۔",
+  noCompletedOrdersFiltered: "موجودہ فلٹرز کے مطابق کوئی مکمل اپائنٹمنٹ نہیں ملا۔",
 
   onlineWaitingAcceptance: "آن لائن - قبولیت کا انتظار",
   onlineStatusPrefix: "آن لائن - {{status}}",
   changeRequestedBadge: "تبدیلی کی درخواست",
 
-  orderNumberHeading: "آرڈر #{{number}}",
+  orderNumberHeading: "اپائنٹمنٹ #{{number}}",
   tableLabel: "ٹیبل {{table}}",
   orderTypeItemsCount: "{{type}} • {{count}} آئٹمز",
   loadMore: "مزید دکھائیں ({{count}} مزید)",
 
-  orderDetailLabel: "آرڈر کی تفصیل",
-  loadingFullOrderDetails: "مکمل آرڈر کی تفصیل لوڈ ہو رہی ہے...",
+  orderDetailLabel: "اپائنٹمنٹ کی تفصیل",
+  loadingFullOrderDetails: "مکمل اپائنٹمنٹ کی تفصیل لوڈ ہو رہی ہے...",
   sendingEllipsis: "بھیجا جا رہا ہے...",
-  sendToKitchen: "گودام بھیجیں",
   printReceipt: "رسید پرنٹ کریں",
   editLocked: "ترمیم بند ہے",
 
   boxLabels: {
-    orderNumber: "آرڈر نمبر",
+    doctor: "ڈاکٹر",
+    appointmentDate: "اپائنٹمنٹ کی تاریخ",
+    timeSlot: "وقت",
+    checkup: "چیک اپ",
+    orderNumber: "اپائنٹمنٹ نمبر",
     createdAt: "بننے کا وقت",
-    customer: "کسٹمر",
+    customer: "مریض",
     waiter: "ویٹر",
     table: "ٹیبل",
-    orderType: "آرڈر کی قسم",
+    orderType: "اپائنٹمنٹ کی قسم",
     paymentMethod: "ادائیگی کا طریقہ",
     deliveryLocation: "ڈیلیوری لوکیشن",
     previousDues: "پچھلے واجبات",
@@ -69,7 +72,7 @@ export const sales = {
 
   items: "آئٹمز",
   addItems: "آئٹمز شامل کریں",
-  orderLocked: "آرڈر بند ہے",
+  orderLocked: "اپائنٹمنٹ بند ہے",
   loadingItems: "آئٹمز لوڈ ہو رہے ہیں...",
   qty: "مقدار {{quantity}}",
 
@@ -84,15 +87,15 @@ export const sales = {
     discountFixed: "رعایت (مقررہ رقم)",
   },
 
-  completeOrder: "آرڈر مکمل کریں",
-  cancelOrder: "آرڈر منسوخ کریں",
-  orderCancelledKept: "یہ آرڈر منسوخ کر کے ریکارڈ میں رکھا گیا ہے۔",
+  completeOrder: "اپائنٹمنٹ مکمل کریں",
+  cancelOrder: "اپائنٹمنٹ منسوخ کریں",
+  orderCancelledKept: "یہ اپائنٹمنٹ منسوخ کر کے ریکارڈ میں رکھا گیا ہے۔",
   cancelledBy: "منسوخ کیا از {{name}}",
   reasonLabel: "وجہ: {{reason}}",
-  orderCompletedStored: "یہ آرڈر مکمل ہو چکا ہے اور سیلز ہسٹری میں محفوظ ہے۔",
+  orderCompletedStored: "یہ اپائنٹمنٹ مکمل ہو چکا ہے اور سیلز ہسٹری میں محفوظ ہے۔",
 
-  selectOrderTitle: "ایک آرڈر منتخب کریں",
-  selectOrderHint: "بائیں جانب سے کوئی بھی آرڈر کارڈ منتخب کریں۔",
+  selectOrderTitle: "ایک اپائنٹمنٹ منتخب کریں",
+  selectOrderHint: "بائیں جانب سے کوئی بھی اپائنٹمنٹ کارڈ منتخب کریں۔",
 
   completePaymentTitle: "ادائیگی مکمل کریں",
   amountPaidLabel: "ادا کی گئی رقم / موصولہ نقدی",
@@ -102,20 +105,18 @@ export const sales = {
   confirmPaymentButton: "ادائیگی کی تصدیق کریں",
   payFull: "مکمل ادائیگی",
 
-  addItemsToOrderTitle: "آرڈر میں آئٹمز شامل کریں",
+  addItemsToOrderTitle: "اپائنٹمنٹ میں آئٹمز شامل کریں",
   autoPrintFrameTitle: "خودکار پرنٹ فریم",
 
   loginTokenMissing: "لاگ ان ٹوکن نہیں ملا۔ دوبارہ لاگ ان کیے بغیر سیلز اپڈیٹس MongoDB سے سنک نہیں ہوں گی۔",
-  localHubUnreachable: "اس مشین کا لوکل ہب رابطہ نہیں ہو سکا{{reason}} - آف لائن آرڈر ہسٹری کے لیے ایپ دوبارہ شروع کریں۔",
+  localHubUnreachable: "اس مشین کا لوکل ہب رابطہ نہیں ہو سکا{{reason}} - آف لائن اپائنٹمنٹ ہسٹری کے لیے ایپ دوبارہ شروع کریں۔",
   failedToStart: "شروع نہیں ہو سکا",
 
-  orderNotInLocalCache: "یہ آرڈر اس مشین کے لوکل کیش میں موجود نہیں - آن لائن ہونے پر دوبارہ کوشش کریں۔",
-  couldNotRefreshOffline: "آف لائن اس آرڈر کو ریفریش نہیں کیا جا سکا۔",
-  couldNotRefreshOrder: "یہ آرڈر ریفریش نہیں ہو سکا۔",
-  noPendingOrderFound: "\"{{query}}\" سے ملتا کوئی زیر التواء آرڈر نہیں ملا۔",
+  orderNotInLocalCache: "یہ اپائنٹمنٹ اس مشین کے لوکل کیش میں موجود نہیں - آن لائن ہونے پر دوبارہ کوشش کریں۔",
+  couldNotRefreshOffline: "آف لائن اس اپائنٹمنٹ کو ریفریش نہیں کیا جا سکا۔",
+  couldNotRefreshOrder: "یہ اپائنٹمنٹ ریفریش نہیں ہو سکا۔",
+  noPendingOrderFound: "\"{{query}}\" سے ملتا کوئی زیر التواء اپائنٹمنٹ نہیں ملا۔",
 
-  savedKitchenPrintedSyncing: "محفوظ ہو گیا - کچن ٹکٹ پرنٹ ہو گئی۔ کلاؤڈ سے سنک ہو رہا ہے...",
-  savedKitchenPrintedOffline: "محفوظ ہو گیا - کچن ٹکٹ پرنٹ ہو گئی۔ آن لائن ہونے پر سنک ہو گا۔",
   savedSyncingToCloud: "محفوظ ہو گیا - کلاؤڈ سے سنک ہو رہا ہے...",
   savedWillSyncOffline: "محفوظ ہو گیا - آن لائن ہونے پر سنک ہو گا۔",
   couldNotSaveChange: "یہ تبدیلی محفوظ نہیں ہو سکی۔",
@@ -123,28 +124,28 @@ export const sales = {
   invalidPaymentAmountTitle: "غلط ادائیگی کی رقم",
   enterValidPaymentAmount: "ایک درست ادائیگی کی رقم درج کریں۔",
   paymentAmountRequiredTitle: "ادائیگی کی رقم درکار ہے",
-  paymentAmountRequiredMessage: "ادائیگی کی رقم درج کریں، یا بغیر ادائیگی کے اس آرڈر کی تصدیق کے لیے \"زیر التواء رکھیں\" پر نشان لگائیں۔",
+  paymentAmountRequiredMessage: "ادائیگی کی رقم درج کریں، یا بغیر ادائیگی کے اس اپائنٹمنٹ کی تصدیق کے لیے \"زیر التواء رکھیں\" پر نشان لگائیں۔",
 
-  zeroPaymentCustomerRequired: "صفر ادائیگی کے ساتھ تصدیق کرنے سے پہلے کسٹمر کا نام اور فون نمبر درج کریں - پوری رقم واجب الادا بن جائے گی، اور واجبات کے لیے اصل کسٹمر ہونا ضروری ہے۔ پہلے آرڈر میں ترمیم کریں، یا مکمل ادائیگی کریں۔",
-  partialPaymentCustomerRequired: "جزوی ادائیگی کی تصدیق کرنے سے پہلے کسٹمر کا نام اور فون نمبر درج کریں - واجبات کے لیے اصل کسٹمر ہونا ضروری ہے۔ پہلے آرڈر میں ترمیم کریں، یا مکمل ادائیگی کریں۔",
+  zeroPaymentCustomerRequired: "صفر ادائیگی کے ساتھ تصدیق کرنے سے پہلے مریض کا نام اور فون نمبر درج کریں - پوری رقم واجب الادا بن جائے گی، اور واجبات کے لیے اصل مریض ہونا ضروری ہے۔ پہلے اپائنٹمنٹ میں ترمیم کریں، یا مکمل ادائیگی کریں۔",
+  partialPaymentCustomerRequired: "جزوی ادائیگی کی تصدیق کرنے سے پہلے مریض کا نام اور فون نمبر درج کریں - واجبات کے لیے اصل مریض ہونا ضروری ہے۔ پہلے اپائنٹمنٹ میں ترمیم کریں، یا مکمل ادائیگی کریں۔",
 
   confirmZeroPaymentTitle: "صفر ادائیگی کی تصدیق کریں",
-  confirmZeroPaymentMessage: "آرڈر #{{orderNumber}} کے لیے ابھی کوئی ادائیگی وصول نہیں کی جائے گی - پوری رقم ₨{{payable}} {{customerName}} کے واجبات میں درج ہو جائے گی۔ جاری رکھیں؟",
+  confirmZeroPaymentMessage: "اپائنٹمنٹ #{{orderNumber}} کے لیے ابھی کوئی ادائیگی وصول نہیں کی جائے گی - پوری رقم ₨{{payable}} {{customerName}} کے واجبات میں درج ہو جائے گی۔ جاری رکھیں؟",
 
-  orderCompletedChange: "آرڈر #{{orderNumber}} مکمل ہو گیا - Rs {{paid}} وصول ہوئے، Rs {{change}} واپس کیے گئے۔",
-  orderCompletedNoChange: "آرڈر #{{orderNumber}} مکمل ہو گیا - Rs {{paid}} وصول ہوئے۔",
+  orderCompletedChange: "اپائنٹمنٹ #{{orderNumber}} مکمل ہو گیا - Rs {{paid}} وصول ہوئے، Rs {{change}} واپس کیے گئے۔",
+  orderCompletedNoChange: "اپائنٹمنٹ #{{orderNumber}} مکمل ہو گیا - Rs {{paid}} وصول ہوئے۔",
 
-  whatsappReceiptSendFailed: "آرڈر مکمل ہو گیا، لیکن واٹس ایپ پر PDF رسید نہیں بھیجی جا سکی۔",
-  orderCancelledSuccessfully: "آرڈر {{orderId}} کامیابی سے منسوخ کر دیا گیا۔",
-  declineOnlineOrderConfirm: "کیا اس آن لائن آرڈر کو مسترد/منسوخ کرنا ہے؟",
-  orderMarkedStatus: "آرڈر #{{orderId}} کو {{status}} کر دیا گیا۔",
-  couldNotUpdateOrder: "یہ آرڈر اپ ڈیٹ نہیں ہو سکا۔",
+  whatsappReceiptSendFailed: "اپائنٹمنٹ مکمل ہو گیا، لیکن واٹس ایپ پر PDF رسید نہیں بھیجی جا سکی۔",
+  orderCancelledSuccessfully: "اپائنٹمنٹ {{orderId}} کامیابی سے منسوخ کر دیا گیا۔",
+  declineOnlineOrderConfirm: "کیا اس آن لائن اپائنٹمنٹ کو مسترد/منسوخ کرنا ہے؟",
+  orderMarkedStatus: "اپائنٹمنٹ #{{orderId}} کو {{status}} کر دیا گیا۔",
+  couldNotUpdateOrder: "یہ اپائنٹمنٹ اپ ڈیٹ نہیں ہو سکا۔",
 
   assignedRiderNotified: "{{name}} کو تفویض کر دیا گیا - واٹس ایپ پیغام بھیج دیا گیا۔",
   assignedRiderNotNotified: "{{name}} کو تفویض کر دیا گیا، لیکن واٹس ایپ پیغام نہیں بھیجا جا سکا۔",
   couldNotAssignRider: "یہ رائیڈر تفویض نہیں ہو سکا۔",
 
-  changeRequestApproved: "تبدیلی کی درخواست منظور - آرڈر اپ ڈیٹ ہو گیا۔",
+  changeRequestApproved: "تبدیلی کی درخواست منظور - اپائنٹمنٹ اپ ڈیٹ ہو گیا۔",
   changeRequestDeclined: "تبدیلی کی درخواست مسترد کر دی گئی۔",
   couldNotRespondToRequest: "اس درخواست کا جواب نہیں دیا جا سکا۔",
 
@@ -155,19 +156,19 @@ export const sales = {
   addedItemsPlain: "{{orderId}} میں {{count}} آئٹم شامل کر دیے گئے۔",
 
   whatsappNeedsInternet: "واٹس ایپ کے لیے انٹرنیٹ کنکشن درکار ہے - آن لائن ہونے پر دوبارہ کوشش کریں۔",
-  noValidPhoneNumber: "اس کسٹمر کا کوئی درست فون نمبر نہیں۔",
-  customerReceiptLabel: "کسٹمر رسید",
+  noValidPhoneNumber: "اس مریض کا کوئی درست فون نمبر نہیں۔",
+  customerReceiptLabel: "مریض رسید",
   receiptSentWhatsApp: "رسید واٹس ایپ کے ذریعے {{phone}} پر بھیج دی گئی",
   whatsappSendFailed: "واٹس ایپ پیغام بھیجنے میں ناکامی۔ کیا یہ منسلک ہے؟",
   whatsappSendFailedPrefix: "واٹس ایپ بھیجنے میں ناکامی: ",
 
-  whatsappOrderNo: "آرڈر نمبر: *{{number}}*",
+  whatsappOrderNo: "اپائنٹمنٹ نمبر: *{{number}}*",
   whatsappTotal: "کل رقم: *PKR {{total}}*",
-  whatsappThankYou: "آپ کے آرڈر کا شکریہ!",
+  whatsappThankYou: "آپ کے اپائنٹمنٹ کا شکریہ!",
 
   customer: {
-    dineInCustomer: "ڈائن ان کسٹمر",
-    walkInCustomer: "واک اِن کسٹمر",
+    dineInCustomer: "ڈائن ان مریض",
+    walkInCustomer: "واک اِن مریض",
     waiterPrefix: "ویٹر: {{name}}",
     noPhone: "کوئی فون نہیں",
   },
@@ -197,7 +198,7 @@ export const sales = {
   },
 
   online: {
-    orderLabel: "آن لائن آرڈر",
+    orderLabel: "آن لائن اپائنٹمنٹ",
     paymentStatusLabel: "ادائیگی: {{status}}",
     markStatus: "{{status}} کریں",
     decline: "مسترد کریں",
@@ -208,7 +209,9 @@ export const sales = {
     chooseRider: "ایک رائیڈر منتخب کریں…",
     reassignNotify: "دوبارہ تفویض کریں اور مطلع کریں",
     assignNotify: "تفویض کریں اور مطلع کریں",
-    customerRequestedChange: "کسٹمر نے تبدیلی کی درخواست کی",
+    customerRequestedChange: "مریض نے تبدیلی کی درخواست کی",
     approve: "منظور کریں",
   },
+  checkupDone: "چیک ہو گیا",
+  checkupWaiting: "انتظار میں",
 } as const;

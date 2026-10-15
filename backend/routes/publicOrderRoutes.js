@@ -21,7 +21,7 @@ const readLimiter = rateLimit({
 const orderLimiter = rateLimit({
   windowMs: 10 * 60 * 1000,
   max: 8,
-  message: { message: "Too many orders from this device - please wait a few minutes and try again." },
+  message: { message: "Too many appointments from this device - please wait a few minutes and try again." },
 });
 
 router.use("/:shopId", requireShopOrderable);

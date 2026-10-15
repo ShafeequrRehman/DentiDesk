@@ -1,34 +1,34 @@
 export const editOrder = {
-  loadingOrderEditor: "آرڈر ایڈیٹر لوڈ ہو رہا ہے...",
+  loadingOrderEditor: "اپائنٹمنٹ ایڈیٹر لوڈ ہو رہا ہے...",
   offlineUnavailable:
-    "یہ آرڈر ابھی اس مشین کے لوکل کیش میں موجود نہیں (یہ یا تو 14 دن کی آف لائن کیش حد سے پرانا ہے، یا یہ مشین آرڈر ہونے کے بعد سے سنک نہیں ہوئی)۔ اس کے بجائے آرڈر کارڈ کے Add Items / Complete Payment کا استعمال کریں، یا آن لائن ہونے پر دوبارہ کوشش کریں۔",
-  orderNotFound: "آرڈر نہیں ملا۔",
+    "یہ اپائنٹمنٹ ابھی اس مشین کے لوکل کیش میں موجود نہیں (یہ یا تو 14 دن کی آف لائن کیش حد سے پرانا ہے، یا یہ مشین اپائنٹمنٹ ہونے کے بعد سے سنک نہیں ہوئی)۔ اس کے بجائے اپائنٹمنٹ کارڈ کے Add Items / Complete Payment کا استعمال کریں، یا آن لائن ہونے پر دوبارہ کوشش کریں۔",
+  orderNotFound: "اپائنٹمنٹ نہیں ملا۔",
 
   backToSales: "سیلز پر واپس",
-  pageTitle: "آرڈر #{{orderNumber}} میں ترمیم",
+  pageTitle: "اپائنٹمنٹ #{{orderNumber}} میں ترمیم",
   printCenter: "پرنٹ سینٹر",
   saveChanges: "تبدیلیاں محفوظ کریں",
 
-  orderItems: "آرڈر کی اشیاء",
-  orderMeta: "آرڈر کی تفصیلات",
+  orderItems: "اپائنٹمنٹ کی اشیاء",
+  orderMeta: "اپائنٹمنٹ کی تفصیلات",
 
-  customerNamePlaceholder: "کسٹمر کا نام",
+  customerNamePlaceholder: "مریض کا نام",
   phonePlaceholder: "فون",
-  searchingCustomers: "کسٹمرز تلاش کیے جا رہے ہیں...",
+  searchingCustomers: "مریضوں تلاش کیے جا رہے ہیں...",
   duePrefix: "واجب الادا PKR {{amount}}",
   addressPlaceholder: "پتہ",
   waiterPlaceholder: "ویٹر",
   tablePlaceholder: "ٹیبل",
-  orderNotePlaceholder: "آرڈر کا نوٹ",
+  orderNotePlaceholder: "اپائنٹمنٹ نوٹ",
 
-  quickAddProduct: "فوری پروڈکٹ شامل کریں",
+  quickAddProduct: "فوری ڈاکٹر/سروس شامل کریں",
   searchMenuItemsPlaceholder: "مینو آئٹمز تلاش کریں",
   priceDisplay: "Rs {{price}}",
   addCustomItem: "کسٹم آئٹم شامل کریں",
   customItemDefaultName: "کسٹم آئٹم",
 
   couldNotSaveChange: "یہ تبدیلی محفوظ نہیں ہو سکی۔",
-  orderSavedSyncing: "آرڈر {{orderId}} محفوظ ہو گیا۔ کلاؤڈ سے سنک ہو رہا ہے...",
-  orderSavedOffline: "آرڈر {{orderId}} محفوظ ہو گیا۔ آن لائن ہونے پر سنک ہو گا۔",
-  orderSavedSuccessfully: "آرڈر {{orderId}} کامیابی سے محفوظ ہو گیا۔",
+  orderSavedSyncing: "اپائنٹمنٹ {{orderId}} محفوظ ہو گیا۔ کلاؤڈ سے سنک ہو رہا ہے...",
+  orderSavedOffline: "اپائنٹمنٹ {{orderId}} محفوظ ہو گیا۔ آن لائن ہونے پر سنک ہو گا۔",
+  orderSavedSuccessfully: "اپائنٹمنٹ {{orderId}} کامیابی سے محفوظ ہو گیا۔",
 } as const;

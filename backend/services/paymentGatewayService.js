@@ -79,7 +79,7 @@ function jazzCashSecureHash(fields, integritySalt) {
 // returnUrl: where JazzCash sends the customer's browser back to after payment.
 function buildJazzCashCheckoutPayload(order, config, returnUrl) {
   if (!isJazzCashConfigured(config)) {
-    throw Object.assign(new Error("JazzCash isn't configured for this shop yet."), { status: 409, reason: "gateway_not_configured" });
+    throw Object.assign(new Error("JazzCash isn't configured for this clinic yet."), { status: 409, reason: "gateway_not_configured" });
   }
   const now = new Date();
   const expiry = new Date(now.getTime() + 60 * 60 * 1000); // 1 hour to complete payment
@@ -98,7 +98,7 @@ function buildJazzCashCheckoutPayload(order, config, returnUrl) {
     pp_TxnDateTime: jazzCashTimestamp(now),
     pp_TxnExpiryDateTime: jazzCashTimestamp(expiry),
     pp_BillReference: `Order${order.dailyOrderNumber || ""}`,
-    pp_Description: `Order #${order.dailyOrderNumber || ""}`,
+    pp_Description: `Appointment #${order.dailyOrderNumber || ""}`,
     pp_ReturnURL: returnUrl,
     pp_BankID: "",
     pp_ProductID: "",
@@ -143,7 +143,7 @@ function easyPaisaTimestamp(date) {
 
 function buildEasyPaisaCheckoutPayload(order, config, postBackUrl) {
   if (!isEasyPaisaConfigured(config)) {
-    throw Object.assign(new Error("EasyPaisa isn't configured for this shop yet."), { status: 409, reason: "gateway_not_configured" });
+    throw Object.assign(new Error("EasyPaisa isn't configured for this clinic yet."), { status: 409, reason: "gateway_not_configured" });
   }
   // "Last two digits are decimal" - i.e. no decimal point, amount * 100.
   const amount = (Number(order.total) * 100).toFixed(0);

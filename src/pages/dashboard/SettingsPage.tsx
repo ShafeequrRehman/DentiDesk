@@ -18,7 +18,7 @@ import { useToast } from '@/lib/toast';
 
 export default function SettingsPage() {
   const { toast } = useToast();
-  const [activeSection, setActiveSection] = useState("Shop Profile");
+  const [activeSection, setActiveSection] = useState("Clinic Profile");
   const [settings, setSettings] = useState<StoreSettings | null>(null);
   const [printers, setPrinters] = useState<string[]>([]);
   const [savingSettings, setSavingSettings] = useState(false);
@@ -109,7 +109,7 @@ export default function SettingsPage() {
       updateCachedShopName(trimmedShopName);
       toast.success('Settings saved.');
     } else {
-      toast.error('Settings saved, but the shop name/address failed to sync - check your connection and try again.');
+      toast.error('Settings saved, but the clinic name/address failed to sync - check your connection and try again.');
     }
   };
 
@@ -123,11 +123,11 @@ export default function SettingsPage() {
   const fileInputRef = useRef<HTMLInputElement | null>(null);
 
   const menuItems = [
-    { id: "Shop Profile", icon: <Store size={18} /> },
-    { id: "Manage Products", icon: <Package size={18} /> },
+    { id: "Clinic Profile", icon: <Store size={18} /> },
+    { id: "Manage Appointments", icon: <Package size={18} /> },
     { id: "Manage Receipt", icon: <Receipt size={18} /> },
     { id: "Sidebar Pages", icon: <Eye size={18} /> },
-    { id: "Customer Ordering", icon: <QrCode size={18} /> },
+    { id: "Patient Ordering", icon: <QrCode size={18} /> },
     { id: "Payments & Tax", icon: <CreditCard size={18} /> },
     { id: "Hardware / POS", icon: <Printer size={18} /> },
     { id: "Security", icon: <Lock size={18} /> },
@@ -257,11 +257,11 @@ export default function SettingsPage() {
           <div className="max-w-3xl space-y-8">
             {activeSection === "Manage Receipt" ? (
               <ReceiptManagementSection settings={settings} onChange={handleSettingChange} printLogo={printLogo} />
-            ) : activeSection === "Manage Products" ? (
+            ) : activeSection === "Manage Appointments" ? (
               <ProductManagementSection />
             ) : activeSection === "Sidebar Pages" ? (
               <SidebarPagesSection />
-            ) : activeSection === "Customer Ordering" ? (
+            ) : activeSection === "Patient Ordering" ? (
               <CustomerOrderingSection />
             ) : (
               <>
@@ -270,7 +270,7 @@ export default function SettingsPage() {
                 <div>
                   <p className="text-sm font-black text-slate-900">Receipt Print Logo</p>
                   <p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-500">
-                    Quick access for the logo used on printed cashier and kitchen receipts.
+                    Quick access for the logo used on printed patient receipts.
                   </p>
                 </div>
                 {!isHardwareSection ? (
@@ -300,9 +300,9 @@ export default function SettingsPage() {
                 <h3 className="text-lg font-black text-slate-900">Waiter Setup Has Moved</h3>
               </div>
               <p className="mt-2 max-w-2xl text-sm text-slate-500">
-                Waiters and order takers are now added from <span className="font-bold text-slate-700">Manage Staff</span>.
+                Waiters and appointment takers are now added from <span className="font-bold text-slate-700">Manage Staff</span>.
                 Add a staff member there with designation <span className="font-bold text-slate-700">"Waiter"</span> or{' '}
-                <span className="font-bold text-slate-700">"Order Taker"</span> and they'll automatically show up in the POS waiter dropdown.
+                <span className="font-bold text-slate-700">"Appointment Taker"</span> and they'll automatically show up in the POS waiter dropdown.
               </p>
             </div>
 
@@ -310,13 +310,13 @@ export default function SettingsPage() {
             <>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
-                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Shop Name</label>
+                <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Clinic Name</label>
                 <input
                   type="text"
                   value={shopName}
                   onChange={e => setShopName(e.target.value)}
                   disabled={shopProfileLoading}
-                  placeholder="Your shop's name"
+                  placeholder="Your clinic's name"
                   className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 font-bold outline-none disabled:opacity-50"
                 />
               </div>
@@ -332,13 +332,13 @@ export default function SettingsPage() {
             </div>
 
             <div className="space-y-2">
-              <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Shop Address</label>
+              <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Clinic Address</label>
               <textarea
                 rows={3}
                 value={shopAddress}
                 onChange={e => setShopAddress(e.target.value)}
                 disabled={shopProfileLoading}
-                placeholder="Your shop's address"
+                placeholder="Your clinic's address"
                 className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 font-bold outline-none resize-none disabled:opacity-50"
               />
             </div>
@@ -399,7 +399,7 @@ export default function SettingsPage() {
             {/* Toggle Sections */}
             <div className="pt-6 space-y-4">
                <h3 className="text-sm font-black text-slate-900 mb-4">Device Preferences</h3>
-               <ToggleItem icon={<Monitor size={18}/>} label="Dual Screen Display" description="Enable customer-facing checkout screen." enabled={settings.dualScreenDisplay} onToggle={v => handleSettingChange('dualScreenDisplay', v)} />
+               <ToggleItem icon={<Monitor size={18}/>} label="Dual Screen Display" description="Enable patient-facing checkout screen." enabled={settings.dualScreenDisplay} onToggle={v => handleSettingChange('dualScreenDisplay', v)} />
                <ToggleItem icon={<Printer size={18}/>} label="Auto-print Receipts" description="Print physical receipt after every transaction." enabled={settings.autoPrintReceipts} onToggle={v => handleSettingChange('autoPrintReceipts', v)} />
             </div>
             </>
@@ -421,17 +421,6 @@ export default function SettingsPage() {
                         {printers.map(p => <option key={p} value={p}>{p}</option>)}
                       </select>
                     </div>
-                    <div className="space-y-2">
-                      <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Kitchen Printer</label>
-                      <select 
-                        value={settings.kitchenPrinter || ""}
-                        onChange={e => handleSettingChange('kitchenPrinter', e.target.value)}
-                        className="w-full p-4 bg-white rounded-2xl border border-slate-200 font-bold outline-none appearance-none"
-                      >
-                        <option value="">Select Kitchen Printer</option>
-                        {printers.map(p => <option key={p} value={p}>{p}</option>)}
-                      </select>
-                    </div>
                   </div>
                 </div>
 
@@ -439,7 +428,7 @@ export default function SettingsPage() {
                 <div className="mb-4">
                   <p className="text-sm font-black text-slate-900">Receipt Print Logo</p>
                   <p className="mt-1 text-xs font-bold uppercase tracking-wide text-slate-400">
-                    Choose the logo that appears at the top of printed cashier and kitchen receipts.
+                    Choose the logo that appears at the top of printed patient receipts.
                   </p>
                 </div>
 

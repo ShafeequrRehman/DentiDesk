@@ -315,7 +315,7 @@ app.post("/orders/:id/fail", requirePairingKey, (req, res) => {
 app.patch("/orders/local/:localId", requirePairingKey, (req, res) => {
   const updated = localOrders.updateQueuedOrder(req.params.localId, req.body?.payload || {}, !!req.body?.receiptPrinted);
   if (!updated) {
-    return res.status(404).json({ message: "No such queued order (it may have already synced)." });
+    return res.status(404).json({ message: "No such queued appointment (it may have already synced)." });
   }
   res.json(updated);
 });

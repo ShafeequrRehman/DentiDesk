@@ -3,7 +3,6 @@ import { SavedOrder } from '@/lib/pos-types';
 import { getStoreSettings, defaultSettings, StoreSettings } from '@/lib/pos-settings';
 import ThermalReceipt from './ThermalReceipt';
 import ItemizedBillReceipt from './ItemizedBillReceipt';
-import KitchenKotReceipt from './KitchenKotReceipt';
 
 // Picks which printed layout to render for this order, based on whatever
 // the shop has chosen in Settings > Manage Receipt (see
@@ -19,7 +18,7 @@ export default function ReceiptRenderer({
   previousDues = 0,
 }: {
   order: SavedOrder;
-  type: 'kitchen' | 'cashier';
+  type: 'cashier';
   logoSrc?: string | null;
   previousDues?: number;
 }) {
@@ -38,10 +37,6 @@ export default function ReceiptRenderer({
 
   if (type === 'cashier' && settings.cashierReceiptTemplate === 'itemizedBill') {
     return <ItemizedBillReceipt order={order} logoSrc={logoSrc} previousDues={previousDues} />;
-  }
-
-  if (type === 'kitchen' && settings.kitchenReceiptTemplate === 'kot') {
-    return <KitchenKotReceipt order={order} />;
   }
 
   return <ThermalReceipt order={order} type={type} logoSrc={logoSrc} previousDues={previousDues} />;

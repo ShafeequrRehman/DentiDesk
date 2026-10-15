@@ -71,7 +71,7 @@ export default function OfflineSyncPage() {
     if (result.error) {
       toast.error(result.error);
     } else if (result.imported > 0) {
-      toast.success(`Synced ${result.imported} offline order${result.imported === 1 ? '' : 's'} to the cloud.`);
+      toast.success(`Synced ${result.imported} offline appointment${result.imported === 1 ? '' : 's'} to the cloud.`);
     } else {
       toast.success('Nothing to sync - everything is already up to date.');
     }
@@ -92,7 +92,7 @@ export default function OfflineSyncPage() {
         <div>
           <h1 className="text-2xl font-black text-slate-900">Connect Devices</h1>
           <p className="mt-1 text-sm text-slate-500">
-            Pair a phone to this till so orders can still be taken if the internet goes down. Paired phones sync
+            Pair a phone to this till so appointments can still be taken if the internet goes down. Paired phones sync
             automatically once you're back online.
           </p>
         </div>
@@ -187,9 +187,9 @@ export default function OfflineSyncPage() {
       <div className="rounded-[28px] border border-slate-200 bg-white p-6">
         <div className="flex flex-wrap items-center justify-between gap-4">
           <div>
-            <h2 className="text-lg font-black text-slate-900">Offline Orders</h2>
+            <h2 className="text-lg font-black text-slate-900">Offline Appointments</h2>
             <p className="mt-1 text-sm text-slate-500">
-              Orders queued locally (from this till or a paired phone) while the internet was down. They sync
+              Appointments queued locally (from this till or a paired phone) while the internet was down. They sync
               automatically every 5 minutes once you're back online.
             </p>
           </div>
@@ -205,7 +205,7 @@ export default function OfflineSyncPage() {
         </div>
 
         <div className="mt-5 grid grid-cols-2 gap-4 sm:grid-cols-4">
-          <StatBox label="Pending Orders" value={status?.pendingCount ?? 0} tone="amber" />
+          <StatBox label="Pending Appointments" value={status?.pendingCount ?? 0} tone="amber" />
           <StatBox label="Pending Edits" value={status?.pendingEditCount ?? 0} tone="amber" />
           <StatBox label="Failed" value={(status?.failedCount ?? 0) + (status?.failedEditCount ?? 0)} tone="rose" />
           <StatBox label="Total Queued" value={status?.totalQueued ?? 0} tone="slate" />
@@ -233,7 +233,7 @@ export default function OfflineSyncPage() {
           <h2 className="text-lg font-black text-slate-900">Offline Staff Changes</h2>
           <p className="mt-1 text-sm text-slate-500">
             Staff members created, edited, or removed on Manage Staff while the internet was down. They sync
-            automatically the same way offline orders do.
+            automatically the same way offline appointments do.
           </p>
         </div>
 
@@ -265,8 +265,8 @@ export default function OfflineSyncPage() {
         <div>
           <h2 className="text-lg font-black text-slate-900">Offline Cancellations</h2>
           <p className="mt-1 text-sm text-slate-500">
-            Orders cancelled while the internet was down. The Cancel Order Key is only actually checked once this
-            syncs - a wrong key shows up here as Failed, meaning that order was NOT really cancelled.
+            Appointments cancelled while the internet was down. The Cancel Appointment Key is only actually checked once this
+            syncs - a wrong key shows up here as Failed, meaning that appointment was NOT really cancelled.
           </p>
         </div>
 
@@ -288,10 +288,10 @@ export default function OfflineSyncPage() {
           engine/interval as everything else on this page. */}
       <div className="rounded-[28px] border border-slate-200 bg-white p-6">
         <div>
-          <h2 className="text-lg font-black text-slate-900">Offline Customer Dues</h2>
+          <h2 className="text-lg font-black text-slate-900">Offline Patient Dues</h2>
           <p className="mt-1 text-sm text-slate-500">
-            A customer added, or a dues amount added/paid, on Customer Dues while offline or on a slow connection.
-            They sync automatically the same way offline orders do.
+            A patient added, or a dues amount added/paid, on Patient Dues while offline or on a slow connection.
+            They sync automatically the same way offline appointments do.
           </p>
         </div>
 

@@ -5,21 +5,18 @@ import {
   Package, DollarSign, FileText, Settings, HelpCircle,
   Search, Cloud, MessageCircle, Bell, LogOut, UserCog, BookText,
   Store, Lock, ClipboardList, Wifi, WifiOff, Download, RefreshCcw,
-  Menu, X, Smartphone, Boxes, Landmark, Wheat, HardHat
+  Menu, X, Smartphone, Boxes, Landmark, Stethoscope
 } from 'lucide-react';
 import { clearAuthSession, getAuthRole, getAuthShop, hasPermission, hasAnyPermission, isPageEnabled, getIsDashboardHidden } from '@/lib/auth';
 import { DASHBOARD_PAGES } from '@/lib/dashboard-pages';
 import { useOfflineSync } from '@/lib/offline-sync';
 import { isDesktopApp, logoutRequest } from '@/lib/api';
-import { ApiError, claimKitchenPrint, claimKitchenUpdatePrint, closeShopSession, fetchProducts, fetchUnprintedKitchenOrders, fetchUnprintedKitchenUpdateOrders, openShopSession } from '@/lib/pos-api';
+import { closeShopSession, openShopSession } from '@/lib/pos-api';
 import { useNetworkStatus } from '@/lib/network-status';
 import { ShopSessionProvider, useShopSession } from '@/lib/shop-session';
 import { useToast } from '@/lib/toast';
 import { useNotifications, formatNotificationAge, NOTIFICATION_ICON, NOTIFICATION_ICON_BG, type AppNotification } from '@/lib/notifications';
-import { getStoreSettings } from '@/lib/pos-settings';
 import { getIpcRenderer } from '@/lib/electron-bridge';
-import { reportPrintOutcome } from '@/lib/print-notify';
-import { buildCategoryLookup, dispatchKitchenPrints } from '@/lib/kitchen-print-routing';
 import ShopClosingSummaryModal from '@/pages/dashboard/components/ShopClosingSummaryModal';
 import { useLanguage } from '@/i18n';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
@@ -30,15 +27,13 @@ const PAGE_ICONS: Record<string, React.ReactNode> = {
   dashboard: <LayoutDashboard size={18} />,
   pos: <ShoppingCart size={18} />,
   sales: <BarChart3 size={18} />,
+  doctors: <Stethoscope size={18} />,
   accounting: <Calculator size={18} />,
   purchase: <Package size={18} />,
   'ingredient-stock': <Boxes size={18} />,
   dues: <FileText size={18} />,
   ledger: <BookText size={18} />,
   bank: <Landmark size={18} />,
-  'grain-stock': <Wheat size={18} />,
-  'labour-khata': <HardHat size={18} />,
-  'munshi-khata': <UserCog size={18} />,
   record: <ClipboardList size={18} />,
   shifts: <Store size={18} />,
   offline: <Wifi size={18} />,
@@ -119,9 +114,6 @@ export default function DashboardShell() {
   // and harmless to mount even for shops that never use offline mode.
   const { lastResult } = useOfflineSync();
   const { toast: syncToast } = useToast();
-  // Shared by both kitchen watchers below (see their own comments) instead
-  // of each running its own independent copy of this poll.
-  const categoryLookupRef = useCategoryLookupRef();
 
   // A Cancel Order made offline is trusted immediately (see
   // CancelOrderModal.tsx) and only actually verified against the real
@@ -134,8 +126,8 @@ export default function DashboardShell() {
     if (lastResult?.wrongKeyOrderIds && lastResult.wrongKeyOrderIds.length > 0) {
       syncToast.error(
         lastResult.wrongKeyOrderIds.length === 1
-          ? `An offline cancellation used the wrong Cancel Order Key - order ${lastResult.wrongKeyOrderIds[0]} was NOT cancelled. Redo it with the correct key.`
-          : `${lastResult.wrongKeyOrderIds.length} offline cancellations used the wrong Cancel Order Key and were NOT applied. Redo them with the correct key.`,
+          ? `An offline cancellation used the wrong Cancel Appointment Key - appointment ${lastResult.wrongKeyOrderIds[0]} was NOT cancelled. Redo it with the correct key.`
+          : `${lastResult.wrongKeyOrderIds.length} offline cancellations used the wrong Cancel Appointment Key and were NOT applied. Redo them with the correct key.`,
       );
     }
     // Conflict resolution: two devices both placed a Dine-In order for the
@@ -147,8 +139,8 @@ export default function DashboardShell() {
     if (lastResult?.tableConflictOrderIds && lastResult.tableConflictOrderIds.length > 0) {
       syncToast.error(
         lastResult.tableConflictOrderIds.length === 1
-          ? `An offline order's table was also taken by another device. Change its table to sync it.`
-          : `${lastResult.tableConflictOrderIds.length} offline orders' tables were also taken by another device. Change their tables to sync them.`,
+          ? `An offline appointment's table was also taken by another device. Change its table to sync it.`
+          : `${lastResult.tableConflictOrderIds.length} offline appointments' tables were also taken by another device. Change their tables to sync them.`,
       );
     }
     // Conflict resolution: an offline edit was built against an order
@@ -158,7 +150,7 @@ export default function DashboardShell() {
     if (lastResult?.versionConflictOrderIds && lastResult.versionConflictOrderIds.length > 0) {
       syncToast.error(
         lastResult.versionConflictOrderIds.length === 1
-          ? `An offline edit conflicted with a change from another device on order ${lastResult.versionConflictOrderIds[0]}. Refresh and redo that edit.`
+          ? `An offline edit conflicted with a change from another device on appointment ${lastResult.versionConflictOrderIds[0]}. Refresh and redo that edit.`
           : `${lastResult.versionConflictOrderIds.length} offline edits conflicted with changes from another device. Refresh and redo those edits.`,
       );
     }
@@ -178,8 +170,6 @@ export default function DashboardShell() {
       {/* Floating frosted sidebar (macOS Finder / Sonoma-style) - detached
           from the edge with its own rounded glass panel on desktop, sliding
           in as a full-height glass panel on mobile (see sidebarOpen below). */}
-      <KitchenPrintWatcher categoryLookupRef={categoryLookupRef} />
-      <KitchenUpdateWatcher categoryLookupRef={categoryLookupRef} />
       {/* h-screen + overflow-hidden (was min-h-screen, no overflow control)
           - min-h-screen only sets a FLOOR, so once the page's content grew
           taller than the viewport the whole document scrolled as one unit,
@@ -382,243 +372,6 @@ function InstallAppButton() {
   return null;
 }
 
-// Background "print any order nobody has printed a kitchen ticket for yet"
-// loop - this is what makes an order placed on pos-mobile show up on this
-// till's kitchen printer automatically, the same way a till-placed order
-// already prints itself immediately (see POSPage.tsx). Renders nothing;
-// it's mounted here (inside DashboardShell, which wraps every dashboard
-// page) so it keeps running no matter which page the cashier is looking
-// at, not just while POS or Kitchen happens to be open.
-//
-// Only ever does anything in Electron with a kitchen printer configured -
-// a plain browser tab has no printer to send jobs to, and letting it poll
-// anyway would mean it could claim orders (see claimKitchenPrint's atomic
-// "only one caller ever wins" guarantee) and then just silently fail to
-// print them, starving the real till of a ticket it should have gotten.
-// Was 7000ms - a mobile-placed/edited order has NO printer of its own, so
-// this poll interval is the entire "how long until the kitchen finds out"
-// delay for anything that came from a phone (the desktop's own orders print
-// immediately, bypassing this poll entirely - see POSPage.tsx). 1500ms
-// keeps that worst-case wait under 2s instead of up to 7s, at the cost of a
-// slightly chattier poll - negligible for a single-shop backend.
-const KITCHEN_POLL_INTERVAL_MS = 1500;
-
-// Both kitchen watchers below need a name->category lookup to route Ice
-// Cream/Drinks/Shwarma items to the counter printer instead of the
-// kitchen printer (see kitchen-print-routing.ts) - refreshed on its own
-// slower interval rather than on every 1.5s poll tick, since the product
-// catalog changes far less often than orders come in. Falls back to
-// whatever was last fetched (or an empty lookup, before the first fetch
-// resolves - everything routes to the kitchen printer either way, the
-// same behavior as before this split existed) if a refresh ever fails.
-//
-// Called ONCE here in DashboardShell and passed down as a prop to both
-// watchers below, rather than each watcher calling this hook itself - they
-// used to each run their own independent copy of this poll, meaning two
-// separate fetchProducts() calls (plus two Map rebuilds) every single
-// minute for the exact same data, for the entire time any dashboard page
-// is open. One shared instance halves that redundant background network
-// and CPU work.
-const CATEGORY_LOOKUP_REFRESH_MS = 60000;
-
-function useCategoryLookupRef() {
-  const lookupRef = useRef<Map<string, string>>(new Map());
-  useEffect(() => {
-    let cancelled = false;
-    async function refresh() {
-      try {
-        const result = await fetchProducts();
-        if (!cancelled) lookupRef.current = buildCategoryLookup(result.products || []);
-      } catch {
-        // Network hiccup - keep using the last-known lookup, next tick retries.
-      }
-    }
-    void refresh();
-    const intervalId = setInterval(() => void refresh(), CATEGORY_LOOKUP_REFRESH_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(intervalId);
-    };
-  }, []);
-  return lookupRef;
-}
-
-function KitchenPrintWatcher({ categoryLookupRef }: { categoryLookupRef: React.MutableRefObject<Map<string, string>> }) {
-  const { toast } = useToast();
-  const inFlightRef = useRef<Set<string>>(new Set());
-  // ToastProvider rebuilds its `toast` object every render (it's a plain
-  // object literal, not memoized), so depending on `toast` directly in the
-  // effect below would tear down and restart this poll loop constantly -
-  // any toast firing anywhere in the app would restart it. A ref sidesteps
-  // that: the effect reads the LATEST toast fns without needing them in
-  // its dependency array, so it mounts once and stays running.
-  const toastRef = useRef(toast);
-  toastRef.current = toast;
-
-  useEffect(() => {
-    const ipcRenderer = getIpcRenderer();
-    if (!ipcRenderer) return undefined; // not Electron - nothing to print with
-    // TypeScript's null-narrowing above doesn't survive into the .then()
-    // closures further down (they're not guaranteed to run within the same
-    // synchronous control-flow tsc is analyzing) - rebinding to a new const
-    // here keeps it non-nullable everywhere it's actually used below.
-    const ipc = ipcRenderer;
-
-    let cancelled = false;
-
-    async function poll() {
-      const settings = getStoreSettings();
-      if (!settings.kitchenPrinter && !settings.counterPrinter) return; // nothing configured to print to
-
-      let orders;
-      try {
-        orders = await fetchUnprintedKitchenOrders();
-      } catch {
-        return; // network hiccup - next tick retries
-      }
-      if (!orders || cancelled) return;
-
-      const printLogo = typeof window !== 'undefined' ? localStorage.getItem('preferred-print-logo') : null;
-
-      for (const order of orders) {
-        if (cancelled) break;
-        if (inFlightRef.current.has(order.id)) continue; // already claiming/printing this one
-        inFlightRef.current.add(order.id);
-
-        claimKitchenPrint(order.id)
-          .then(async (claimed) => {
-            const label = `New order #${claimed.dailyOrderNumber ?? claimed.id.slice(-4)}`;
-            await dispatchKitchenPrints(
-              claimed.items,
-              categoryLookupRef.current,
-              settings,
-              async (groupItems, printerName, groupLabel) => {
-                const printPromise = ipc.invoke('print-kitchen-receipt-data', { ...claimed, items: groupItems }, printerName, printLogo, settings);
-                reportPrintOutcome(printPromise, `${label} ${groupLabel.toLowerCase()}`, toastRef.current);
-                await printPromise.catch(() => {});
-              },
-            );
-          })
-          .catch((err) => {
-            // 409 = another till (or this same one, on a previous tick)
-            // already claimed it - not an error, just not ours to print.
-            if (!(err instanceof ApiError) || err.status !== 409) {
-              console.error('Kitchen auto-print failed:', err);
-            }
-          })
-          .finally(() => {
-            inFlightRef.current.delete(order.id);
-          });
-      }
-    }
-
-    void poll();
-    const intervalId = setInterval(() => void poll(), KITCHEN_POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(intervalId);
-    };
-  }, []);
-
-  return null;
-}
-
-// A customer receipt (DineIn, TakeAway, or Delivery - no exceptions) is
-// never auto-printed anywhere in this app, including for an order
-// completed from a phone (which has no printer of its own) - it's always
-// a deliberate, on-demand action via the printer icon / Print Receipt
-// button on the order detail card (see SalesPage.tsx/RecordPage.tsx).
-// There used to be a ReceiptPrintWatcher here, sibling to
-// KitchenPrintWatcher above, that polled orderController.js's
-// getUnprintedReceiptOrders and auto-printed - removed entirely, not just
-// disabled, since leaving it running with nothing left to legitimately
-// auto-print would be dead weight (and a latent footgun if that backend
-// route's filters ever changed again).
-
-// Sibling to KitchenPrintWatcher above, for edits made
-// to an order AFTER its original kitchen ticket already printed -
-// kitchenPrintedAt only ever fires once per order, so an item added or a
-// quantity bumped up later (via EditOrderPage.tsx's stepper/Quick Add, or
-// pos-mobile's Order Detail screen, which has no printer of its own) needs
-// its own notification. Backend queues just the increased quantity/new
-// items in pendingKitchenUpdate (see getUnprintedKitchenUpdateOrders) -
-// this prints exactly that delta, not the whole order, so the kitchen
-// isn't told to re-make things they already started. SalesPage.tsx and
-// EditOrderPage.tsx both claim+print this themselves the instant they make
-// the edit on this till, so this watcher is really only needed for edits
-// that came from a phone.
-const KITCHEN_UPDATE_POLL_INTERVAL_MS = 1500; // see KITCHEN_POLL_INTERVAL_MS above
-
-function KitchenUpdateWatcher({ categoryLookupRef }: { categoryLookupRef: React.MutableRefObject<Map<string, string>> }) {
-  const { toast } = useToast();
-  const inFlightRef = useRef<Set<string>>(new Set());
-  const toastRef = useRef(toast);
-  toastRef.current = toast;
-
-  useEffect(() => {
-    const ipcRenderer = getIpcRenderer();
-    if (!ipcRenderer) return undefined;
-    // Same reasoning as KitchenPrintWatcher above.
-    const ipc = ipcRenderer;
-
-    let cancelled = false;
-
-    async function poll() {
-      const settings = getStoreSettings();
-      if (!settings.kitchenPrinter && !settings.counterPrinter) return; // nothing configured to print to
-
-      let orders;
-      try {
-        orders = await fetchUnprintedKitchenUpdateOrders();
-      } catch {
-        return; // network hiccup - next tick retries
-      }
-      if (!orders || cancelled) return;
-
-      const printLogo = typeof window !== 'undefined' ? localStorage.getItem('preferred-print-logo') : null;
-
-      for (const order of orders) {
-        if (cancelled) break;
-        if (inFlightRef.current.has(order.id)) continue;
-        inFlightRef.current.add(order.id);
-
-        claimKitchenUpdatePrint(order.id)
-          .then(async (claimed) => {
-            if (!claimed || claimed.items.length === 0) return;
-            const label = `Order #${claimed.order.dailyOrderNumber ?? claimed.order.id.slice(-4)}`;
-            await dispatchKitchenPrints(
-              claimed.items,
-              categoryLookupRef.current,
-              settings,
-              async (groupItems, printerName, groupLabel) => {
-                const printPromise = ipc.invoke('print-kitchen-receipt-data', { ...claimed.order, items: groupItems }, printerName, printLogo, settings);
-                reportPrintOutcome(printPromise, `${label} ${groupLabel.toLowerCase()} update`, toastRef.current);
-                await printPromise.catch(() => {});
-              },
-            );
-          })
-          .catch((err) => {
-            if (!(err instanceof ApiError) || err.status !== 409) {
-              console.error('Kitchen update auto-print failed:', err);
-            }
-          })
-          .finally(() => {
-            inFlightRef.current.delete(order.id);
-          });
-      }
-    }
-
-    void poll();
-    const intervalId = setInterval(() => void poll(), KITCHEN_UPDATE_POLL_INTERVAL_MS);
-    return () => {
-      cancelled = true;
-      clearInterval(intervalId);
-    };
-  }, []);
-
-  return null;
-}
-
 // The Open/Close Shop control. Any shop member can see the current status
 // (important context - the POS screen refuses new orders while closed, see
 // POSPage), but only someone with the shop.session.manage permission
@@ -646,14 +399,14 @@ function ShopStatusControl() {
         // shop-session.tsx's openLocally() and offline-sync.ts's
         // reconciliation step for how this becomes a real ShopSession.
         openLocally();
-        toast.success('Shop opened offline. Will sync once back online.');
+        toast.success('Clinic opened offline. Will sync once back online.');
         return;
       }
       await openShopSession();
       await refresh();
-      toast.success('Shop opened. Orders can now be taken.');
+      toast.success('Clinic opened. Appointments can now be taken.');
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to open shop.');
+      toast.error(error instanceof Error ? error.message : 'Failed to open clinic.');
     } finally {
       setBusy(false);
     }
@@ -686,8 +439,8 @@ function ShopStatusControl() {
         // while the Unresolved Orders dialog still opens and drives its own
         // "Close Anyway" -> handleClose(true) recursion independently.
         void confirm(
-          `${orders.length} order${orders.length === 1 ? ' is' : 's are'} still pending or unpaid:\n\n${preview}${extra}\n\nClose the shop anyway? These orders stay in the system either way.`,
-          { title: 'Unresolved orders', confirmText: 'Close Anyway', tone: 'danger' }
+          `${orders.length} appointment${orders.length === 1 ? ' is' : 's are'} still pending or unpaid:\n\n${preview}${extra}\n\nClose the clinic anyway? These appointments stay in the system either way.`,
+          { title: 'Unresolved appointments', confirmText: 'Close Anyway', tone: 'danger' }
         ).then((confirmed) => {
           if (confirmed) void handleClose(true);
         });
@@ -697,10 +450,10 @@ function ShopStatusControl() {
       await refresh();
       if (result.session) {
         const s = result.session.summary;
-        toast.success(`Shop closed. ${s.orderCount} order${s.orderCount === 1 ? '' : 's'}, PKR ${s.totalSales.toLocaleString()} total sales.`);
+        toast.success(`Clinic closed. ${s.orderCount} appointment${s.orderCount === 1 ? '' : 's'}, PKR ${s.totalSales.toLocaleString()} total sales.`);
       }
     } catch (error) {
-      toast.error(error instanceof Error ? error.message : 'Failed to close shop.');
+      toast.error(error instanceof Error ? error.message : 'Failed to close clinic.');
     } finally {
       setBusy(false);
     }
@@ -716,11 +469,11 @@ function ShopStatusControl() {
         type="button"
         onClick={handleOpen}
         disabled={busy || !canManage}
-        title={canManage ? 'Open the shop to start taking orders' : 'Only a Manager or Shop Owner can open the shop'}
+        title={canManage ? 'Open the clinic to start taking appointments' : 'Only a Manager or Clinic Owner can open the clinic'}
         className="flex items-center gap-1.5 rounded-full border-[0.5px] border-white/40 bg-gradient-to-b from-emerald-400 to-emerald-600 px-2.5 py-1.5 text-xs font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.4),inset_0_-3px_8px_rgba(6,95,70,0.45)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
       >
         <Store size={13} />
-        {busy ? 'Opening...' : 'Open Shop'}
+        {busy ? 'Opening...' : 'Open Clinic'}
       </button>
     );
   }
@@ -735,7 +488,7 @@ function ShopStatusControl() {
         title={`Opened at ${openedTime}${session?.openedByName ? ` by ${session.openedByName}` : ''}`}
       >
         <span className="h-1.5 w-1.5 rounded-full bg-emerald-500" />
-        Open since {openedTime} · {liveCount} order{liveCount === 1 ? '' : 's'}
+        Open since {openedTime} · {liveCount} appointment{liveCount === 1 ? '' : 's'}
       </div>
       {canManage && (
         <button
@@ -745,7 +498,7 @@ function ShopStatusControl() {
           className="flex items-center gap-1.5 rounded-full border-[0.5px] border-white/40 bg-gradient-to-b from-rose-500 to-rose-700 px-2.5 py-1.5 text-xs font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.3),inset_0_-3px_8px_rgba(136,19,55,0.45)] transition-colors hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
         >
           <Lock size={13} />
-          {busy ? 'Closing...' : 'Close Shop'}
+          {busy ? 'Closing...' : 'Close Clinic'}
         </button>
       )}
       {showClosingSummary && (

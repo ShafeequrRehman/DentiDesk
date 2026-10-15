@@ -46,7 +46,7 @@ export function buildReceiptShellHtml(title: string, bodyHtml: string, titleSub?
       .receipt * { box-sizing: border-box; }
       .center { text-align: center; }
       .logo { max-height: 100px; width: auto; max-width: 220px; object-fit: contain; margin: 0 auto 6px; display: block; }
-      .shop-name { font-size: 18px; line-height: 20px; font-weight: 800; text-transform: uppercase; margin: 0 0 5px; }
+      .clinic-name { font-size: 18px; line-height: 20px; font-weight: 800; text-transform: uppercase; margin: 0 0 5px; }
       .title-block { border-top: 4px solid #000; border-bottom: 4px solid #000; padding: 8px 0; margin: 10px 0; text-align: center; }
       .title-block h2 { font-size: 16px; font-weight: 800; text-transform: uppercase; margin: 0; }
       .title-block .title-sub { font-size: 40px; line-height: 40px; font-weight: 900; margin-top: 4px; }
@@ -59,7 +59,7 @@ export function buildReceiptShellHtml(title: string, bodyHtml: string, titleSub?
     <div class="receipt">
       <div class="center">
         ${logoSrc ? `<img class="logo" src="${logoSrc}" alt="" />` : ''}
-        <p class="shop-name">${settings.receiptHeader || 'Store Name'}</p>
+        <p class="clinic-name">${settings.receiptHeader || 'Store Name'}</p>
         ${settings.receiptSubHeader ? `<p>${settings.receiptSubHeader}</p>` : ''}
         ${settings.receiptAddress ? `<p>${settings.receiptAddress}</p>` : ''}
         ${settings.receiptContact ? `<p>${settings.receiptContact}</p>` : ''}
@@ -106,14 +106,14 @@ function buildOrderReceiptBodyHtml(order: SavedOrder) {
     `;
   }).join('');
 
-  const hasRealCustomer = order.customer && order.customer.name && order.customer.name !== 'Walk-in Customer';
+  const hasRealCustomer = order.customer && order.customer.name && !['Walk-in Customer', 'Walk-in Patient'].includes(order.customer.name);
   const hasRealPhone = hasRealCustomer && order.customer.phone && order.customer.phone !== '03000000000';
 
   return `
     <p>DATE: ${dateString}</p>
     <p>TIME: ${timeString}</p>
     <p>TYPE: ${order.orderType.toUpperCase()}</p>
-    ${hasRealCustomer ? `<p>CUSTOMER: ${order.customer.name.toUpperCase()}</p>` : ''}
+    ${hasRealCustomer ? `<p>PATIENT: ${order.customer.name.toUpperCase()}</p>` : ''}
     ${hasRealPhone ? `<p>PHONE: ${order.customer.phone}</p>` : ''}
     ${order.customer?.address ? `<p>ADDRESS: ${order.customer.address}</p>` : ''}
     ${order.billTid ? `<p>TID: ${order.billTid}</p>` : ''}
@@ -144,7 +144,7 @@ function buildOrderReceiptBodyHtml(order: SavedOrder) {
 // definition.
 //
 // Deliberately shows ONLY the payment itself - the amount and which
-// method it moved through (Cash/Bank/Grain/Labour/Munshi) - and never a
+// method it moved through (Cash/Bank) - and never a
 // balance total. This used to also print a "BALANCE AFTER" line (first
 // entry.balanceAfter, the raw previousDues-only ledger figure, then
 // later the customer's real netBalance once that mismatch was found and
@@ -158,16 +158,10 @@ export function writeDuesEntryReceiptToWindow(printWindow: Window, customerName:
   const actionLabel = entry.type === 'add' ? 'PAID' : 'RECEIVED';
   const paymentMethodLabel = entry.paymentMethod === 'bank' && entry.bankName
     ? `Bank - ${entry.bankName}`
-    : entry.paymentMethod === 'grain' && entry.grainName
-      ? `Grain - ${entry.grainName} (${entry.grainKg || 0}kg)`
-      : entry.paymentMethod === 'labour'
-        ? 'Labour Khata'
-        : entry.paymentMethod === 'munshi'
-          ? 'Munshi Khata'
-          : 'Cash';
+    : 'Cash';
   const bodyHtml = `
     <p>DATE: ${date}</p>
-    <p>CUSTOMER: ${customerName.toUpperCase()}</p>
+    <p>PATIENT: ${customerName.toUpperCase()}</p>
     <div class="dashed"></div>
     <div class="row bold"><span>${actionLabel}:</span><span>Rs ${entry.amount}</span></div>
     <p>VIA: ${paymentMethodLabel}</p>
@@ -236,7 +230,7 @@ export function writeOrderReceiptToWindow(printWindow: Window, order: SavedOrder
   const orderNumber = String(order.dailyOrderNumber ?? order.id.slice(-3)).padStart(3, '0');
   const bodyHtml = buildOrderReceiptBodyHtml(order);
   printWindow.document.open();
-  printWindow.document.write(buildReceiptShellHtml('Order No.', bodyHtml, orderNumber));
+  printWindow.document.write(buildReceiptShellHtml('Appointment No.', bodyHtml, orderNumber));
   printWindow.document.close();
   printWindow.focus();
   printWindow.print();

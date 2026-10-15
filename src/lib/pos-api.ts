@@ -1,14 +1,17 @@
 import { api, getSystemApiBaseUrl } from '@/lib/api';
 export { isAuthenticated } from '@/lib/auth';
 import { AxiosError } from 'axios';
-import { Bank, CancelOrderPayload, CashSummary, CloseShopResult, CompanyLedgerEntry, Customer, DashboardAdjustmentHistoryEntry, DashboardAdjustmentKey, DashboardSummary, DayEndReport, DuesPaymentOption, Expense, Grain, Ingredient, IngredientCategory, IngredientLedgerResponse, IngredientPurchase, IngredientUnit, InventoryReport, LabourSummary, LedgerCustomer, LedgerTransactionsResponse, MunshiSummary, MySalesReport, OrderPayload, OrderUpdatePayload, Product, ProductInput, PurchaseOrderInput, PurchaseOrderReceiveItemInput, Recipe, RecoveryHistoryRow, SaleOnCashDetailRow, SavedOrder, ShopSession, ShopSessionStatus, StockValueDetailRow, Supplier, VendorBalanceDetailRow, Waiter } from '@/lib/pos-types';
+import { Bank, CancelOrderPayload, CashSummary, CloseShopResult, CompanyLedgerEntry, Customer, DashboardAdjustmentHistoryEntry, DashboardAdjustmentKey, DashboardSummary, DayEndReport, DuesPaymentOption, Expense, Ingredient, IngredientCategory, IngredientLedgerResponse, IngredientPurchase, IngredientUnit, InventoryReport, LedgerCustomer, LedgerTransactionsResponse, MySalesReport, OrderPayload, OrderUpdatePayload, Product, ProductInput, PurchaseOrderInput, PurchaseOrderReceiveItemInput, Recipe, RecoveryHistoryRow, SaleOnCashDetailRow, SavedOrder, ShopSession, ShopSessionStatus, StockValueDetailRow, Supplier, VendorBalanceDetailRow, Waiter } from '@/lib/pos-types';
 
 export class ApiError extends Error {
   status?: number;
-  constructor(message: string, status?: number) {
+  // Backend's machine-readable `reason` (e.g. "slot_taken"), when sent.
+  reason?: string;
+  constructor(message: string, status?: number, reason?: string) {
     super(message);
     this.name = 'ApiError';
     this.status = status;
+    this.reason = reason;
   }
 }
 
@@ -49,6 +52,11 @@ function normalizeOrder(order: SavedOrder & { _id?: string }) {
   return {
     ...order,
     id: order.id ?? order._id ?? '',
+    // Older appointments were saved with the default name "Walk-in
+    // Customer" - show them with the clinic wording instead.
+    customer: order.customer && order.customer.name === 'Walk-in Customer'
+      ? { ...order.customer, name: 'Walk-in Patient' }
+      : order.customer,
   };
 }
 
@@ -57,7 +65,7 @@ function handleApiError(error: unknown): never {
     const message = (error.response?.data as { error?: string; message?: string } | undefined)?.error
       || (error.response?.data as { error?: string; message?: string } | undefined)?.message
       || error.message;
-    throw new ApiError(message, error.response?.status);
+    throw new ApiError(message, error.response?.status, (error.response?.data as { reason?: string } | undefined)?.reason);
   }
 
   throw error instanceof Error ? error : new Error('Request failed');
@@ -174,8 +182,6 @@ export async function updateCustomerDues(phone: string, previousDues: number, no
       note,
       paymentMethod: payment?.method || 'cash',
       bankId: payment?.bankId,
-      grainId: payment?.grainId,
-      grainKg: payment?.grainKg,
     });
     return normalizeCustomer(response.data as Customer & { _id?: string; updatedAt?: string });
   } catch (error) {
@@ -217,8 +223,6 @@ export async function settleCustomerDues(phone: string, amount: number, note?: s
       note,
       paymentMethod: payment?.method || 'cash',
       bankId: payment?.bankId,
-      grainId: payment?.grainId,
-      grainKg: payment?.grainKg,
     });
     return response.data;
   } catch (error) {
@@ -259,88 +263,6 @@ export async function createBank(name: string, openingAmount: number, note?: str
 export async function addBankTransaction(bankId: string, type: 'deposit' | 'withdrawal', amount: number, note?: string) {
   try {
     const response = await api.post<Bank>(`/banks/${bankId}/transactions`, { type, amount, note });
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-  }
-}
-
-// --- Grain Stock page (the shop's own grain stock, e.g. Rice/Gandam) ---
-// Mirrors the Bank page pattern above - each grain has a running kg total
-// and rupee value, plus a history of movements - but tracks stock (kg)
-// alongside money. See backend/models/Grain.js.
-export async function fetchGrains() {
-  try {
-    const response = await api.get<Grain[]>('/grains');
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-  }
-}
-
-// Adding a grain and its very first stock in one step, e.g. "Rice" with an
-// opening 500kg worth Rs150,000 - same "add my bank, add a payment" flow
-// createBank was built for. Both opening fields can be 0 to just create an
-// empty grain.
-export async function createGrain(name: string, openingKg: number, openingAmount: number, note?: string) {
-  try {
-    const response = await api.post<Grain>('/grains', { name, openingKg, openingAmount, note });
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-  }
-}
-
-// A manual deposit/withdrawal recorded directly on the Grain Stock page
-// itself - grain the owner put into or took out of this grain's stock with
-// no customer involved (a customer-linked movement is recorded
-// automatically instead, via updateCustomerDues/settleCustomerDues's own
-// grainPayment above).
-export async function addGrainTransaction(grainId: string, type: 'deposit' | 'withdrawal', kg: number, amount: number, note?: string) {
-  try {
-    const response = await api.post<Grain>(`/grains/${grainId}/transactions`, { type, kg, amount, note });
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-  }
-}
-
-// --- Labour Khata / Munshi Khata (each shop's own single running in/out
-// ledger) --- Simpler than Bank/Grain above: there's only ever ONE Labour
-// account and ONE Munshi account per shop (see backend/models/
-// LabourAccount.js/MunshiAccount.js), so no id/name is ever needed - just
-// fetch the one summary and adjust it directly, same shape as
-// fetchCashSummary/adjustCash.
-export async function fetchLabourSummary() {
-  try {
-    const response = await api.get<LabourSummary>('/labour');
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-  }
-}
-
-export async function adjustLabour(amount: number, direction: 'in' | 'out', note?: string) {
-  try {
-    const response = await api.post<LabourSummary>('/labour/adjust', { amount, direction, note });
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-  }
-}
-
-export async function fetchMunshiSummary() {
-  try {
-    const response = await api.get<MunshiSummary>('/munshi');
-    return response.data;
-  } catch (error) {
-    handleApiError(error);
-  }
-}
-
-export async function adjustMunshi(amount: number, direction: 'in' | 'out', note?: string) {
-  try {
-    const response = await api.post<MunshiSummary>('/munshi/adjust', { amount, direction, note });
     return response.data;
   } catch (error) {
     handleApiError(error);
@@ -1059,33 +981,7 @@ export async function fetchOrdersList(params?: { date?: string; since?: string; 
   }
 }
 
-// Orders with no kitchen ticket printed yet, shop-wide - regardless of
-// which client (this till's own POS screen, or a cashier's phone via
-// pos-mobile) created them. Polled by DashboardShell.tsx's background
-// print loop.
-export async function fetchUnprintedKitchenOrders() {
-  try {
-    const response = await api.get<Array<SavedOrder & { _id?: string }>>('/orders/kitchen/unprinted');
-    return response.data.map(normalizeOrder);
-  } catch (error) {
-    handleApiError(error);
-  }
-}
 
-// Atomically claims an order for kitchen printing - always called BEFORE
-// actually sending it to the printer, never after. Throws an ApiError with
-// status 409 if another till already claimed/printed it first - the poll
-// loop checks for exactly that status to skip silently instead of treating
-// it as a real failure (see handleApiError above, which preserves
-// error.response.status on the thrown ApiError).
-export async function claimKitchenPrint(orderId: string) {
-  try {
-    const response = await api.patch<SavedOrder & { _id?: string }>(`/orders/${orderId}/claim-kitchen-print`);
-    return normalizeOrder(response.data);
-  } catch (error) {
-    handleApiError(error);
-  }
-}
 
 // Orders with no customer receipt printed yet, shop-wide - the
 // receipt-printing sibling of fetchUnprintedKitchenOrders above. Returns
@@ -1113,38 +1009,39 @@ export async function claimReceiptPrint(orderId: string) {
   }
 }
 
-// Orders with items queued to notify the kitchen about (addItems, or a
-// replaceItems quantity increase) since their original kitchen ticket
-// already printed - kitchenPrintedAt only ever fires once per order, so
-// this is what makes a LATER edit (including one made from pos-mobile,
-// which has no printer of its own) still reach the kitchen. See
-// backend/controllers/orderController.js's getUnprintedKitchenUpdateOrders.
-export async function fetchUnprintedKitchenUpdateOrders() {
+
+
+export async function fetchOrder(id: string) {
   try {
-    const response = await api.get<Array<SavedOrder & { _id?: string }>>('/orders/kitchen-updates/unprinted');
+    const response = await api.get<SavedOrder & { _id?: string }>(`/orders/${id}`);
+    return normalizeOrder(response.data);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+// --- Clinic appointments (POS time-slot picker + Drs & Services page) ---
+export interface AppointmentQuery {
+  doctor?: string;
+  date?: string; // exact YYYY-MM-DD
+  from?: string; // YYYY-MM-DD and later
+  status?: 'waiting' | 'done';
+}
+
+export async function fetchAppointments(query: AppointmentQuery) {
+  try {
+    const response = await api.get<Array<SavedOrder & { _id?: string }>>('/orders/appointments', { params: query });
     return response.data.map(normalizeOrder);
   } catch (error) {
     handleApiError(error);
   }
 }
 
-// Same claim-before-print contract as claimKitchenPrint, but this one can
-// fire again later for the same order (pendingKitchenUpdate gets queued and
-// cleared any number of times over an order's life, unlike the one-shot
-// kitchenPrintedAt) - returns both the updated order and just the item
-// delta that was claimed, ready to hand straight to the kitchen printer.
-export async function claimKitchenUpdatePrint(orderId: string) {
+// done:true marks the checkup complete (frees the slot) and saves the
+// medicine details; done:false re-opens it.
+export async function saveCheckup(id: string, prescription: string, done = true) {
   try {
-    const response = await api.patch<{ order: SavedOrder & { _id?: string }; items: SavedOrder['items'] }>(`/orders/${orderId}/claim-kitchen-update-print`);
-    return { order: normalizeOrder(response.data.order), items: response.data.items };
-  } catch (error) {
-    handleApiError(error);
-  }
-}
-
-export async function fetchOrder(id: string) {
-  try {
-    const response = await api.get<SavedOrder & { _id?: string }>(`/orders/${id}`);
+    const response = await api.patch<SavedOrder & { _id?: string }>(`/orders/${id}/checkup`, { prescription, done });
     return normalizeOrder(response.data);
   } catch (error) {
     handleApiError(error);

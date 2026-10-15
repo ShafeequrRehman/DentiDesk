@@ -1,6 +1,6 @@
 export const shopClosingSummary = {
   header: {
-    title: "روزانہ شاپ بندش اور Z-رپورٹ",
+    title: "روزانہ کلینک بندش اور Z-رپورٹ",
     subtitle: "دن کے اختتام پر مالیاتی مصالحت",
   },
 
@@ -10,18 +10,18 @@ export const shopClosingSummary = {
   stats: {
     totalRevenue: "کل آمدنی",
     netProfit: "خالص منافع",
-    totalOrders: "کل آرڈرز",
+    totalOrders: "کل اپائنٹمنٹس",
     outstandingDue: "بقایا رقم",
   },
 
   expensesBreakdown: {
     title: "اخراجات کی تفصیل",
-    kitchenStock: "کچن سٹاک (اجزاء کی خریداری)",
+    kitchenStock: "میڈیسن اسٹاک (خریداری)",
     manualOperations: "دستی آپریشنز (دیگر اخراجات)",
   },
 
   ordersByType: {
-    title: "آرڈرز بلحاظ قسم",
+    title: "اپائنٹمنٹس بلحاظ قسم",
     dineIn: "ڈائن اِن",
     takeaway: "ٹیک اوے",
     delivery: "ڈیلیوری",
@@ -35,7 +35,7 @@ export const shopClosingSummary = {
   printReceipt: "رسید پرنٹ کریں",
   sendWhatsapp: "واٹس ایپ بھیجیں",
   sending: "بھیجا جا رہا ہے...",
-  confirmAndCloseShop: "تصدیق کریں اور شاپ بند کریں",
+  confirmAndCloseShop: "تصدیق کریں اور کلینک بند کریں",
   closingInProgress: "بند ہو رہا ہے...",
 
   toasts: {

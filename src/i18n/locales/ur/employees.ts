@@ -72,7 +72,7 @@ export const employees = {
     emailOptional: "ای میل (اختیاری)",
     roleSelectLabel: "کردار (اجازتیں)",
     selectRole: "ایک کردار منتخب کریں",
-    designationLabel: "عہدہ (جاب ٹائٹل - ویٹر/آرڈر ٹیکر POS ویٹر لسٹ میں نظر آتے ہیں)",
+    designationLabel: "عہدہ (جاب ٹائٹل - ویٹر/اپائنٹمنٹ ٹیکر POS ویٹر لسٹ میں نظر آتے ہیں)",
     customDesignationPlaceholder: "مثلاً بریسٹا",
     chooseFromList: "فہرست سے منتخب کریں",
     selectDesignation: "ایک عہدہ منتخب کریں",

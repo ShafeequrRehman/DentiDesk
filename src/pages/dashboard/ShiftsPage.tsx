@@ -68,7 +68,7 @@ export default function ShiftsPage() {
           <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
             Shifts <Store className="text-indigo-600" size={30} />
           </h1>
-          <p className="text-gray-500 font-bold">Every Open Shop → Close Shop cycle, with the exact order count and sales locked in at close time.</p>
+          <p className="text-gray-500 font-bold">Every Open Clinic → Close Clinic cycle, with the exact appointment count and sales locked in at close time.</p>
         </div>
         <button
           type="button"
@@ -89,7 +89,7 @@ export default function ShiftsPage() {
 
       <div className="grid grid-cols-1 sm:grid-cols-3 gap-5">
         <StatCard label="Closed Shifts" value={String(sessions.filter((s) => s.status === 'closed').length)} />
-        <StatCard label="Total Orders" value={totals.orders.toLocaleString()} />
+        <StatCard label="Total Appointments" value={totals.orders.toLocaleString()} />
         <StatCard label="Total Sales" value={formatMoney(totals.sales)} />
       </div>
 
@@ -97,14 +97,14 @@ export default function ShiftsPage() {
         <div className="rounded-[32px] bg-white p-8 text-center text-sm font-bold text-gray-500 shadow-sm">Loading shift history...</div>
       ) : sessions.length === 0 ? (
         <div className="rounded-[32px] bg-white p-8 text-center text-sm font-bold text-gray-500 shadow-sm">
-          No shifts recorded yet. Use the "Open Shop" button to start one.
+          No shifts recorded yet. Use the "Open Clinic" button to start one.
         </div>
       ) : (
         <div className="rounded-[32px] bg-white shadow-sm overflow-hidden">
           <div className="grid grid-cols-[1.3fr_0.9fr_0.7fr_0.9fr_0.9fr_1fr] gap-2 px-6 py-4 text-[11px] font-black uppercase tracking-[0.14em] text-gray-400 border-b border-gray-100">
             <span>Opened → Closed</span>
             <span>Duration</span>
-            <span>Orders</span>
+            <span>Appointments</span>
             <span>Sales</span>
             <span>Collected</span>
             <span>Opened / Closed By</span>
@@ -145,7 +145,7 @@ function ShiftRow({ session }: { session: ShopSession }) {
           )}
         </div>
         {!isOpen && session.closedWithUnpaidOrders ? (
-          <div className="mt-1 text-[11px] font-bold text-amber-600">Closed with unresolved orders</div>
+          <div className="mt-1 text-[11px] font-bold text-amber-600">Closed with unresolved appointments</div>
         ) : null}
       </div>
       <span className="text-sm font-bold text-gray-600 flex items-center gap-1">

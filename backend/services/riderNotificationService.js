@@ -22,7 +22,7 @@ function buildRiderMessage(order, shop) {
       : null;
 
   const lines = [
-    `New Delivery Order #${order.dailyOrderNumber} - ${shop?.name || ""}`.trim(),
+    `New Delivery Appointment #${order.dailyOrderNumber} - ${shop?.name || ""}`.trim(),
     `Customer: ${order.customer?.name || "-"}`,
     `Phone: ${order.customer?.phone || "-"}`,
     `Address: ${order.customer?.address || order.address || "-"}`,
@@ -56,7 +56,7 @@ async function sendToPhones(order, shop, phones) {
       )
     );
   } catch (error) {
-    console.error("Non-fatal: rider notification failed for order", order?._id, error.message);
+    console.error("Non-fatal: rider notification failed for appointment", order?._id, error.message);
     failed.push(...unique);
   }
   return { sent, failed };

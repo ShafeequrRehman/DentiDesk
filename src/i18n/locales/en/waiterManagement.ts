@@ -3,7 +3,7 @@
 // src/components/WaiterManagementSection.tsx.
 export const waiterManagement = {
   title: "Waiter Directory",
-  description: "Add, update, activate, or remove waiters for this shop. The same list is used in POS order entry.",
+  description: "Add, update, activate, or remove waiters for this clinic. The same list is used in POS appointment entry.",
   activeWaiters: "Active Waiters",
 
   namePlaceholder: "Enter waiter name",

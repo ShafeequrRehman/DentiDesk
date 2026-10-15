@@ -5,7 +5,7 @@ export const purchase = {
   },
   searchPlaceholder: "پی او نمبر یا سپلائر تلاش کریں...",
   newPurchaseOrder: "نیا خریداری آرڈر",
-  defaultShopName: "دکان",
+  defaultShopName: "کلینک",
   unspecifiedCompany: "غیر متعین",
   generatedAt: "تیار کردہ: {{date}}",
 
@@ -79,7 +79,7 @@ export const purchase = {
   },
 
   stats: {
-    shop: "دکان",
+    shop: "کلینک",
     totalPurchased: "کل خریداری",
     totalPaid: "کل ادا شدہ",
     totalDue: "کل واجب الادا",

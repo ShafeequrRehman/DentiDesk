@@ -11,18 +11,16 @@ const {
   getOrders,
   updateOrder,
   cancelOrder,
-  getUnprintedKitchenOrders,
-  claimKitchenPrint,
   getUnprintedReceiptOrders,
   claimReceiptPrint,
-  getUnprintedKitchenUpdateOrders,
-  claimKitchenUpdatePrint,
   importOfflineOrders,
   importOfflineOrderUpdates,
   importOfflineCancellations,
   updateTrackingStatus,
   assignRider,
   respondToChangeRequest,
+  getAppointments,
+  completeCheckup,
 } = require("../controllers/orderController");
 
 const router = express.Router();
@@ -69,20 +67,19 @@ router.post("/import-offline-updates", importOfflineOrderUpdates);
 router.post("/import-offline-cancellations", requirePermission("sales.delete"), importOfflineCancellations);
 router.get("/pending/:phone", canReadOrders, checkPendingOrder);
 // Must come before the generic "/:id" GET below, or Express would try to
-// treat "kitchen"/"receipts"/"kitchen-updates" as an order id. Left
+// treat "receipts" as an order id. Left
 // ungated - see the comment above canReadOrders.
-router.get("/kitchen/unprinted", getUnprintedKitchenOrders);
 router.get("/receipts/unprinted", getUnprintedReceiptOrders);
-router.get("/kitchen-updates/unprinted", getUnprintedKitchenUpdateOrders);
+// Clinic appointments (POS time-slot picker + Drs & Services page).
+router.get("/appointments", canReadOrders, getAppointments);
 router.get("/:id", canReadOrders, getOrder);
 // Add items, change details, or complete/settle payment on a pending order
 // - anyone who can either create sales (checkout is part of that same POS
 // workflow) or edit sales can reach this.
 router.patch("/:id", requireAnyPermission("sales.create", "sales.edit"), updateOrder);
 // Print-claim endpoints - till-level, left ungated, see canReadOrders' comment.
-router.patch("/:id/claim-kitchen-print", claimKitchenPrint);
 router.patch("/:id/claim-receipt-print", claimReceiptPrint);
-router.patch("/:id/claim-kitchen-update-print", claimKitchenUpdatePrint);
+router.patch("/:id/checkup", requireAnyPermission("sales.create", "sales.edit", "orders.record.view"), completeCheckup);
 router.patch("/:id/tracking-status", requireAnyPermission("sales.create", "sales.edit"), updateTrackingStatus);
 router.patch("/:id/assign-rider", requireAnyPermission("sales.create", "sales.edit"), assignRider);
 router.patch("/:id/change-request", requireAnyPermission("sales.create", "sales.edit"), respondToChangeRequest);

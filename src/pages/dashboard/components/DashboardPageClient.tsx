@@ -8,7 +8,7 @@ import {
 import {
   Target, Users, CheckCircle2, Clock,
   RotateCcw, XCircle, Wallet, Landmark, Package, Truck,
-  ShoppingBag, Receipt, HandCoins, PiggyBank, Pencil, History as HistoryIcon, List, Wheat, HardHat, UserCog,
+  ShoppingBag, Receipt, HandCoins, PiggyBank, Pencil, History as HistoryIcon, List,
 } from 'lucide-react';
 import { adjustCash, adjustDashboardTile, fetchCashSummary, fetchDashboardAdjustmentHistory, fetchDashboardSummary, fetchOrdersSummary, fetchProducts, fetchRecoveryHistory, fetchShopSessionHistory, fetchStockValueDetail, fetchVendorBalanceDetail, fetchSaleOnCashDetail, type OrderSummary } from '@/lib/pos-api';
 import { CashTransaction, DashboardAdjustmentHistoryEntry, DashboardAdjustmentKey, DashboardSummary, Product, RecoveryHistoryRow, SaleOnCashDetailRow, SavedOrder, ShopSession, StockValueDetailRow, VendorBalanceDetailRow } from '@/lib/pos-types';
@@ -124,7 +124,7 @@ function DashboardPageClientInner() {
         // genuinely still open the whole time.
         if (history && history.length > 0) setShopSession(history[0]);
       } catch (error) {
-        console.error('Dashboard shop session fetch error', error);
+        console.error('Dashboard clinic session fetch error', error);
       }
     }
 
@@ -141,7 +141,7 @@ function DashboardPageClientInner() {
       .then((productsRes) => {
         if (productsRes?.products) setProducts(productsRes.products);
       })
-      .catch((error) => console.error('Dashboard products fetch error', error));
+      .catch((error) => console.error('Dashboard Drs/Services fetch error', error));
   }, []);
 
   // Accounting Overview widgets (Total Sale, Customer Udhar/Advance, Cash
@@ -212,7 +212,7 @@ function DashboardPageClientInner() {
         try {
           setOrders(await loadOrdersFromLocalHub());
         } catch (error) {
-          console.error('Dashboard orders cache read error', error);
+          console.error('Dashboard appointments cache read error', error);
         }
         if (!isOnline) return;
       }
@@ -247,7 +247,7 @@ function DashboardPageClientInner() {
           setOrders(ordersData);
         }
       } catch (error) {
-        console.error('Dashboard orders fetch error', error);
+        console.error('Dashboard appointments fetch error', error);
       }
     }
 
@@ -386,7 +386,7 @@ function DashboardPageClientInner() {
                 to see the rest. Side-by-side again from tablet width up. */}
             <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
               <StatCard title={`Rs ${formatter.format(stats.totalRevenue)}`} subtitle="Total Revenue" trend="Live" color="bg-orange-50 text-orange-400" icon={<Target size={20} />} />
-              <StatCard title={formatter.format(stats.totalOrders)} subtitle="Total Orders" trend="Live" color="bg-purple-50 text-purple-400" icon={<Users size={20} />} />
+              <StatCard title={formatter.format(stats.totalOrders)} subtitle="Total Appointments" trend="Live" color="bg-purple-50 text-purple-400" icon={<Users size={20} />} />
             </div>
 
             <div className="relative min-w-0 overflow-hidden rounded-3xl border border-gray-50 bg-white p-4 h-48">
@@ -398,7 +398,7 @@ function DashboardPageClientInner() {
                     </div>
                     <span className="text-2xl font-bold">{stats.uniqueCustomers}</span>
                   </div>
-                  <p className="text-[10px] font-bold uppercase text-gray-400">Stored Database Customers</p>
+                  <p className="text-[10px] font-bold uppercase text-gray-400">Stored Database Patients</p>
                 </div>
                 <div className="text-right">
                   <span className="text-xl font-bold">Rs {formatter.format(stats.businessSales)}</span>
@@ -428,7 +428,7 @@ function DashboardPageClientInner() {
             <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
               <MiniStat label="Business Day Sales" value={`Rs ${formatter.format(stats.businessSales)}`} />
               <MiniStat label="Transactions" value={formatter.format(stats.totalOrders)} />
-              <MiniStat label="Avg. Order" value={`Rs ${formatter.format(stats.avgValue)}`} valueColor="text-green-500" />
+              <MiniStat label="Avg. Appointment" value={`Rs ${formatter.format(stats.avgValue)}`} valueColor="text-green-500" />
             </div>
           </div>
 
@@ -438,10 +438,10 @@ function DashboardPageClientInner() {
         <div className="col-span-12 min-w-0 space-y-6 lg:col-span-5">
           <div className="rounded-[32px] bg-white p-6 shadow-sm">
             <div className="mb-8 flex items-center justify-between">
-              <h3 className="font-bold">Orders Overview</h3>
+              <h3 className="font-bold">Appointments Overview</h3>
               <div className="flex gap-4 text-[10px] font-bold uppercase text-gray-400">
                 <span className="flex items-center gap-1">
-                  <div className="h-2 w-2 rounded-full bg-orange-400" /> Orders
+                  <div className="h-2 w-2 rounded-full bg-orange-400" /> Appointments
                 </span>
                 <span className="flex items-center gap-1">
                   <div className="h-2 w-2 rounded-full bg-purple-500" /> Est Profit
@@ -658,11 +658,11 @@ function AccountingOverview({
       ) : null}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <OverviewTile icon={<Target size={18} />} color="bg-orange-50 text-orange-500" label={`Total Sale (${periodLabel})`} value={money(summary?.totalSaleToday)} actions={actionsFor('totalSaleToday')} />
-        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label="Customer Udhar" value={money(summary?.customerUdharTotal)} valueColor="text-rose-600" actions={actionsFor('customerUdharTotal')} />
+        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label="Patient Udhar" value={money(summary?.customerUdharTotal)} valueColor="text-rose-600" actions={actionsFor('customerUdharTotal')} />
         <OverviewTile
           icon={<PiggyBank size={18} />}
           color="bg-emerald-50 text-emerald-500"
-          label="Customer Advance"
+          label="Patient Advance"
           value={money(summary?.customerAdvanceTotal)}
           valueColor="text-emerald-600"
           actions={[
@@ -682,9 +682,6 @@ function AccountingOverview({
           ]}
         />
         <OverviewTile icon={<Landmark size={18} />} color="bg-indigo-50 text-indigo-500" label={`Balance on Bank (${balanceAsOfLabel})`} value={money(summary?.balanceOnBank)} />
-        <OverviewTile icon={<Wheat size={18} />} color="bg-amber-50 text-amber-600" label="Grain Stock" value={money(summary?.grainStockValue)} />
-        <OverviewTile icon={<HardHat size={18} />} color="bg-orange-50 text-orange-600" label="Labour Khata" value={money(summary?.labourBalance)} />
-        <OverviewTile icon={<UserCog size={18} />} color="bg-cyan-50 text-cyan-600" label="Munshi Khata" value={money(summary?.munshiBalance)} />
         <OverviewTile
           icon={<Package size={18} />}
           color="bg-violet-50 text-violet-500"
@@ -1168,7 +1165,7 @@ function TileAdjustModal({
             <XCircle size={18} />
           </button>
         </div>
-        <p className="mt-1 text-xs text-gray-400">This only adjusts the number shown on the Dashboard - it never touches the real orders/purchases/ledger behind it.</p>
+        <p className="mt-1 text-xs text-gray-400">This only adjusts the number shown on the Dashboard - it never touches the real appointments/purchases/ledger behind it.</p>
 
         <div className="mt-4 grid grid-cols-2 gap-2">
           <button
@@ -1253,24 +1250,24 @@ function CustomerAdvancesModal({
       const { ReportPdfDocument, downloadPdfDocument } = await import('@/lib/pdf-export');
       const doc = (
         <ReportPdfDocument
-          title="Customer Advances"
+          title="Patient Advances"
           subtitle={`As of ${asOfDate}`}
           stats={[
             { label: 'Total Advance', value: `Rs ${total.toLocaleString()}` },
-            { label: 'Customers', value: String(advances.length) },
+            { label: 'Patients', value: String(advances.length) },
           ]}
           tables={[
             {
-              title: 'Customers',
+              title: 'Patients',
               columns: [
                 { label: 'Date', width: 1.2 },
-                { label: 'Customer', width: 1.8 },
+                { label: 'Patient', width: 1.8 },
                 { label: 'Phone', width: 1.4 },
                 { label: 'Advance', width: 1, align: 'right' },
               ],
               rows: advances.map((c) => [asOfDate, c.name, c.phone || '\u2014', `Rs ${c.amount.toLocaleString()}`]),
               footer: ['', '', 'Total', `Rs ${total.toLocaleString()}`],
-              emptyMessage: 'No customer currently has an advance.',
+              emptyMessage: 'No patient currently has an advance.',
             },
           ]}
         />
@@ -1286,8 +1283,8 @@ function CustomerAdvancesModal({
       <div className="flex max-h-[85vh] w-full max-w-sm flex-col rounded-[32px] bg-white p-6 shadow-2xl">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-black text-gray-900">Customer Advances</h2>
-            <p className="mt-1 text-xs text-gray-400">Every customer who has paid the shop more than they currently owe.</p>
+            <h2 className="text-lg font-black text-gray-900">Patient Advances</h2>
+            <p className="mt-1 text-xs text-gray-400">Every patient who has paid the clinic more than they currently owe.</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full bg-[#F6F7FB] p-2.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900">
             <XCircle size={18} />
@@ -1308,7 +1305,7 @@ function CustomerAdvancesModal({
 
         <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
           {advances.length === 0 ? (
-            <p className="py-8 text-center text-xs font-bold text-gray-400">No customer currently has an advance.</p>
+            <p className="py-8 text-center text-xs font-bold text-gray-400">No patient currently has an advance.</p>
           ) : (
             advances.map((customer) => (
               <div key={customer.phone || customer.name} className="flex items-center justify-between rounded-2xl bg-[#F8F9FB] p-3">
@@ -1520,7 +1517,7 @@ function SaleOnCashDetailModal({
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-lg font-black text-gray-900">Sale on Cash</h2>
-            <p className="mt-1 text-xs text-gray-400">Every order that made up this total.</p>
+            <p className="mt-1 text-xs text-gray-400">Every appointment that made up this total.</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full bg-[#F6F7FB] p-2.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900">
             <XCircle size={18} />
@@ -1541,7 +1538,7 @@ function SaleOnCashDetailModal({
               <div key={`${order.orderNumber ?? 'na'}-${index}`} className="flex items-center justify-between rounded-2xl bg-[#F8F9FB] p-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-gray-800">
-                    {order.orderNumber ? `#${order.orderNumber}` : 'Order'} · {order.customerName || 'Walk-in'}
+                    {order.orderNumber ? `#${order.orderNumber}` : 'Appointment'} · {order.customerName || 'Walk-in'}
                   </p>
                   <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
                     {order.paymentMethod} · {new Date(order.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
@@ -1661,7 +1658,7 @@ function RecoveryHistoryModal({ onClose }: { onClose: () => void }) {
         <div className="flex items-start justify-between">
           <div>
             <h2 className="text-lg font-black text-gray-900">Recovery History</h2>
-            <p className="mt-1 text-xs text-gray-400">Every due payment collected from a customer, Cash or Bank.</p>
+            <p className="mt-1 text-xs text-gray-400">Every due payment collected from a patient, Cash or Bank.</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full bg-[#F6F7FB] p-2.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900">
             <XCircle size={18} />
@@ -1856,7 +1853,7 @@ function formatTime(value: Date) {
 function buildDashboardWindow(session: ShopSession | null, now: Date): BusinessWindow {
   const window = getBusinessWindow(session, now);
   if (!window.hasSession) {
-    return { ...window, label: 'No shift yet — open the shop to start counting orders' };
+    return { ...window, label: 'No shift yet — open the clinic to start counting appointments' };
   }
 
   const label = window.isOpen

@@ -4,16 +4,15 @@ import { Link, useNavigate } from 'react-router-dom';
 import { CheckCircle2, Download, Edit3, Eye, Printer, Search, Trash2, WifiOff, X } from 'lucide-react';
 import { cancelOrder, fetchCustomerOutstanding, fetchOrders, fetchProducts, fetchShopSessionHistory } from '@/lib/pos-api';
 import { writeOrderReceiptToWindow } from '@/lib/order-receipt-print';
-import { SavedOrder, ShopSession, Product } from '@/lib/pos-types';
+import { SavedOrder, ShopSession } from '@/lib/pos-types';
 import { getStoreSettings } from '@/lib/pos-settings';
 import { hasPermission, getAuthUser } from '@/lib/auth';
 import { getBusinessWindow, filterOrdersInBusinessWindow, filterOrdersInBusinessWindows, getSessionDateKey, useShopSession } from '@/lib/shop-session';
 import { isDesktopApp } from '@/lib/api';
 import { useNetworkStatus } from '@/lib/network-status';
-import { getLocalHubStartDiagnostics, getReferenceData, pushOrdersCache } from '@/lib/local-hub-api';
+import { getLocalHubStartDiagnostics, pushOrdersCache } from '@/lib/local-hub-api';
 import { loadOrdersFromLocalHub, saveOrderCancelOffline } from '@/lib/offline-order-helpers';
 import { triggerBackgroundSync } from '@/lib/offline-sync';
-import { buildCategoryLookup, dispatchKitchenPrints } from '@/lib/kitchen-print-routing';
 import { reportPrintOutcome, ToastLike } from '@/lib/print-notify';
 import { useToast } from '@/lib/toast';
 import CompleteOrderModal from '@/components/CompleteOrderModal';
@@ -57,7 +56,7 @@ async function printCustomerReceipt(order: SavedOrder, customerDue: number, toas
       const receiptData = { ...order, previousDues: customerDue };
       reportPrintOutcome(
         ipcRenderer.invoke('print-cashier-receipt-data', receiptData, settings.counterPrinter, printLogo, settings),
-        'Customer receipt',
+        'Patient receipt',
         toast,
       );
       return;
@@ -84,57 +83,6 @@ async function printCustomerReceipt(order: SavedOrder, customerDue: number, toas
   }
   if (printWindow.closed) return;
   writeOrderReceiptToWindow(printWindow, order, previousDues);
-}
-
-// Same reasoning as CancelOrderModal.tsx's own getCancelCategoryLookup -
-// fetched fresh only when a cancellation actually happens, falling back to
-// an empty lookup (every item routes to the kitchen printer) if it fails,
-// never letting a catalog hiccup block the cancellation itself.
-async function getCancelCategoryLookup(useLocalCache: boolean): Promise<Map<string, string>> {
-  try {
-    if (useLocalCache) {
-      const snapshot = await getReferenceData();
-      return buildCategoryLookup((snapshot.products || []) as Product[]);
-    }
-    const result = await fetchProducts();
-    return buildCategoryLookup(result.products || []);
-  } catch {
-    return new Map();
-  }
-}
-
-// Fires the "stop preparation" kitchen ticket the instant an order is
-// cancelled/deleted - same as CancelOrderModal.tsx's own version (the shop
-// owner asked to drop that confirm popup entirely for delete, in favor of
-// this instant direct-cancel path, so this is duplicated here rather than
-// still routing through that modal).
-function printKitchenCancelTicket(order: SavedOrder, toast: ToastLike, categoryLookup: Map<string, string>) {
-  const isElectron = typeof window !== 'undefined' && navigator.userAgent.includes('Electron');
-  if (!isElectron) return;
-
-  try {
-    const electronRequire = (window as ElectronWindow).require;
-    if (!electronRequire) return;
-    const { ipcRenderer } = electronRequire('electron');
-    const settings = getStoreSettings();
-    const printLogo = localStorage.getItem('preferred-print-logo');
-
-    if (settings.kitchenPrinter || settings.counterPrinter) {
-      void dispatchKitchenPrints(
-        order.items,
-        categoryLookup,
-        settings,
-        (groupItems, printerName, label) =>
-          reportPrintOutcome(
-            ipcRenderer.invoke('print-kitchen-cancel-receipt-data', { ...order, items: groupItems }, printerName, printLogo, settings),
-            `${label} cancellation`,
-            toast,
-          ),
-      );
-    }
-  } catch (err) {
-    console.error('Electron print error (kitchen cancel ticket):', err);
-  }
 }
 
 type StatusFilter = 'All' | 'pending' | 'completed' | 'paid' | 'cancelled';
@@ -358,7 +306,7 @@ export default function RecordPage() {
         });
         setCategoryByItem(map);
       } catch (error) {
-        console.error('Record page product/category load error', error);
+        console.error('Record page Drs/Service/category load error', error);
       }
     }
     void loadCategories();
@@ -1013,13 +961,9 @@ export default function RecordPage() {
       if (isDesktopApp()) {
         const actor = { name: getAuthUser()?.name || getAuthUser()?.username };
         updated = await saveOrderCancelOffline(order, '', undefined, actor);
-        const categoryLookup = await getCancelCategoryLookup(true);
-        printKitchenCancelTicket(updated, toast, categoryLookup);
         triggerBackgroundSync();
       } else {
         updated = await cancelOrder(order.id, {});
-        const categoryLookup = await getCancelCategoryLookup(false);
-        printKitchenCancelTicket(updated, toast, categoryLookup);
       }
       localEditVersionRef.current += 1;
       setOrders((previous) => previous.map((existing) => (existing.id === updated.id ? updated : existing)));

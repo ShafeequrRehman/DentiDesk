@@ -188,7 +188,7 @@ class ShopWhatsAppSession {
           console.log(`[whatsapp:${this.shopId}] disconnected:`, reasonCode);
 
           if (reasonCode === DR.loggedOut) {
-            console.log(`[whatsapp:${this.shopId}] logged out - clearing this shop's session only, generating a fresh QR next time.`);
+            console.log(`[whatsapp:${this.shopId}] logged out - clearing this clinic's session only, generating a fresh QR next time.`);
             fs.rmSync(this.authDir, { recursive: true, force: true });
             fs.mkdirSync(this.authDir, { recursive: true });
           }

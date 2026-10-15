@@ -143,7 +143,7 @@ exports.getManifest = (req, res) => {
 
   res.set("Content-Type", "application/manifest+json");
   res.json({
-    name: `${req.shop.name} - Order Online`,
+    name: `${req.shop.name} - Appointment Online`,
     short_name: req.shop.name,
     start_url: `${origin}/#/order/${req.shop._id}`,
     scope: `${origin}/`,
@@ -245,7 +245,7 @@ exports.getOrderStatus = async (req, res) => {
         "dailyOrderNumber orderType table status trackingStatus paymentStatus subtotal tax total paymentMethod createdAt address assignedRider items customerChangeRequest",
       )
       .lean();
-    if (!order) return res.status(404).json({ message: "Order not found." });
+    if (!order) return res.status(404).json({ message: "Appointment not found." });
     res.json(publicOrderShape(order));
   } catch (error) {
     res.status(500).json({ message: error.message });
@@ -291,14 +291,14 @@ exports.createOrder = async (req, res) => {
       requestedLocation && Number.isFinite(Number(requestedLocation.lat)) && Number.isFinite(Number(requestedLocation.lng));
     if (orderType === "Delivery" && !hasValidLocation) {
       return res.status(400).json({
-        message: "Please allow location access so the rider can find you - location is required for delivery orders.",
+        message: "Please allow location access so the rider can find you - location is required for delivery appointments.",
         reason: "location_required",
       });
     }
 
     const openSession = await ShopSession.findOne({ shopId, status: "open" }).lean();
     if (!openSession) {
-      return res.status(409).json({ message: "This shop is currently closed and isn't taking orders right now.", reason: "shop_closed" });
+      return res.status(409).json({ message: "This clinic is currently closed and isn't taking appointments right now.", reason: "shop_closed" });
     }
 
     // Never trust client-submitted prices/names - re-look-up every line
@@ -354,7 +354,7 @@ exports.createOrder = async (req, res) => {
       .lean();
     if (existingActiveForPhone) {
       return res.status(409).json({
-        message: `You already have an active order (#${existingActiveForPhone.dailyOrderNumber}). Please wait until it's completed before placing another.`,
+        message: `You already have an active appointment (#${existingActiveForPhone.dailyOrderNumber}). Please wait until it's completed before placing another.`,
         reason: "already_has_active_order",
         existingOrder: {
           id: String(existingActiveForPhone._id),
@@ -389,8 +389,8 @@ exports.createOrder = async (req, res) => {
     const paymentMethod = isOnlineIntent ? "E-Wallet" : "Cash";
     const customerNote = String(payload.note || "").trim();
     const noteParts = [];
-    if (isGatewayPayment) noteParts.push(`Customer selected ${payload.paymentMethod} - awaiting online payment confirmation.`);
-    else if (payload.paymentMethod === "Online") noteParts.push("Customer selected to pay online directly - please confirm payment with them.");
+    if (isGatewayPayment) noteParts.push(`Patient selected ${payload.paymentMethod} - awaiting online payment confirmation.`);
+    else if (payload.paymentMethod === "Online") noteParts.push("Patient selected to pay online directly - please confirm payment with them.");
     if (customerNote) noteParts.push(customerNote);
 
     // Real-time location, captured once from the customer's own phone -
@@ -431,7 +431,7 @@ exports.createOrder = async (req, res) => {
         { upsert: true, setDefaultsOnInsert: true },
       );
     } catch (customerError) {
-      console.error("Non-fatal: customer contact-info sync failed for a public QR order", customerError);
+      console.error("Non-fatal: patient contact-info sync failed for a public QR appointment", customerError);
     }
 
     res.status(201).json({
@@ -464,16 +464,16 @@ exports.createOrder = async (req, res) => {
 exports.requestOrderChange = async (req, res) => {
   try {
     const order = await Order.findOne({ _id: req.params.orderId, shopId: req.shop._id });
-    if (!order) return res.status(404).json({ message: "Order not found." });
+    if (!order) return res.status(404).json({ message: "Appointment not found." });
     if (order.source !== "customer-qr") {
-      return res.status(400).json({ message: "This order can't be changed here." });
+      return res.status(400).json({ message: "This appointment can't be changed here." });
     }
     if (order.status !== "pending") {
-      return res.status(400).json({ message: "This order is already finished and can no longer be changed.", reason: "order_finished" });
+      return res.status(400).json({ message: "This appointment is already finished and can no longer be changed.", reason: "order_finished" });
     }
     if (["preparing", "ready", "cancelled"].includes(order.trackingStatus)) {
       return res.status(409).json({
-        message: "The kitchen has already started on this order - please contact the shop directly for any changes.",
+        message: "This appointment is already in progress - please contact the clinic directly for any changes.",
         reason: "too_late",
       });
     }
@@ -494,7 +494,7 @@ exports.requestOrderChange = async (req, res) => {
     // just hidden client-side once the countdown hits zero.
     const orderAgeMs = Date.now() - new Date(order.createdAt).getTime();
     if (requestedAdd.length > 0 && orderAgeMs > ADD_ITEMS_WINDOW_MS) {
-      return res.status(409).json({ message: "You can only add items within 5 minutes of placing your order.", reason: "add_window_expired" });
+      return res.status(409).json({ message: "You can only add items within 5 minutes of placing your appointment.", reason: "add_window_expired" });
     }
 
     // Never trust client-submitted prices/names - re-look-up every
@@ -540,7 +540,7 @@ exports.requestOrderChange = async (req, res) => {
         const available = currentQuantities.get(key) || 0;
         const quantity = Math.min(Math.max(Math.floor(Number(requested?.quantity) || 0), 1), available);
         if (quantity <= 0) {
-          return res.status(400).json({ message: `"${name}" isn't part of your order.`, reason: "item_not_in_order" });
+          return res.status(400).json({ message: `"${name}" isn't part of your appointment.`, reason: "item_not_in_order" });
         }
         removeItems.push({ name, variation, quantity });
       }
@@ -559,7 +559,7 @@ exports.requestOrderChange = async (req, res) => {
     await order.save();
 
     res.json({
-      message: "Request sent - waiting for the shop to approve.",
+      message: "Request sent - waiting for the clinic to approve.",
       customerChangeRequest: publicOrderShape(order).customerChangeRequest,
     });
   } catch (error) {
@@ -578,9 +578,9 @@ exports.initiatePayment = async (req, res) => {
     }
 
     const order = await Order.findOne({ _id: req.params.orderId, shopId: req.shop._id });
-    if (!order) return res.status(404).json({ message: "Order not found." });
+    if (!order) return res.status(404).json({ message: "Appointment not found." });
     if (order.paymentStatus === "paid") {
-      return res.status(409).json({ message: "This order is already paid." });
+      return res.status(409).json({ message: "This appointment is already paid." });
     }
 
     const gateway = req.shop.paymentGateway || {};
@@ -624,7 +624,7 @@ exports.jazzCashCallback = async (req, res) => {
     const fields = { ...req.query, ...req.body };
     const gateway = req.shop.paymentGateway?.jazzCash;
     const order = await findOrderByTxnRef(req.shop._id, fields.pp_TxnRefNo);
-    if (!order || !gateway) return res.status(404).send("Order not found.");
+    if (!order || !gateway) return res.status(404).send("Appointment not found.");
 
     const result = verifyJazzCashCallback(fields, gateway);
     if (result.verified && result.success) {
@@ -653,7 +653,7 @@ exports.easyPaisaCallback = async (req, res) => {
     const fields = { ...req.query, ...req.body };
     const gateway = req.shop.paymentGateway?.easyPaisa;
     const order = await findOrderByTxnRef(req.shop._id, fields.orderRefNum);
-    if (!order || !gateway) return res.status(404).send("Order not found.");
+    if (!order || !gateway) return res.status(404).send("Appointment not found.");
 
     const result = verifyEasyPaisaCallback(fields, gateway);
     if (result.verified && result.success) {

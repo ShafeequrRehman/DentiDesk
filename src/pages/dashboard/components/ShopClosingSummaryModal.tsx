@@ -75,35 +75,35 @@ export default function ShopClosingSummaryModal({
     return [
       { label: 'Total Revenue', value: formatMoney(report.revenue) },
       { label: 'Net Profit', value: formatMoney(report.netProfit) },
-      { label: 'Total Orders', value: String(report.orderCount) },
+      { label: 'Total Appointments', value: String(report.orderCount) },
       { label: 'Outstanding Due', value: formatMoney(report.totalDue) },
     ];
   }
 
   function buildExpenseTable(): PdfTable {
     const rows: Array<Array<string | number>> = [
-      ['Kitchen Stock (ingredient purchases)', formatMoney(report?.kitchenStockPurchases || 0)],
+      ['Medicine Stock (purchases)', formatMoney(report?.kitchenStockPurchases || 0)],
       ['Manual Operations (other expenses)', formatMoney(report?.otherExpenses || 0)],
     ];
     return {
       title: 'Expenses Breakdown',
       columns: [{ label: 'Category', width: 2 }, { label: 'Amount', width: 1, align: 'right' }],
       rows,
-      footer: ['Net Profit (Revenue - Kitchen Stock is excluded, already counted via COGS)', formatMoney(report?.netProfit || 0)],
+      footer: ['Net Profit (Revenue - Medicine Stock is excluded, already counted via COGS)', formatMoney(report?.netProfit || 0)],
     };
   }
 
   function buildOrderTypeTable(): PdfTable {
     const breakdown = report?.orderTypeBreakdown || { DineIn: 0, TakeAway: 0, Delivery: 0 };
     return {
-      title: 'Orders by Type',
-      columns: [{ label: 'Order Type', width: 2 }, { label: 'Count', width: 1, align: 'right' }],
+      title: 'Appointments by Type',
+      columns: [{ label: 'Appointment Type', width: 2 }, { label: 'Count', width: 1, align: 'right' }],
       rows: [
         ['Dine-In', breakdown.DineIn],
         ['Takeaway', breakdown.TakeAway],
         ['Delivery', breakdown.Delivery],
       ],
-      footer: ['Total Orders', report?.orderCount || 0],
+      footer: ['Total Appointments', report?.orderCount || 0],
     };
   }
 
@@ -111,7 +111,7 @@ export default function ShopClosingSummaryModal({
     const openedLabel = session?.openedAt ? new Date(session.openedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '--';
     return (
       <ReportPdfDocument
-        title="Day-End Shop Closing Summary (Z-Report)"
+        title="Day-End Clinic Closing Summary (Z-Report)"
         subtitle={`Shift opened ${openedLabel}${session?.openedByName ? ` by ${session.openedByName}` : ''}`}
         stats={buildPdfStats()}
         tables={[buildExpenseTable(), buildOrderTypeTable()]}
@@ -180,7 +180,7 @@ export default function ShopClosingSummaryModal({
               <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
                 <SummaryStat label="Total Revenue" value={formatMoney(report.revenue)} accent="text-emerald-600" />
                 <SummaryStat label="Net Profit" value={formatMoney(report.netProfit)} accent={report.netProfit >= 0 ? 'text-emerald-600' : 'text-rose-600'} />
-                <SummaryStat label="Total Orders" value={String(report.orderCount)} accent="text-indigo-600" />
+                <SummaryStat label="Total Appointments" value={String(report.orderCount)} accent="text-indigo-600" />
                 <SummaryStat label="Outstanding Due" value={formatMoney(report.totalDue)} accent="text-amber-600" />
               </div>
 
@@ -188,7 +188,7 @@ export default function ShopClosingSummaryModal({
                 <h3 className="mb-3 text-xs font-black uppercase tracking-wide text-gray-500">Expenses Breakdown</h3>
                 <div className="space-y-2 text-sm">
                   <div className="flex items-center justify-between">
-                    <span className="font-bold text-gray-600">Kitchen Stock (ingredient purchases)</span>
+                    <span className="font-bold text-gray-600">Medicine Stock (purchases)</span>
                     <span className="font-black text-gray-900">{formatMoney(report.kitchenStockPurchases)}</span>
                   </div>
                   <div className="flex items-center justify-between">
@@ -199,7 +199,7 @@ export default function ShopClosingSummaryModal({
               </div>
 
               <div className="rounded-2xl bg-white/60 p-4">
-                <h3 className="mb-3 text-xs font-black uppercase tracking-wide text-gray-500">Orders by Type</h3>
+                <h3 className="mb-3 text-xs font-black uppercase tracking-wide text-gray-500">Appointments by Type</h3>
                 <div className="grid grid-cols-3 gap-3 text-center">
                   <div>
                     <div className="text-lg font-black text-gray-900">{breakdown.DineIn}</div>
@@ -251,7 +251,7 @@ export default function ShopClosingSummaryModal({
                 disabled={confirming || closing}
                 className="flex w-full items-center justify-center gap-2 rounded-full border-[0.5px] border-white/40 bg-gradient-to-b from-rose-500 to-rose-700 px-4 py-3.5 text-sm font-bold text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.3),inset_0_-3px_8px_rgba(136,19,55,0.45)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-60"
               >
-                <Lock size={16} /> {confirming || closing ? 'Closing...' : 'Confirm & Close Shop'}
+                <Lock size={16} /> {confirming || closing ? 'Closing...' : 'Confirm & Close Clinic'}
               </button>
             </div>
           )}

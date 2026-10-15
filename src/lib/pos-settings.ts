@@ -63,7 +63,7 @@ export const defaultSettings: StoreSettings = {
   receiptAddress: "Gojra Road Near Ali Merriage Hall",
   receiptContact: "0300-0310275",
   receiptPaymentInfo: "0307 - 4798089 Jazzcash/EasyPaisa",
-  receiptFooterMessage: "Thank You for your Order!",
+  receiptFooterMessage: "Thank You for your Appointment!",
   cashierReceiptTemplate: "classic",
   kitchenReceiptTemplate: "classic",
   serviceChargePercent: 0,
@@ -103,7 +103,13 @@ export function getStoreSettings(): StoreSettings {
   try {
     const saved = localStorage.getItem('pos_store_settings');
     if (saved) {
-      return { ...defaultSettings, ...JSON.parse(saved), ...sessionOverrides };
+      const parsed = JSON.parse(saved) as Partial<StoreSettings>;
+      // The old built-in footer text - swap it for the clinic wording, but
+      // leave any footer the clinic typed itself untouched.
+      if (parsed.receiptFooterMessage === 'Thank You for your Order!') {
+        parsed.receiptFooterMessage = defaultSettings.receiptFooterMessage;
+      }
+      return { ...defaultSettings, ...parsed, ...sessionOverrides };
     }
   } catch (err) {
     console.error('Failed to load settings:', err);

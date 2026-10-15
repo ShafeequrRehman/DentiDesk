@@ -51,7 +51,7 @@ export default function PaymentsPage() {
       <div className="mb-6 flex items-center justify-between">
         <div>
           <h1 className="text-2xl font-bold">Payments</h1>
-          <p className="text-sm text-gray-400">Internal record of payments received from shops (no gateway integration).</p>
+          <p className="text-sm text-gray-400">Internal record of payments received from clinics (no gateway integration).</p>
         </div>
         <button type="button" onClick={() => setShowForm((v) => !v)} className="flex items-center gap-2 rounded-full bg-[#E2F33C] px-4 py-2.5 text-sm font-bold text-black">
           <Plus size={16} /> Record Payment
@@ -62,7 +62,7 @@ export default function PaymentsPage() {
         <div className="mb-6 max-w-xl rounded-2xl border border-white/10 bg-white/5 p-5">
           <div className="grid grid-cols-2 gap-3 text-sm">
             <select value={form.shopId} onChange={(e) => setForm({ ...form, shopId: e.target.value })} className="rounded-lg border border-white/10 bg-black/30 px-3 py-2">
-              <option value="">Select shop</option>
+              <option value="">Select clinic</option>
               {shops.map((s) => <option key={s._id} value={s._id}>{s.name}</option>)}
             </select>
             <input placeholder="Amount" type="number" value={form.amount} onChange={(e) => setForm({ ...form, amount: e.target.value })} className="rounded-lg border border-white/10 bg-black/30 px-3 py-2" />
@@ -84,7 +84,7 @@ export default function PaymentsPage() {
           <thead className="bg-white/5 text-xs uppercase text-gray-400">
             <tr>
               <th className="px-4 py-3">Date</th>
-              <th className="px-4 py-3">Shop</th>
+              <th className="px-4 py-3">Clinic</th>
               <th className="px-4 py-3">Amount</th>
               <th className="px-4 py-3">Method</th>
               <th className="px-4 py-3">Months</th>

@@ -1,5 +1,6 @@
 import { useLanguage } from '@/i18n';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
+import { formatAppointmentDate, formatSlot } from '@/lib/appointments';
 import { AlertCircle, CheckCircle2, Edit3, Trash2, XCircle } from 'lucide-react';
 import { SavedOrder } from '@/lib/pos-types';
 import { resolveProductImage } from '@/lib/food-images';
@@ -105,6 +106,14 @@ export default function OrderDetailModal({
             <DetailBox label={order.orderType === 'DineIn' ? t('record.orderDetail.waiter') : t('common.phone')} value={order.orderType === 'DineIn' ? (order.waiter || t('record.orderType.dineIn')) : (order.customer?.phone || t('record.orderDetail.noPhone'))} />
             {order.orderType === 'DineIn' ? <DetailBox label={t('record.tableHeaders.table')} value={order.table || '—'} /> : null}
             <DetailBox label={t('record.orderDetail.orderTypeLabel')} value={orderType} />
+            {order.appointmentTime ? (
+              <>
+                <DetailBox label={t('sales.boxLabels.doctor')} value={order.doctorName || '-'} />
+                <DetailBox label={t('sales.boxLabels.appointmentDate')} value={formatAppointmentDate(order.appointmentDate) || '-'} />
+                <DetailBox label={t('sales.boxLabels.timeSlot')} value={formatSlot(order.appointmentTime)} />
+                <DetailBox label={t('sales.boxLabels.checkup')} value={order.checkupStatus === 'done' ? t('sales.checkupDone') : t('sales.checkupWaiting')} />
+              </>
+            ) : null}
             <DetailBox label={t('record.orderDetail.paymentMethod')} value={order.paymentMethod} />
             <DetailBox label={t('record.paid')} value={`Rs ${order.paidAmount ?? 0}`} />
             <DetailBox label={t('record.remaining')} value={`Rs ${order.remainingAmount ?? 0}`} />

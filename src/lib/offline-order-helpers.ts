@@ -393,5 +393,11 @@ export async function loadOrdersFromLocalHub(): Promise<SavedOrder[]> {
     getPendingOrderEdits(),
     getPendingOrderCancellations(),
   ]);
-  return mergeOrdersForDisplay(cache.orders as SavedOrder[], pendingNew, pendingEdits, pendingCancellations);
+  return mergeOrdersForDisplay(cache.orders as SavedOrder[], pendingNew, pendingEdits, pendingCancellations).map((order) => (
+    // Older appointments were saved as "Walk-in Customer" - show the
+    // clinic wording instead (same mapping as pos-api.ts's normalizeOrder).
+    order.customer && order.customer.name === 'Walk-in Customer'
+      ? { ...order, customer: { ...order.customer, name: 'Walk-in Patient' } }
+      : order
+  ));
 }

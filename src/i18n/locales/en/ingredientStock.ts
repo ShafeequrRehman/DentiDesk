@@ -2,12 +2,12 @@
 // tracking (picked from the Manage Products catalog), suppliers/companies,
 // and incoming purchase logging.
 export const ingredientStock = {
-  title: "Stock",
-  description: "Pick products from your catalog to track as raw stock, and log incoming purchases.",
-  noProductsForCompany: "No products on file for this company yet.",
+  title: "Medicine Stock",
+  description: "Pick Drs/Services from your catalog to track as raw stock, and log incoming purchases.",
+  noProductsForCompany: "No Drs/Services on file for this company yet.",
 
   toasts: {
-    loadFailedTitle: "Couldn't load ingredient stock",
+    loadFailedTitle: "Couldn't load medicine stock",
     loadFailedMessage: "Failed to load.",
     missingInfoTitle: "Missing information",
     companyNameRequired: "Company name is required.",
@@ -16,7 +16,7 @@ export const ingredientStock = {
     saveCompanyFailedMessage: "Failed to save company.",
     removeCompanyFailedTitle: "Couldn't remove company",
     removeCompanyFailedMessage: "Failed to remove company.",
-    ingredientNameRequired: "Product name is required.",
+    ingredientNameRequired: "Dr & Service is required.",
     saveIngredientFailedTitle: "Couldn't save",
     saveIngredientFailedMessage: "Failed to save ingredient.",
     deleteIngredientFailedTitle: "Couldn't delete",
@@ -70,7 +70,7 @@ export const ingredientStock = {
 
   form: {
     editHeading: "Edit Ingredient",
-    nameLabel: "Product Name",
+    nameLabel: "Dr & Service",
     namePlaceholder: "e.g. Urea, DAP, Antracool, Poma",
     unitLabel: "Unit",
     currentStockLabel: "Current Stock",
@@ -82,7 +82,7 @@ export const ingredientStock = {
   },
 
   directory: {
-    heading: "Ingredient Directory ({{count}})",
+    heading: "Medicine Directory ({{count}})",
     loadMore: "Load More ({{count}} more)",
     searchPlaceholder: "Search ingredients...",
     downloadPdf: "Download PDF",
@@ -102,7 +102,7 @@ export const ingredientStock = {
     noIngredientsConfigured: "No ingredients configured yet.",
     lowStockBadge: "Low Stock",
     avgCostSuffix: "Avg cost {{cost}}/{{unit}}",
-    logPurchaseTitle: "Log a purchased batch (company, product, rate, quantity, total, due)",
+    logPurchaseTitle: "Log a purchased batch (company, Drs/Service, rate, quantity, total, due)",
     logPurchase: "Log Purchase",
     adjustStockTitle: "Manual stock adjustment (correction/wastage - no cost)",
     historyTitle: "Stock ledger for this ingredient (who it was bought from, who it was sold to, remaining balance)",
@@ -142,7 +142,7 @@ export const ingredientStock = {
     selectCompany: "Select a company",
     noCompaniesSelect: "No companies yet - add one above",
     addCompanyFirstTitle: "Add a company in the Companies list above first",
-    productDetailsLabel: "Product Details",
+    productDetailsLabel: "Drs/Service Details",
     rateLabel: "Rate per {{unit}}",
     rateTitle: "The exact cost this batch was bought at - saved on the batch and folded into this ingredient's average cost.",
     quantityLabel: "Quantity ({{unit}})",
@@ -160,18 +160,18 @@ export const ingredientStock = {
   },
 
   offline: {
-    banner: "Offline - showing stock levels as of {{time}}, adjusted for orders taken this session. Purchases/new ingredients need internet.",
+    banner: "Offline - showing stock levels as of {{time}}, adjusted for appointments taken this session. Purchases/new ingredients need internet.",
   },
 
   export: {
-    products: "Products Supplied",
+    products: "Drs/Services Supplied",
     totalPurchasedAmount: "Total Purchased Amount",
     totalDue: "Total Due",
     todaysPurchaseOrders: "Today's Purchase Orders",
     allPurchaseOrders: "All Purchase Orders",
     poNumber: "PO #",
     dateTime: "Date & Time",
-    product: "Product",
+    product: "Drs/Service",
     qty: "Qty",
     rate: "Rate",
     paid: "Paid",
@@ -183,7 +183,7 @@ export const ingredientStock = {
     unit: "Unit",
     currentStock: "Current Stock",
     avgCostPerUnit: "Avg Cost / Unit",
-    shopFallback: "Shop",
+    shopFallback: "Clinic",
     generatedAt: "Generated: {{date}}",
     companyStockSheetName: "Stock Status",
     purchaseOrdersSheetName: "Purchase Orders",
@@ -198,8 +198,8 @@ export const ingredientStock = {
     stockAvailabilitySheetName: "Stock Availability",
     purchaseOrderSheetTitle: "{{name}} — Purchase Order Sheet",
     purchaseOrderSheetSubtitle: "{{productCount}} · Total due {{due}}",
-    productSingular: "{{count}} product",
-    productPlural: "{{count}} products",
+    productSingular: "{{count}} Drs/Service",
+    productPlural: "{{count}} Drs/Services",
     ingredientSingular: "{{count}} ingredient",
     ingredientPlural: "{{count}} ingredients",
     companySuffix: " · {{name}}",

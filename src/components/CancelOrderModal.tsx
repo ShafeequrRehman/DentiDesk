@@ -1,84 +1,14 @@
 import { useState } from 'react';
 import { Trash2, WifiOff, XCircle } from 'lucide-react';
-import { cancelOrder, fetchProducts } from '@/lib/pos-api';
-import { Product, SavedOrder } from '@/lib/pos-types';
-import { getStoreSettings } from '@/lib/pos-settings';
-import { reportPrintOutcome, type ToastLike } from '@/lib/print-notify';
-import { buildCategoryLookup, dispatchKitchenPrints } from '@/lib/kitchen-print-routing';
+import { cancelOrder } from '@/lib/pos-api';
+import { SavedOrder } from '@/lib/pos-types';
 import { useToast } from '@/lib/toast';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { isDesktopApp } from '@/lib/api';
 import { useNetworkStatus } from '@/lib/network-status';
 import { getAuthUser } from '@/lib/auth';
-import { getReferenceData } from '@/lib/local-hub-api';
 import { saveOrderCancelOffline } from '@/lib/offline-order-helpers';
 import { triggerBackgroundSync } from '@/lib/offline-sync';
-
-// This modal has no product catalog of its own loaded (unlike POSPage/
-// SalesPage/EditOrderPage, which already keep one in state for the item
-// picker) - a cancel ticket is infrequent enough that fetching it fresh
-// right here, only when actually needed, beats keeping a whole extra
-// products subscription alive just for this. Falls back to an empty
-// lookup (everything routes to the kitchen printer, same as before this
-// split existed) if the fetch fails for any reason - never lets a catalog
-// hiccup block the cancel ticket itself from printing.
-async function getCancelCategoryLookup(useLocalCache: boolean): Promise<Map<string, string>> {
-  try {
-    if (useLocalCache) {
-      const snapshot = await getReferenceData();
-      return buildCategoryLookup((snapshot.products || []) as Product[]);
-    }
-    const result = await fetchProducts();
-    return buildCategoryLookup(result.products || []);
-  } catch {
-    return new Map();
-  }
-}
-
-type ElectronWindow = Window & typeof globalThis & {
-  require?: (moduleName: 'electron') => {
-    ipcRenderer: {
-      invoke: (channel: string, ...args: unknown[]) => Promise<unknown>;
-    };
-  };
-};
-
-// Fires the "stop preparation" kitchen ticket the instant an order is
-// cancelled, so the kitchen doesn't keep cooking items nobody's paying
-// for anymore. Mirrors how POSPage.tsx prints the original kitchen
-// ticket on order creation - same printer, same IPC pattern - just a
-// different receipt type ("kitchen-cancel", see main.js) that prints
-// "*** ORDER CANCELLED ***" plus the reason instead of prices.
-function printKitchenCancelTicket(order: SavedOrder, toast: ToastLike, categoryLookup: Map<string, string>) {
-  const isElectron = typeof window !== 'undefined' && navigator.userAgent.includes('Electron');
-  if (!isElectron) return;
-
-  try {
-    const electronRequire = (window as ElectronWindow).require;
-    if (!electronRequire) return;
-    const { ipcRenderer } = electronRequire('electron');
-    const settings = getStoreSettings();
-    const printLogo = localStorage.getItem('preferred-print-logo');
-
-    if (settings.kitchenPrinter || settings.counterPrinter) {
-      void dispatchKitchenPrints(
-        order.items,
-        categoryLookup,
-        settings,
-        (groupItems, printerName, label) =>
-          reportPrintOutcome(
-            ipcRenderer.invoke('print-kitchen-cancel-receipt-data', { ...order, items: groupItems }, printerName, printLogo, settings),
-            `${label} cancellation`,
-            toast,
-          ),
-      );
-    } else {
-      console.warn('No kitchen printer configured in settings - cancel ticket not printed.');
-    }
-  } catch (err) {
-    console.error('Electron print error (kitchen cancel ticket):', err);
-  }
-}
 
 // Shared by SalesPage and RecordPage so both places cancel/delete an order
 // the same way. Previously also required the shop's Cancel Order Key
@@ -103,8 +33,7 @@ export default function CancelOrderModal({
   const { isOnline } = useNetworkStatus();
   // Always local-first inside the desktop app, online or not - cancels
   // instantly on this till (see localOrders.js's "Cancelling an ALREADY-
-  // SYNCED order while offline" section) so the kitchen can stop cooking
-  // this right now instead of waiting on a live cloud round trip, then
+  // SYNCED order while offline" section) right now instead of waiting on a live cloud round trip, then
   // syncs for real moments later via triggerBackgroundSync (or once back
   // online, if genuinely offline right now).
   const localFirst = isDesktopApp();
@@ -120,13 +49,8 @@ export default function CancelOrderModal({
       if (localFirst) {
         const actor = { name: getAuthUser()?.name || getAuthUser()?.username };
         const updated = await saveOrderCancelOffline(order, '', reason.trim() || undefined, actor);
-        // Local Hub reference-data cache, not a live fetchProducts() call -
-        // same "don't wait on the network for something this fast"
-        // reasoning as everything else in this local-first branch.
-        const categoryLookup = await getCancelCategoryLookup(true);
-        printKitchenCancelTicket(updated, toast, categoryLookup);
         triggerBackgroundSync();
-        toast.success(trulyOffline ? 'Order cancelled offline - will sync once back online.' : 'Order cancelled.');
+        toast.success(trulyOffline ? 'Appointment cancelled offline - will sync once back online.' : 'Appointment cancelled.');
         onCancelled(updated);
         return;
       }
@@ -135,12 +59,10 @@ export default function CancelOrderModal({
       // queue into).
       const updated = await cancelOrder(order.id, { reason: reason.trim() || undefined });
       if (updated) {
-        const categoryLookup = await getCancelCategoryLookup(false);
-        printKitchenCancelTicket(updated, toast, categoryLookup);
         onCancelled(updated);
       }
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to cancel order.');
+      setError(err instanceof Error ? err.message : 'Failed to cancel appointment.');
     } finally {
       setSubmitting(false);
     }
@@ -156,9 +78,9 @@ export default function CancelOrderModal({
       <div className="glass-strong w-full max-w-md rounded-[28px] p-6">
         <div className="flex items-start justify-between gap-4">
           <div>
-            <h2 className="text-xl font-black text-gray-900">Cancel Order #{orderLabel}</h2>
+            <h2 className="text-xl font-black text-gray-900">Cancel Appointment #{orderLabel}</h2>
             <p className="mt-1 text-xs font-bold text-gray-400">
-              This restores this order's stock and adjusts dues automatically - it is never deleted, just marked Cancelled.
+              This restores this appointment's stock and adjusts dues automatically - it is never deleted, just marked Cancelled.
             </p>
           </div>
           <button type="button" onClick={onClose} className="glass-pill rounded-full p-2.5 text-gray-500 transition hover:bg-white/70 hover:text-gray-900">

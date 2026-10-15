@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { Link } from 'react-router-dom';
-import { ArrowRight, CheckCircle2, Edit3, Globe, Heart, Lock, MapPin, PackagePlus, Phone, Printer, RefreshCcw, Search, ShoppingBag, Star, Table2, UserRound, XCircle } from 'lucide-react';
-import { ApiError, claimKitchenUpdatePrint, fetchCustomerOutstanding, fetchOrder, fetchOrders, fetchOrdersList, fetchProducts, fetchShopProfile, fetchShopSessionHistory, fetchWaiters, fetchRiders, assignOrderRider, isAuthenticated, updateOrder, sendWhatsappMessage, sendWhatsappDocument, updateOrderTrackingStatus, respondToOrderChangeRequest, type TrackingStatus, type Rider } from '@/lib/pos-api';
+import { ArrowRight, CalendarClock, CheckCircle2, Edit3, Globe, Heart, Lock, MapPin, PackagePlus, Phone, Printer, RefreshCcw, Search, ShoppingBag, Star, Table2, UserRound, XCircle } from 'lucide-react';
+import { fetchCustomerOutstanding, fetchOrder, fetchOrders, fetchOrdersList, fetchProducts, fetchShopProfile, fetchShopSessionHistory, fetchWaiters, fetchRiders, assignOrderRider, isAuthenticated, updateOrder, sendWhatsappMessage, sendWhatsappDocument, updateOrderTrackingStatus, respondToOrderChangeRequest, type TrackingStatus, type Rider } from '@/lib/pos-api';
 import { Discount, Product, SavedOrder, ShopSession, Waiter } from '@/lib/pos-types';
 import { StoreSettings, getStoreSettings } from '@/lib/pos-settings';
+import { formatAppointmentDate, formatSlot } from '@/lib/appointments';
 import { hasPermission } from '@/lib/auth';
 import { getBusinessWindow, filterOrdersInBusinessWindow, useShopSession } from '@/lib/shop-session';
 import { isDesktopApp } from '@/lib/api';
 import { useNetworkStatus } from '@/lib/network-status';
 import { getLocalHubStartDiagnostics, getReferenceData, pushOrdersCache } from '@/lib/local-hub-api';
-import { loadOrdersFromLocalHub, saveOrderEditOffline, computeKitchenPrintDelta } from '@/lib/offline-order-helpers';
+import { loadOrdersFromLocalHub, saveOrderEditOffline } from '@/lib/offline-order-helpers';
 import { triggerBackgroundSync } from '@/lib/offline-sync';
 import { computeDiscountFromInputs, loadDiscountDraft, saveDiscountDraft } from '@/lib/discount-draft';
 import { reportPrintOutcome, listenForPrintSentMessages } from '@/lib/print-notify';
-import { buildCategoryLookup, dispatchKitchenPrints, isCategoryPrintRoutingEnabled } from '@/lib/kitchen-print-routing';
 import { useToast } from '@/lib/toast';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { useNotifications } from '@/lib/notifications';
@@ -680,7 +680,7 @@ export default function SalesPage() {
         // (or the default numbered list if this till has never fetched it).
       }
     } catch (err) {
-      console.error('Failed to load orders', err);
+      console.error('Failed to load appointments', err);
       // Let's not wipe out the current orders if it's just a transient error,
       // but we could setStatus here. For now, just catch it safely.
     }
@@ -842,13 +842,6 @@ export default function SalesPage() {
       // triggerBackgroundSync's immediate sync attempt lands (typically a
       // second or two, not the full 5-minute timer) or, if actually
       // offline, once back online.
-      const kitchenDelta = computeKitchenPrintDelta(selectedOrder, payload);
-      const printSettings = getStoreSettings();
-      const isElectronNow = typeof window !== 'undefined' && navigator.userAgent.includes('Electron');
-      // counterPrinter only counts here for Urban Crunch (see
-      // kitchen-print-routing.ts) - every other shop only ever prints to
-      // kitchenPrinter.
-      const willPrintKitchen = isElectronNow && kitchenDelta.length > 0 && !!(printSettings.kitchenPrinter || (isCategoryPrintRoutingEnabled() && printSettings.counterPrinter));
       // No order type - DineIn, TakeAway, or Delivery - auto-prints its
       // customer receipt at completion, offline or on. It's always a
       // deliberate, on-demand action via the Print Receipt button or
@@ -858,40 +851,15 @@ export default function SalesPage() {
       // on-demand print is always available later.
 
       try {
-        const updated = await saveOrderEditOffline(selectedOrder, payload, willPrintKitchen, false);
+        const updated = await saveOrderEditOffline(selectedOrder, payload, false, false);
         localEditVersionRef.current += 1;
         setOrders((previous) => previous.map((order) => order.id === updated.id ? updated : order));
         setSelectedOrder(updated);
 
-        if (willPrintKitchen) {
-          try {
-            const electronRequire = (window as ElectronWindow).require;
-            const { ipcRenderer } = electronRequire ? electronRequire('electron') : { ipcRenderer: null };
-            if (ipcRenderer) {
-              const printLogo = localStorage.getItem('preferred-print-logo');
-              const categoryLookup = buildCategoryLookup(products);
-              await dispatchKitchenPrints(
-                kitchenDelta,
-                categoryLookup,
-                printSettings,
-                async (groupItems, printerName, label) => {
-                  const printPromise = ipcRenderer.invoke('print-kitchen-receipt-data', { ...updated, items: groupItems }, printerName, printLogo, printSettings);
-                  reportPrintOutcome(printPromise, label, toast);
-                  await printPromise.catch(() => {});
-                },
-              );
-            }
-          } catch (printErr) {
-            console.error('Offline kitchen update print failed:', printErr);
-          }
-        }
-
         triggerBackgroundSync();
         setStatus({
           tone: 'info',
-          text: willPrintKitchen
-            ? (isOnline ? t('sales.savedKitchenPrintedSyncing') : t('sales.savedKitchenPrintedOffline'))
-            : isOnline ? t('sales.savedSyncingToCloud') : t('sales.savedWillSyncOffline'),
+          text: isOnline ? t('sales.savedSyncingToCloud') : t('sales.savedWillSyncOffline'),
         });
         return updated;
       } catch (err) {
@@ -909,94 +877,8 @@ export default function SalesPage() {
     setOrders((previous) => previous.map((order) => order.id === updated.id ? updated : order));
     setSelectedOrder(updated);
 
-    // The only thing this ever auto-prints is a kitchen ticket for items
-    // just added (addItems) - completing an order never auto-prints the
-    // customer receipt here, for any order type (see the offline branch
-    // above for the full reasoning; the receipt stays available on demand
-    // via the Print Receipt button / printer icon).
-    if (payload.action !== 'addItems') {
-      return updated;
-    }
-
-    // Claim-before-print, same invariant used everywhere else a kitchen
-    // ticket gets auto-printed (see POSPage.tsx / DashboardShell.tsx's
-    // KitchenUpdateWatcher). This is what makes adding items to an order
-    // from the mobile app work the same as doing it here: the phone has no
-    // printer of its own, so DashboardShell's watcher polls for updated,
-    // unclaimed orders and prints them on this till - and this claim is
-    // what stops both the watcher and this same tick here from printing
-    // two copies when the till itself makes the edit.
-    let kitchenUpdateItems: SavedOrder['items'] | null = null;
-    try {
-      const claimed = await claimKitchenUpdatePrint(updated.id);
-      if (!claimed || claimed.items.length === 0) return updated;
-      kitchenUpdateItems = claimed.items;
-    } catch (err) {
-      if (!(err instanceof ApiError) || err.status !== 409) {
-        console.error('Kitchen update claim failed:', err);
-      }
-      // DashboardShell's KitchenUpdateWatcher is the safety net, no local
-      // fallback here.
-      return updated;
-    }
-
-    // Browser/no-printer fallback goes through PrintOrderPage.tsx, which
-    // fetches the order fresh (full merged item list) - stash just the
-    // claimed new items here for that page to pick up instead.
-    function printPageUrl() {
-      if (kitchenUpdateItems) {
-        try {
-          sessionStorage.setItem(`kitchen-add-items-${updated.id}`, JSON.stringify(kitchenUpdateItems));
-        } catch {
-          // sessionStorage unavailable - the fallback page will just show
-          // the full item list instead, which is an acceptable degradation.
-        }
-      }
-      return `/dashboard/sales/print/${updated.id}?auto=true&type=kitchen`;
-    }
-
-    const isElectron = typeof window !== 'undefined' && navigator.userAgent.includes('Electron');
-    if (isElectron && settings) {
-      try {
-        const electronRequire = (window as ElectronWindow).require;
-        const { ipcRenderer } = electronRequire ? electronRequire('electron') : { ipcRenderer: null };
-        if (!ipcRenderer) throw new Error('Electron IPC is unavailable.');
-
-        const printLogo = localStorage.getItem('preferred-print-logo');
-        // Only the claimed delta ever goes to the kitchen - reprinting the
-        // whole order's items would have the kitchen re-cook stuff they
-        // already started (or finished) on the original ticket. Ice Cream/
-        // Drinks/Shwarma items within that delta route to the counter
-        // printer instead - see kitchen-print-routing.ts.
-        const deltaItems = kitchenUpdateItems || [];
-
-        // main.js's print handlers never reject - a real failure (bad
-        // printer name, react-pdf render error, etc.) comes back as
-        // { success: false, error }, not a thrown/rejected promise - so a
-        // bare .catch() here was never actually seeing those failures.
-        // reportPrintOutcome (print-notify.ts) checks result.success
-        // explicitly, surfacing a genuine print failure AND popping the
-        // success toast on a real success, instead of both looking
-        // identical to a silent no-op.
-        if (settings.kitchenPrinter || settings.counterPrinter) {
-          const categoryLookup = buildCategoryLookup(products);
-          void dispatchKitchenPrints(
-            deltaItems,
-            categoryLookup,
-            settings,
-            (groupItems, printerName, label) =>
-              reportPrintOutcome(ipcRenderer.invoke('print-kitchen-receipt-data', { ...updated, items: groupItems }, printerName, printLogo, settings), label, toast),
-          );
-        } else {
-          setPrintReadyUrl(printPageUrl());
-        }
-      } catch {
-        setPrintReadyUrl(printPageUrl());
-      }
-    } else {
-      setPrintReadyUrl(printPageUrl());
-    }
-
+    // Nothing auto-prints after an edit - the patient receipt is always
+    // printed on demand via the Print Receipt button / printer icon.
     return updated;
   }
 
@@ -1167,7 +1049,7 @@ export default function SalesPage() {
 
     const isElectron = typeof window !== 'undefined' && navigator.userAgent.includes('Electron');
     if (!isElectron) {
-      console.warn('Customer receipt PDF WhatsApp send requires the Electron app.');
+      console.warn('Patient receipt PDF WhatsApp send requires the Electron app.');
       return;
     }
 
@@ -1187,7 +1069,7 @@ export default function SalesPage() {
       // Settings -> Manage Receipt.
       const result = await ipcRenderer.invoke('create-customer-receipt-pdf-data', { ...order, previousDues: customerDue }, `customer_receipt_${receiptNumber}`, printLogo, settings);
       if (!isReceiptPdfResult(result) || !result.success || !result.fileBase64) {
-        throw new Error(isReceiptPdfResult(result) ? result.error || 'Customer receipt PDF was not created.' : 'Invalid receipt PDF response.');
+        throw new Error(isReceiptPdfResult(result) ? result.error || 'Patient receipt PDF was not created.' : 'Invalid receipt PDF response.');
       }
 
       await sendWhatsappDocument(order.customer.phone, result.fileBase64, `receipt-${receiptNumber}.pdf`);
@@ -1490,6 +1372,7 @@ export default function SalesPage() {
                       </div>
                       <Line icon={<Phone size={15} />} text={phoneLabel(order, t)} />
                       <Line icon={<ShoppingBag size={15} />} text={t('sales.orderTypeItemsCount', { type: prettyType(order, t), count: order.itemCount ?? order.items.length })} />
+                      {order.appointmentTime ? <Line icon={<CalendarClock size={15} />} text={`${formatAppointmentDate(order.appointmentDate)} · ${formatSlot(order.appointmentTime)}${order.doctorName ? ` · ${order.doctorName}` : ''}`} /> : null}
                     </div>
                     <div className={`mt-4 flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black ${STATUS_TOTAL_PILL[order.status] ?? 'glass-dark'}`}>
                       <span className="text-[10px] font-bold uppercase tracking-widest text-white/75">{t('common.total')}</span>
@@ -1535,33 +1418,6 @@ export default function SalesPage() {
                         {isSendingWA ? t('sales.sendingEllipsis') : 'WhatsApp'}
                       </button>
                     )}
-                    <button disabled={!isSelectedOrderHydrated} type="button" onClick={() => {
-                      const isElectron = typeof window !== 'undefined' && navigator.userAgent.includes('Electron');
-                      if (isElectron && settings && (settings.kitchenPrinter || settings.counterPrinter)) {
-                        try {
-                          const electronRequire = (window as ElectronWindow).require;
-                          const { ipcRenderer } = electronRequire ? electronRequire('electron') : { ipcRenderer: null };
-                          if (!ipcRenderer) throw new Error('Electron IPC is unavailable.');
-                          const printLogo = localStorage.getItem('preferred-print-logo');
-                          const categoryLookup = buildCategoryLookup(products);
-                          void dispatchKitchenPrints(
-                            selectedOrder.items,
-                            categoryLookup,
-                            settings,
-                            (groupItems, printerName, label) =>
-                              reportPrintOutcome(
-                                ipcRenderer.invoke('print-kitchen-receipt-data', { ...selectedOrder, items: groupItems }, printerName, printLogo, settings),
-                                label,
-                                toast,
-                              ),
-                          );
-                        } catch {
-                          setPrintReadyUrl(`/dashboard/sales/print/${selectedOrder.id}?auto=true&type=kitchen`);
-                        }
-                      } else {
-                        setPrintReadyUrl(`/dashboard/sales/print/${selectedOrder.id}?auto=true&type=kitchen`);
-                      }
-                    }} className="glass-dark rounded-2xl px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] disabled:opacity-50">{t('sales.sendToKitchen')}</button>
                     <button disabled={!isSelectedOrderHydrated} type="button" onClick={() => printCustomerReceipt(selectedOrder)} className="glass-pill rounded-2xl px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-gray-700 disabled:opacity-50">{t('sales.printReceipt')}</button>
                     <Link to={`/dashboard/sales/print/${selectedOrder.id}`} className="glass-pill rounded-2xl p-2.5 text-gray-500"><Printer size={16} /></Link>
                     <button type="button" onClick={() => void refreshOne(selectedOrder.id)} className="glass-pill rounded-2xl p-2.5 text-gray-500"><RefreshCcw size={16} /></button>
@@ -1618,6 +1474,14 @@ export default function SalesPage() {
                     )
                   ) : null}
                   <Box label={t('sales.boxLabels.orderType')} value={prettyType(selectedOrder, t)} />
+                  {selectedOrder.appointmentTime ? (
+                    <>
+                      <Box label={t('sales.boxLabels.doctor')} value={selectedOrder.doctorName || t('sales.notApplicable')} />
+                      <Box label={t('sales.boxLabels.appointmentDate')} value={formatAppointmentDate(selectedOrder.appointmentDate) || t('sales.notApplicable')} />
+                      <Box label={t('sales.boxLabels.timeSlot')} value={formatSlot(selectedOrder.appointmentTime)} />
+                      <Box label={t('sales.boxLabels.checkup')} value={selectedOrder.checkupStatus === 'done' ? t('sales.checkupDone') : t('sales.checkupWaiting')} />
+                    </>
+                  ) : null}
                   <Box label={t('common.address')} value={selectedOrder.address || t('sales.notApplicable')} />
                   <Box label={t('sales.boxLabels.paymentMethod')} value={selectedOrder.paymentMethod} />
                   {selectedOrder.orderType === 'Delivery' ? (

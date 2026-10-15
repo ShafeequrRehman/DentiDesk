@@ -170,7 +170,7 @@ export default function LedgerPage() {
     const { ReportPdfDocument, downloadPdfDocument } = await import('@/lib/pdf-export');
     const rangeLabel = isCustomRange ? `${rangeFrom} to ${rangeTo}` : 'All-Time';
     const summaryRows = filtered.map((customer) => [
-      customer.name || 'Unnamed Customer',
+      customer.name || 'Unnamed Patient',
       customer.phone,
       String(customer.orderCount),
       formatMoney(customer.totalBilled),
@@ -190,14 +190,14 @@ export default function LedgerPage() {
     const transactions = filtered
       .flatMap((customer) => customer.orders.map((order) => ({
         ...order,
-        customerName: customer.name || 'Unnamed Customer',
+        customerName: customer.name || 'Unnamed Patient',
         customerPhone: customer.phone,
       })))
       .sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
 
     const doc = (
       <ReportPdfDocument
-        title="Customer Ledger"
+        title="Patient Ledger"
         subtitle={`${rangeLabel} · ${filtered.length} customer${filtered.length === 1 ? '' : 's'}${search.trim() ? ` · Search: "${search.trim()}"` : ''}`}
         stats={[
           { label: isCustomRange ? 'Billed (Selected Range)' : 'Total Billed', value: formatMoney(totals.billed) },
@@ -206,25 +206,25 @@ export default function LedgerPage() {
         ]}
         tables={[
           {
-            title: 'Customer Summary',
+            title: 'Patient Summary',
             columns: [
-              { label: 'Customer', width: 3 },
+              { label: 'Patient', width: 3 },
               { label: 'Phone', width: 2 },
-              { label: isCustomRange ? 'Orders (Range)' : 'Orders', width: 1.2, align: 'right' },
+              { label: isCustomRange ? 'Appointments (Range)' : 'Appointments', width: 1.2, align: 'right' },
               { label: isCustomRange ? 'Billed (Range)' : 'Billed', width: 1.5, align: 'right' },
               { label: isCustomRange ? 'Paid (Range)' : 'Paid', width: 1.5, align: 'right' },
               { label: 'Balance Due', width: 1.5, align: 'right' },
             ],
             rows: summaryRows,
             footer: ['Total', '', String(filteredTotals.orders), formatMoney(filteredTotals.billed), formatMoney(filteredTotals.paid), formatMoney(filteredTotals.due)],
-            emptyMessage: 'No customers match this selection.',
+            emptyMessage: 'No patients match this selection.',
           },
           {
             title: 'Transaction Log',
             columns: [
-              { label: 'Order', width: 1 },
+              { label: 'Appointment', width: 1 },
               { label: 'Date', width: 1.3 },
-              { label: 'Customer', width: 2 },
+              { label: 'Patient', width: 2 },
               { label: 'Phone', width: 1.5 },
               { label: 'Type', width: 1 },
               { label: 'Status', width: 1 },
@@ -243,7 +243,7 @@ export default function LedgerPage() {
               formatMoney(order.paidAmount),
               order.status === 'cancelled' ? '—' : formatMoney(order.remainingAmount),
             ]),
-            emptyMessage: isCustomRange ? 'No orders in this range.' : 'No orders recorded yet.',
+            emptyMessage: isCustomRange ? 'No appointments in this range.' : 'No appointments recorded yet.',
           },
         ]}
       />
@@ -262,8 +262,8 @@ export default function LedgerPage() {
           <p className="text-gray-500 font-bold">
             {tab === 'customers'
               ? (isCustomRange
-                ? `Showing activity from ${rangeFrom} to ${rangeTo} - every customer's order history, what they've paid, and what's still owed.`
-                : "Every customer's order history, what they've paid, and what's still owed.")
+                ? `Showing activity from ${rangeFrom} to ${rangeTo} - every patient's appointment history, what they've paid, and what's still owed.`
+                : "Every patient's appointment history, what they've paid, and what's still owed.")
               : (isCustomRange
                 ? `Showing activity from ${rangeFrom} to ${rangeTo} - every supplier's purchase history and outstanding dues.`
                 : "Every supplier's purchase history, what you've paid, and what's still owed.")}
@@ -312,7 +312,7 @@ export default function LedgerPage() {
           onClick={() => setTab('customers')}
           className={`flex items-center gap-2 rounded-full px-4 py-2 text-xs font-black uppercase tracking-wider transition ${tab === 'customers' ? 'bg-indigo-600 text-white' : 'text-gray-500 hover:text-gray-800'}`}
         >
-          <Users size={14} /> Customers
+          <Users size={14} /> Patients
         </button>
         <button
           type="button"
@@ -381,13 +381,13 @@ export default function LedgerPage() {
             <div className="rounded-[32px] bg-white p-8 text-center text-sm font-bold text-gray-500 shadow-sm">Loading ledger...</div>
           ) : filtered.length === 0 ? (
             <div className="rounded-[32px] bg-white p-8 text-center text-sm font-bold text-gray-500 shadow-sm">
-              {customers.length === 0 ? 'No customer orders recorded yet.' : 'No customers match your search.'}
+              {customers.length === 0 ? 'No patient appointments recorded yet.' : 'No patients match your search.'}
             </div>
           ) : (
             <div className="rounded-[32px] bg-white shadow-sm overflow-hidden">
               <div className="grid grid-cols-[1.6fr_0.8fr_0.9fr_0.9fr_0.9fr_40px] gap-2 px-6 py-4 text-[11px] font-black uppercase tracking-[0.14em] text-gray-400 border-b border-gray-100">
-                <span>Customer</span>
-                <span>Orders</span>
+                <span>Patient</span>
+                <span>Appointments</span>
                 <span>Billed</span>
                 <span>Paid</span>
                 <span>Balance Due</span>
@@ -526,7 +526,7 @@ function LedgerRow({
         className="w-full grid grid-cols-[1.6fr_0.8fr_0.9fr_0.9fr_0.9fr_40px] gap-2 px-6 py-4 text-left items-center hover:bg-gray-50 transition-colors"
       >
         <div>
-          <div className="text-sm font-black text-gray-900">{customer.name || 'Unnamed Customer'}</div>
+          <div className="text-sm font-black text-gray-900">{customer.name || 'Unnamed Patient'}</div>
           <div className="text-xs font-bold text-gray-400 flex items-center gap-1 mt-0.5">
             <Phone size={12} /> {customer.phone}
           </div>
@@ -544,17 +544,17 @@ function LedgerRow({
         <div className="bg-gray-50 px-6 pb-5 pt-1">
           {customer.previousDues > 0 ? (
             <p className="text-xs font-bold text-amber-600 mb-3">
-              Includes {formatMoney(customer.previousDues)} in older dues carried over before per-order tracking.
+              Includes {formatMoney(customer.previousDues)} in older dues carried over before per-appointment tracking.
             </p>
           ) : null}
           {customer.orders.length === 0 ? (
-            <p className="text-sm font-bold text-gray-400 py-3">No orders on record for this customer.</p>
+            <p className="text-sm font-bold text-gray-400 py-3">No appointments on record for this patient.</p>
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full text-left text-sm">
                 <thead>
                   <tr className="text-[10px] font-black uppercase tracking-wider text-gray-400">
-                    <th className="py-2 pr-4">Order</th>
+                    <th className="py-2 pr-4">Appointment</th>
                     <th className="py-2 pr-4">Date</th>
                     <th className="py-2 pr-4">Type</th>
                     <th className="py-2 pr-4">Status</th>

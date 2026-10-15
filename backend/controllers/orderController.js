@@ -79,9 +79,9 @@ function validateDeliveryFields(payload) {
   const name = (payload.customer?.name || "").trim();
   const phone = (payload.customer?.phone || "").trim();
   const address = (payload.customer?.address || payload.address || "").trim();
-  if (!name) return { field: "name", error: "Customer name is required for Delivery orders." };
-  if (!phone) return { field: "phone", error: "Phone number is required for Delivery orders." };
-  if (!address) return { field: "address", error: "Delivery address is required for Delivery orders." };
+  if (!name) return { field: "name", error: "Patient name is required for Delivery appointments." };
+  if (!phone) return { field: "phone", error: "Phone number is required for Delivery appointments." };
+  if (!address) return { field: "address", error: "Delivery address is required for Delivery appointments." };
   return null;
 }
 
@@ -249,6 +249,33 @@ function buildShopScope(req) {
   return shopScope(req);
 }
 
+// --- Clinic appointment slots -------------------------------------------
+// A slot (doctorName + appointmentDate + appointmentTime) is "taken" while
+// an appointment holds it that isn't cancelled and whose checkup isn't
+// done yet. Once the Dr marks the checkup done, the slot frees up again.
+function cleanSlotFields(payload) {
+  const doctorName = String(payload?.doctorName || "").trim();
+  const appointmentDate = String(payload?.appointmentDate || "").trim();
+  const appointmentTime = String(payload?.appointmentTime || "").trim();
+  if (!doctorName || !/^\d{4}-\d{2}-\d{2}$/.test(appointmentDate) || !/^\d{2}:\d{2}$/.test(appointmentTime)) {
+    return null;
+  }
+  return { doctorName, appointmentDate, appointmentTime };
+}
+
+async function findSlotConflict(req, slot, excludeId) {
+  const query = {
+    ...buildShopScope(req),
+    doctorName: slot.doctorName,
+    appointmentDate: slot.appointmentDate,
+    appointmentTime: slot.appointmentTime,
+    status: { $ne: "cancelled" },
+    checkupStatus: { $ne: "done" },
+  };
+  if (excludeId) query._id = { $ne: excludeId };
+  return Order.findOne(query).select("_id dailyOrderNumber customer.name").lean();
+}
+
 // Same expiry math as src/lib/table-timer.ts's isTableTimerExpired, kept in
 // sync manually since this is the one place it also needs to run
 // server-side (see the two occupancy checks below). There is no more
@@ -389,6 +416,10 @@ exports.getOrders = async (req, res) => {
             note: 1,
             waiter: 1,
             table: 1,
+            appointmentDate: 1,
+            appointmentTime: 1,
+            doctorName: 1,
+            checkupStatus: 1,
             status: 1,
             paymentMethod: 1,
             paidAmount: 1,
@@ -450,11 +481,11 @@ exports.getOrders = async (req, res) => {
 exports.getOrder = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(404).json({ error: "Order not found" });
+      return res.status(404).json({ error: "Appointment not found" });
     }
     const order = await Order.findOne({ _id: req.params.id, ...buildShopScope(req) }).lean();
     if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+      return res.status(404).json({ error: "Appointment not found" });
     }
     res.json({ ...order, id: String(order._id) });
   } catch (error) {
@@ -496,7 +527,7 @@ exports.createOrder = async (req, res) => {
         { ...buildShopScope(req), status: "open" }
       ).sort({ openedAt: 1 }).lean();
       if (!openSessionBefore) {
-        return res.status(409).json({ error: "The shop is closed. Open the shop before taking new orders.", reason: "shop_closed" });
+        return res.status(409).json({ error: "The clinic is closed. Open the clinic before taking new appointments.", reason: "shop_closed" });
       }
       const collision = await Order.findOne({
         ...buildShopScope(req),
@@ -527,7 +558,7 @@ exports.createOrder = async (req, res) => {
         { new: true, sort: { openedAt: 1 } }
       );
       if (!openSession) {
-        return res.status(409).json({ error: "The shop is closed. Open the shop before taking new orders.", reason: "shop_closed" });
+        return res.status(409).json({ error: "The clinic is closed. Open the clinic before taking new appointments.", reason: "shop_closed" });
       }
       dailyOrderNumber = openSession.orderCounter;
     }
@@ -595,6 +626,20 @@ exports.createOrder = async (req, res) => {
     // "status === pending"). No staff decision involved any more - once
     // that window has genuinely elapsed, autoFreeExpiredTable clears it
     // right here, in this same request, instead of blocking the new order.
+    const slot = cleanSlotFields(payload);
+    if (slot) {
+      const conflict = await findSlotConflict(req, slot);
+      if (conflict) {
+        return res.status(409).json({
+          error: `${slot.doctorName} is already booked on ${slot.appointmentDate} at ${slot.appointmentTime}. Pick another time slot.`,
+          reason: "slot_taken",
+        });
+      }
+      Object.assign(payload, slot, { checkupStatus: "waiting", prescription: "", checkedAt: null, checkedBy: "" });
+    } else {
+      Object.assign(payload, { doctorName: "", appointmentDate: "", appointmentTime: "", checkupStatus: "" });
+    }
+
     if (payload.orderType === "DineIn" && payload.table) {
       const occupyingOrder = await Order.findOne({
         ...buildShopScope(req),
@@ -606,7 +651,7 @@ exports.createOrder = async (req, res) => {
 
       if (occupyingOrder && !(await autoFreeExpiredTable(occupyingOrder, req))) {
         return res.status(409).json({
-          error: `Table ${payload.table} already has an active order. Complete or pay it to free up this table.`,
+          error: `Table ${payload.table} already has an active appointment. Complete or pay it to free up this table.`,
           reason: "table_occupied",
         });
       }
@@ -715,8 +760,8 @@ exports.createOrder = async (req, res) => {
         // else: brand-new phone, fully paid order - no khata needed, no
         // Customer document created.
       } catch (customerError) {
-        console.error("Non-fatal: failed to sync customer contact info during createOrder", customerError);
-        customerSyncWarning = "The order was saved, but this customer's info could not be saved to Customers/Ledger. Ask your admin to check the backend logs.";
+        console.error("Non-fatal: failed to sync patient contact info during createOrder", customerError);
+        customerSyncWarning = "The appointment was saved, but this patient's info could not be saved to Patients/Ledger. Ask your admin to check the backend logs.";
       }
     }
 
@@ -786,7 +831,7 @@ exports.importOfflineOrders = async (req, res) => {
           { ...buildShopScope(req), status: "open" }
         ).sort({ openedAt: 1 }).lean();
         if (!openSessionBefore) {
-          failed.push({ localOrderId: entry.localOrderId, error: "Shop is closed - open the shop to import queued offline orders." });
+          failed.push({ localOrderId: entry.localOrderId, error: "Clinic is closed - open the clinic to import queued offline appointments." });
           continue;
         }
 
@@ -903,7 +948,7 @@ exports.importOfflineOrders = async (req, res) => {
           if (occupyingOrder && !(await autoFreeExpiredTable(occupyingOrder, req))) {
             failed.push({
               localOrderId: entry.localOrderId,
-              error: `Table ${payload.table} already has an active order from another device. Change this order's table and it will sync automatically.`,
+              error: `Table ${payload.table} already has an active appointment from another device. Change this appointment's table and it will sync automatically.`,
               reason: "table_conflict",
             });
             continue;
@@ -929,7 +974,7 @@ exports.importOfflineOrders = async (req, res) => {
         // time, exactly as if it had been placed online to begin with.
         const stockResult = await deductStockForItems(payload.items || [], req.user.shopId);
         if (stockResult.warning) {
-          console.warn(`Stock shortage importing offline order ${entry.localOrderId}:`, stockResult.warning);
+          console.warn(`Stock shortage importing offline appointment ${entry.localOrderId}:`, stockResult.warning);
         }
 
         const order = await Order.create({
@@ -1003,13 +1048,13 @@ exports.importOfflineOrders = async (req, res) => {
               }
             }
           } catch (customerError) {
-            console.error("Non-fatal: customer contact-info sync failed during offline import", customerError);
+            console.error("Non-fatal: patient contact-info sync failed during offline import", customerError);
           }
         }
 
         imported.push({ localOrderId: entry.localOrderId, orderId: String(order._id), dailyOrderNumber });
       } catch (entryError) {
-        console.error("Failed to import one offline order:", entryError);
+        console.error("Failed to import one offline appointment:", entryError);
         failed.push({ localOrderId: entry.localOrderId, error: entryError.message });
       }
     }
@@ -1020,72 +1065,7 @@ exports.importOfflineOrders = async (req, res) => {
   }
 };
 
-// GET /api/orders/kitchen/unprinted
-// Feeds the till's background "print kitchen tickets for orders nobody has
-// printed yet" poll (see pos-web's DashboardShell.tsx) - this is what makes
-// an order placed on pos-mobile show up on the desktop's kitchen printer
-// without the phone needing its own Bluetooth printer. Cancelled orders are
-// excluded (nothing to cook); oldest first so tickets come out in the order
-// they were actually placed.
-exports.getUnprintedKitchenOrders = async (req, res) => {
-  try {
-    // .lean() + no per-document .toObject() below - this is read-only
-    // (nothing here ever mutates/saves what it fetches), and it's polled
-    // by every till's Kitchen page every 10 seconds all day, so the double
-    // hydration (.find() building real Documents, then .toObject() on each
-    // one converting them right back to plain objects) that was already
-    // found and fixed on getOrders was quietly happening here too, just
-    // more often. Same fix, same reasoning - see getOrders' own comment.
-    const orders = await Order.find({
-      ...buildShopScope(req),
-      kitchenPrintedAt: null,
-      status: { $ne: "cancelled" },
-      // A customer-qr order shouldn't hit the kitchen printer the instant
-      // it's placed - staff (or a verified online-payment webhook, see
-      // publicOrderController.js's jazzCashCallback/easyPaisaCallback)
-      // still has to accept it first (trackingStatus leaving
-      // "awaiting_confirmation" - see updateTrackingStatus). A staff-
-      // placed order is unaffected: trackingStatus defaults to
-      // "awaiting_confirmation" for those too (it's simply never used for
-      // anything on a staff order - see Order.js's own comment), so this
-      // has to key off `source`, not trackingStatus alone, or every normal
-      // till order would stop printing.
-      $or: [{ source: { $ne: "customer-qr" } }, { trackingStatus: { $ne: "awaiting_confirmation" } }],
-    }).sort({ createdAt: 1 }).lean();
-    res.json(orders.map((order) => ({ ...order, id: String(order._id) })));
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
-// PATCH /api/orders/:id/claim-kitchen-print
-// Atomically claims an order for printing - the `kitchenPrintedAt: null`
-// filter means only ONE caller can ever win this update for a given order,
-// even if two tills (or a till and a stale poll tick) race for the same
-// order at the same instant. The desktop app always claims BEFORE printing,
-// never after - if the claim fails (409, someone/something already got it),
-// it silently skips rather than printing a duplicate ticket.
-exports.claimKitchenPrint = async (req, res) => {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    const order = await Order.findOneAndUpdate(
-      { _id: req.params.id, kitchenPrintedAt: null, ...buildShopScope(req) },
-      { kitchenPrintedAt: new Date() },
-      { new: true }
-    );
-
-    if (!order) {
-      return res.status(409).json({ error: "Already claimed or printed by another till.", reason: "already_claimed" });
-    }
-
-    res.json({ ...order.toObject(), id: String(order._id) });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
 // GET /api/orders/receipts/unprinted
 // Sibling to getUnprintedKitchenOrders above, for the customer-receipt side.
@@ -1125,7 +1105,7 @@ exports.getUnprintedReceiptOrders = async (req, res) => {
 exports.claimReceiptPrint = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(404).json({ error: "Order not found" });
+      return res.status(404).json({ error: "Appointment not found" });
     }
 
     const order = await Order.findOneAndUpdate(
@@ -1144,63 +1124,7 @@ exports.claimReceiptPrint = async (req, res) => {
   }
 };
 
-// GET /api/orders/kitchen-updates/unprinted
-// Sibling to getUnprintedKitchenOrders above, but for items added to (or
-// increased in quantity on) an order that was ALREADY kitchen-printed once
-// - kitchenPrintedAt is a one-shot flag for the order's original ticket, so
-// it can never fire again for a later edit. pendingKitchenUpdate is the
-// queue that makes those later edits reach the kitchen too, including ones
-// made from pos-mobile (no printer of its own) via SalesPage.tsx's own
-// edit flow (which claims+prints locally, see saveUpdate) or
-// DashboardShell.tsx's KitchenUpdateWatcher (which catches everything
-// else, same as ReceiptPrintWatcher does for customer receipts).
-exports.getUnprintedKitchenUpdateOrders = async (req, res) => {
-  try {
-    // Same .lean() fix as getUnprintedKitchenOrders above, same reasoning
-    // - this is also a background poll, read-only, never mutates what it
-    // fetches.
-    const orders = await Order.find({
-      ...buildShopScope(req),
-      pendingKitchenUpdate: { $ne: null },
-      status: { $ne: "cancelled" },
-    }).sort({ "pendingKitchenUpdate.queuedAt": 1 }).lean();
-    res.json(orders.map((order) => ({ ...order, id: String(order._id) })));
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
-// PATCH /api/orders/:id/claim-kitchen-update-print
-// Same claim-before-print invariant as claimKitchenPrint/claimReceiptPrint,
-// but atomically CLEARS the queue instead of just stamping a timestamp
-// (pendingKitchenUpdate can be set again by a later edit, unlike the
-// one-shot kitchenPrintedAt) - `new: false` returns the document as it was
-// BEFORE this update, which is what hands the caller the exact items it
-// just claimed the right to print.
-exports.claimKitchenUpdatePrint = async (req, res) => {
-  try {
-    if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(404).json({ error: "Order not found" });
-    }
-
-    const order = await Order.findOneAndUpdate(
-      { _id: req.params.id, pendingKitchenUpdate: { $ne: null }, ...buildShopScope(req) },
-      { pendingKitchenUpdate: null },
-      { new: false }
-    );
-
-    if (!order) {
-      return res.status(409).json({ error: "Already claimed or printed by another till.", reason: "already_claimed" });
-    }
-
-    res.json({
-      order: { ...order.toObject(), id: String(order._id) },
-      items: order.pendingKitchenUpdate.items,
-    });
-  } catch (error) {
-    res.status(500).json({ error: error.message });
-  }
-};
 
 exports.checkPendingOrder = async (req, res) => {
   try {
@@ -1503,7 +1427,7 @@ async function applyOrderPatch(order, patch, req, options) {
     // offline path to check it against.
     if (patch.status === "cancelled") {
       throw Object.assign(
-        new Error("Cancelling an order requires the shop's Cancel Order Key. Use the Cancel Order action instead."),
+        new Error("Cancelling an appointment requires the clinic's Cancel Appointment Key. Use the Cancel Appointment action instead."),
         { status: 400, reason: "cancel_requires_key" }
       );
     }
@@ -1532,7 +1456,7 @@ async function applyOrderPatch(order, patch, req, options) {
         // decision required, the window elapsing is enough on its own.
         if (occupyingOrder && !(await autoFreeExpiredTable(occupyingOrder, req))) {
           throw Object.assign(
-            new Error(`Table ${patch.table} already has an active order. Complete or pay it to free up this table.`),
+            new Error(`Table ${patch.table} already has an active appointment. Complete or pay it to free up this table.`),
             { status: 409, reason: "table_occupied" }
           );
         }
@@ -1561,12 +1485,12 @@ async function applyOrderPatch(order, patch, req, options) {
 exports.updateOrder = async (req, res) => {
   try {
     if (!mongoose.Types.ObjectId.isValid(req.params.id)) {
-      return res.status(404).json({ error: "Order not found" });
+      return res.status(404).json({ error: "Appointment not found" });
     }
 
     const order = await Order.findOne({ _id: req.params.id, ...buildShopScope(req) });
     if (!order) {
-      return res.status(404).json({ error: "Order not found" });
+      return res.status(404).json({ error: "Appointment not found" });
     }
 
     const updated = await applyOrderPatch(order, req.body, req);
@@ -1671,7 +1595,7 @@ exports.importOfflineOrderUpdates = async (req, res) => {
             failed.push({
               localEditId,
               orderId,
-              error: `This order was changed elsewhere since this device last saw it (now v${order.version || 1}, expected v${expectedVersion}). Refresh and redo this edit.`,
+              error: `This appointment was changed elsewhere since this device last saw it (now v${order.version || 1}, expected v${expectedVersion}). Refresh and redo this edit.`,
               reason: "version_conflict",
             });
             continue;
@@ -1682,7 +1606,7 @@ exports.importOfflineOrderUpdates = async (req, res) => {
         await applyOrderPatch(order, payload || {}, req, { suppressKitchenUpdate: !!kitchenPrinted, receiptPrinted: !!receiptPrinted });
         applied.push({ localEditId, orderId });
       } catch (entryError) {
-        console.error("Failed to import one offline order edit:", entryError);
+        console.error("Failed to import one offline appointment edit:", entryError);
         failed.push({ localEditId, orderId, error: entryError.message });
       }
     }
@@ -1713,15 +1637,15 @@ exports.importOfflineOrderUpdates = async (req, res) => {
 // all need to change in lockstep; it's simply ignored now.
 async function cancelOrderCore(orderId, key, reason, req) {
   if (!mongoose.Types.ObjectId.isValid(orderId)) {
-    throw Object.assign(new Error("Order not found"), { status: 404 });
+    throw Object.assign(new Error("Appointment not found"), { status: 404 });
   }
 
   const order = await Order.findOne({ _id: orderId, ...buildShopScope(req) });
   if (!order) {
-    throw Object.assign(new Error("Order not found"), { status: 404 });
+    throw Object.assign(new Error("Appointment not found"), { status: 404 });
   }
   if (order.status === "cancelled") {
-    throw Object.assign(new Error("This order is already cancelled."), { status: 400, reason: "already_cancelled" });
+    throw Object.assign(new Error("This appointment is already cancelled."), { status: 400, reason: "already_cancelled" });
   }
 
   const user = req.user?.id ? await User.findById(req.user.id).select("name username").lean() : null;
@@ -1746,7 +1670,7 @@ async function cancelOrderCore(orderId, key, reason, req) {
   const refundAmount = Number(order.paidAmount || 0);
   if (refundAmount > 0) {
     const refundLabel = order.dailyOrderNumber ?? order.shopSequenceNumber ?? String(order._id).slice(-4);
-    const refundNote = `Refund - Order #${refundLabel} cancelled`;
+    const refundNote = `Refund - Appointment #${refundLabel} cancelled`;
     const refundCreatedBy = user?.name || user?.username || "";
     if (order.bankId) {
       await recordCustomerBankMovement({
@@ -1824,7 +1748,7 @@ exports.importOfflineCancellations = async (req, res) => {
           applied.push({ localCancellationId, orderId });
           continue;
         }
-        console.error("Failed to import one offline order cancellation:", entryError);
+        console.error("Failed to import one offline appointment cancellation:", entryError);
         failed.push({ localCancellationId, orderId, error: entryError.message, reason: entryError.reason });
       }
     }
@@ -1853,12 +1777,12 @@ exports.updateTrackingStatus = async (req, res) => {
 
     const query = { _id: req.params.id, ...buildShopScope(req) };
     const order = await Order.findOne(query);
-    if (!order) return res.status(404).json({ message: "Order not found." });
+    if (!order) return res.status(404).json({ message: "Appointment not found." });
     if (order.source !== "customer-qr") {
-      return res.status(400).json({ message: "This isn't a customer-placed order." });
+      return res.status(400).json({ message: "This isn't a patient-placed appointment." });
     }
     if (order.trackingStatus === "cancelled") {
-      return res.status(400).json({ message: "This order was already cancelled." });
+      return res.status(400).json({ message: "This appointment was already cancelled." });
     }
 
     order.trackingStatus = trackingStatus;
@@ -1876,7 +1800,7 @@ exports.updateTrackingStatus = async (req, res) => {
       order.status = "cancelled";
       order.cancelledAt = new Date();
       order.cancelledBy = user?.name || user?.username || "";
-      order.cancelReason = reason || "Declined by shop";
+      order.cancelReason = reason || "Declined by clinic";
     } else if (trackingStatus === "confirmed") {
       // Both notifications reuse this one Shop lookup - name/phone/address
       // feed the customer's WhatsApp template (customerNotificationService),
@@ -1916,9 +1840,9 @@ exports.assignRider = async (req, res) => {
 
     const query = { _id: req.params.id, ...buildShopScope(req) };
     const order = await Order.findOne(query);
-    if (!order) return res.status(404).json({ message: "Order not found." });
+    if (!order) return res.status(404).json({ message: "Appointment not found." });
     if (order.orderType !== "Delivery") {
-      return res.status(400).json({ message: "Only Delivery orders can be assigned to a rider." });
+      return res.status(400).json({ message: "Only Delivery appointments can be assigned to a rider." });
     }
 
     order.assignedRider = { id: String(riderId || ""), name: String(riderName || ""), phone, assignedAt: new Date() };
@@ -1962,9 +1886,9 @@ exports.respondToChangeRequest = async (req, res) => {
     }
 
     const order = await Order.findOne({ _id: req.params.id, ...buildShopScope(req) });
-    if (!order) return res.status(404).json({ message: "Order not found." });
+    if (!order) return res.status(404).json({ message: "Appointment not found." });
     if (!order.customerChangeRequest || order.customerChangeRequest.status !== "pending") {
-      return res.status(400).json({ message: "There's no change request waiting on this order." });
+      return res.status(400).json({ message: "There's no change request waiting on this appointment." });
     }
 
     const user = req.user?.id ? await User.findById(req.user.id).select("name username").lean() : null;
@@ -2036,3 +1960,71 @@ exports.respondToChangeRequest = async (req, res) => {
     res.status(500).json({ message: error.message });
   }
 };
+
+// GET /orders/appointments?doctor=&date=YYYY-MM-DD&from=YYYY-MM-DD&status=waiting|done
+// Appointments for the Drs & Services page and the POS time-slot picker.
+exports.getAppointments = async (req, res) => {
+  try {
+    const query = {
+      ...buildShopScope(req),
+      status: { $ne: "cancelled" },
+      appointmentTime: { $ne: "" },
+    };
+    const doctor = String(req.query.doctor || "").trim();
+    const date = String(req.query.date || "").trim();
+    const from = String(req.query.from || "").trim();
+    const status = String(req.query.status || "").trim();
+    if (doctor) query.doctorName = doctor;
+    if (/^\d{4}-\d{2}-\d{2}$/.test(date)) query.appointmentDate = date;
+    else if (/^\d{4}-\d{2}-\d{2}$/.test(from)) query.appointmentDate = { $gte: from };
+    if (status === "done") query.checkupStatus = "done";
+    else if (status === "waiting") query.checkupStatus = { $ne: "done" };
+
+    const orders = await Order.find(query)
+      .select("dailyOrderNumber shopSequenceNumber customer note items total paidAmount remainingAmount status orderType appointmentDate appointmentTime doctorName checkupStatus prescription checkedAt checkedBy createdAt")
+      .sort({ appointmentDate: 1, appointmentTime: 1 })
+      .limit(500)
+      .lean();
+    res.json(orders.map((order) => ({ ...order, id: String(order._id) })));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// PATCH /orders/:id/checkup  body: { prescription, done }
+// The Dr marks the checkup done (with the medicine details), which frees
+// the time slot. done:false re-opens it (slot booked again, if still free).
+exports.completeCheckup = async (req, res) => {
+  try {
+    const order = await Order.findOne({ _id: req.params.id, ...buildShopScope(req) });
+    if (!order) return res.status(404).json({ error: "Appointment not found" });
+    if (order.status === "cancelled") {
+      return res.status(400).json({ error: "This appointment was cancelled." });
+    }
+    const done = req.body?.done !== false;
+    if (typeof req.body?.prescription === "string") {
+      order.prescription = req.body.prescription.slice(0, 5000);
+    }
+    if (done) {
+      order.checkupStatus = "done";
+      order.checkedAt = new Date();
+      order.checkedBy = await currentUserDisplayName(req);
+    } else {
+      const slot = cleanSlotFields(order);
+      if (slot) {
+        const conflict = await findSlotConflict(req, slot, order._id);
+        if (conflict) {
+          return res.status(409).json({ error: "That time slot has already been given to another patient.", reason: "slot_taken" });
+        }
+      }
+      order.checkupStatus = "waiting";
+      order.checkedAt = null;
+      order.checkedBy = "";
+    }
+    await order.save();
+    res.json({ ...order.toObject(), id: String(order._id) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+

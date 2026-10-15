@@ -36,7 +36,7 @@ exports.getProducts = async (req, res) => {
 exports.getProduct = async (req, res) => {
   const product = await Product.findOne({ _id: req.params.id, ...shopScope(req) }).lean();
   if (!product) {
-    return res.status(404).json({ error: "Product not found" });
+    return res.status(404).json({ error: "Drs/Service not found" });
   }
   res.json(product);
 };
@@ -73,7 +73,7 @@ async function autoLinkIngredientForNewProduct(product) {
     product.linkedIngredientId = ingredient._id;
     await product.save();
   } catch (error) {
-    console.error("[Product->Stock auto-link] Failed to auto-create Stock entry:", error.message);
+    console.error("[Drs/Service->Stock auto-link] Failed to auto-create Stock entry:", error.message);
   }
 }
 
@@ -86,7 +86,7 @@ exports.createProduct = async (req, res) => {
     // Duplicate Product Code within this shop (see Product.js's partial
     // unique index) - give a clear message instead of a raw Mongo error.
     if (error.code === 11000 && error.keyPattern?.productCode) {
-      return res.status(400).json({ error: `Product Code "${req.body.productCode}" is already in use by another product.` });
+      return res.status(400).json({ error: `Drs/Services Code "${req.body.productCode}" is already in use by another Drs/Service.` });
     }
     throw error;
   }
@@ -103,12 +103,12 @@ exports.updateProduct = async (req, res) => {
       { new: true }
     );
     if (!product) {
-      return res.status(404).json({ error: "Product not found" });
+      return res.status(404).json({ error: "Drs/Service not found" });
     }
     res.json(product);
   } catch (error) {
     if (error.code === 11000 && error.keyPattern?.productCode) {
-      return res.status(400).json({ error: `Product Code "${updates.productCode}" is already in use by another product.` });
+      return res.status(400).json({ error: `Drs/Services Code "${updates.productCode}" is already in use by another Drs/Service.` });
     }
     throw error;
   }
@@ -131,14 +131,14 @@ exports.updateProduct = async (req, res) => {
 exports.deleteProduct = async (req, res) => {
   const product = await Product.findOneAndDelete({ _id: req.params.id, ...shopScope(req) });
   if (!product) {
-    return res.status(404).json({ error: "Product not found" });
+    return res.status(404).json({ error: "Drs/Service not found" });
   }
   if (product.linkedIngredientId) {
     try {
       await Ingredient.findOneAndDelete({ _id: product.linkedIngredientId, shopId: product.shopId });
     } catch (error) {
-      console.error("[Product->Stock auto-link] Failed to remove linked Stock entry:", error.message);
+      console.error("[Drs/Service->Stock auto-link] Failed to remove linked Stock entry:", error.message);
     }
   }
-  res.json({ message: "Product deleted", id: req.params.id });
+  res.json({ message: "Drs/Service deleted", id: req.params.id });
 };

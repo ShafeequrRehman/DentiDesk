@@ -1214,7 +1214,7 @@ function NewPurchaseOrderModal({
                     {contactSearching ? (
                       <p className="px-3 py-2 text-xs font-bold text-slate-400">Searching...</p>
                     ) : contactResults.length === 0 ? (
-                      <p className="px-3 py-2 text-xs font-bold text-slate-400">No matching customers.</p>
+                      <p className="px-3 py-2 text-xs font-bold text-slate-400">No matching patients.</p>
                     ) : (
                       contactResults.map((customer) => (
                         <button
@@ -1232,7 +1232,7 @@ function NewPurchaseOrderModal({
               </div>
             )}
             <p className="mt-1 text-[10px] font-bold text-slate-400">
-              Links this purchase to a Khata contact's account so their sales and purchase dues net into one balance on the Unified Khata page. Leave this empty for a plain supplier who isn't a shop customer.
+              Links this purchase to a Khata contact's account so their sales and purchase dues net into one balance on the Unified Khata page. Leave this empty for a plain supplier who isn't a clinic patient.
             </p>
           </div>
 

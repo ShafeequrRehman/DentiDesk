@@ -14,14 +14,10 @@ interface Props {
 // for the newer templates modeled on real till printouts the shop provided
 // ("Classic" is the app's original ThermalReceipt.tsx layout).
 const CASHIER_TEMPLATES: Array<{ id: NonNullable<StoreSettings['cashierReceiptTemplate']>; label: string; description: string }> = [
-  { id: 'classic', label: 'Classic', description: 'Large centered order number, simple item list.' },
+  { id: 'classic', label: 'Classic', description: 'Large centered appointment number, simple item list.' },
   { id: 'itemizedBill', label: 'Itemized Bill', description: 'Qty/Price/Amount columns, totals, and an "In Words" line.' },
 ];
 
-const KITCHEN_TEMPLATES: Array<{ id: NonNullable<StoreSettings['kitchenReceiptTemplate']>; label: string; description: string }> = [
-  { id: 'classic', label: 'Classic', description: 'Large centered order number, simple item list.' },
-  { id: 'kot', label: 'KOT Ticket', description: 'Numbered item table styled like a traditional kitchen order ticket.' },
-];
 
 function TemplateOptionCard<T extends string>({ id, label, description, selected, onSelect }: { id: T; label: string; description: string; selected: boolean; onSelect: (id: T) => void }) {
   return (
@@ -47,7 +43,7 @@ export function ReceiptManagementSection({ settings, onChange, printLogo }: Prop
       {/* Form Area - Left Side */}
       <div className="flex-1 space-y-6">
         <div className="space-y-3">
-          <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Customer Receipt Template</label>
+          <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Patient Receipt Template</label>
           <div className="flex flex-col sm:flex-row gap-3">
             {CASHIER_TEMPLATES.map((tpl) => (
               <TemplateOptionCard
@@ -57,22 +53,6 @@ export function ReceiptManagementSection({ settings, onChange, printLogo }: Prop
                 description={tpl.description}
                 selected={(settings.cashierReceiptTemplate || 'classic') === tpl.id}
                 onSelect={(id) => onChange('cashierReceiptTemplate', id)}
-              />
-            ))}
-          </div>
-        </div>
-
-        <div className="space-y-3">
-          <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Kitchen Ticket Template</label>
-          <div className="flex flex-col sm:flex-row gap-3">
-            {KITCHEN_TEMPLATES.map((tpl) => (
-              <TemplateOptionCard
-                key={tpl.id}
-                id={tpl.id}
-                label={tpl.label}
-                description={tpl.description}
-                selected={(settings.kitchenReceiptTemplate || 'classic') === tpl.id}
-                onSelect={(id) => onChange('kitchenReceiptTemplate', id)}
               />
             ))}
           </div>
@@ -156,7 +136,7 @@ export function ReceiptManagementSection({ settings, onChange, printLogo }: Prop
             type="text" 
             value={settings.receiptFooterMessage || ''}
             onChange={e => onChange('receiptFooterMessage', e.target.value)}
-            placeholder="e.g. Thank You for your Order!"
+            placeholder="e.g. Thank You for your Appointment!"
             className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 font-bold outline-none" 
           />
         </div>
@@ -191,7 +171,7 @@ export function ReceiptManagementSection({ settings, onChange, printLogo }: Prop
           <div className="border-t border-dashed border-slate-400 my-4"></div>
           
           <p className="text-xs text-left">Date: 12-Oct-2026 14:30</p>
-          <p className="text-xs text-left mb-2">Order #: 1024</p>
+          <p className="text-xs text-left mb-2">Appointment #: 1024</p>
           
           <div className="border-t border-dashed border-slate-400 my-2"></div>
           

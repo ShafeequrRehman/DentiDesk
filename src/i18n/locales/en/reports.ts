@@ -20,8 +20,8 @@ export const reports = {
 
   // "{{count}} order"/"{{count}} orders" under the Revenue KPI card - shared
   // by the Day-End and My Sales views.
-  orderCount: "{{count}} order",
-  orderCountPlural: "{{count}} orders",
+  orderCount: "{{count}} appointment",
+  orderCountPlural: "{{count}} appointments",
   // "{{count}} entry"/"{{count}} entries" next to an expense-breakdown row.
   entryCount: "{{count}} entry",
   entryCountPlural: "{{count}} entries",
@@ -36,10 +36,10 @@ export const reports = {
   // view) and the orders table (My Sales view).
   tableHeaders: {
     company: "Company",
-    product: "Product",
+    product: "Drs/Service",
     paid: "Paid",
     due: "Due",
-    order: "Order",
+    order: "Appointment",
     type: "Type",
   },
 
@@ -61,7 +61,7 @@ export const reports = {
     subtitle: "Revenue, ingredient cost, and expenses - net profit for the period you pick.",
 
     totalRevenue: "Total Revenue",
-    productCost: "Product Cost (COGS)",
+    productCost: "Drs/Service Cost (COGS)",
     ingredientsConsumed: "Ingredients consumed",
     otherExpenses: "Other Expenses",
     expenseCountLogged: "{{count}} logged",
@@ -91,26 +91,26 @@ export const reports = {
   mySales: {
     loadError: "Failed to load your sales report.",
     title: "My Daily Sales",
-    subtitle: "Only the orders you personally placed, one day at a time.",
+    subtitle: "Only the appointments you personally placed, one day at a time.",
 
     myRevenue: "My Revenue",
     collected: "Collected",
     cashReceived: "Cash received",
     stillDue: "Still Due",
-    acrossYourOrders: "Across your orders",
+    acrossYourOrders: "Across your appointments",
     cancelled: "Cancelled",
     notCountedAbove: "Not counted above",
 
-    yourOrdersTitle: "Your Orders",
-    noOrders: "No orders on this day.",
+    yourOrdersTitle: "Your Appointments",
+    noOrders: "No appointments on this day.",
   },
 
   inventory: {
     loadError: "Failed to load the inventory report.",
     title: "Stock & Supplier Report",
-    subtitle: "Kitchen stock purchase logs and supplier dues for the period you pick.",
+    subtitle: "Medicine stock purchase logs and supplier dues for the period you pick.",
 
-    kitchenStockPurchased: "Kitchen Stock Purchased",
+    kitchenStockPurchased: "Medicine Stock Purchased",
     batchesLogged: "{{count}} batches logged",
     totalSupplierDue: "Total Supplier Due",
     allTimeEveryCompany: "All-time, every company",
@@ -121,7 +121,7 @@ export const reports = {
     supplierDuesSubtitle: "All-time balance owed, every company",
     nothingDue: "Nothing due to any company.",
 
-    kitchenStockLogTitle: "Kitchen Stock Log",
+    kitchenStockLogTitle: "Medicine Stock Log",
     kitchenStockLogSubtitle: "Every batch logged this period",
     noPurchases: "No purchases logged in this period.",
     dueSuffix: "due",

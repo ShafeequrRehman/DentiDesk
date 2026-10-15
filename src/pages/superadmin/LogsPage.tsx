@@ -25,7 +25,7 @@ export default function LogsPage() {
   return (
     <div>
       <h1 className="mb-1 text-2xl font-bold">Activity Logs</h1>
-      <p className="mb-6 text-sm text-gray-400">License renewals and payments across every shop, most recent first.</p>
+      <p className="mb-6 text-sm text-gray-400">License renewals and payments across every clinic, most recent first.</p>
 
       <div className="overflow-hidden rounded-2xl border border-white/10">
         <table className="w-full text-left text-sm">
@@ -33,7 +33,7 @@ export default function LogsPage() {
             <tr>
               <th className="px-4 py-3">Date</th>
               <th className="px-4 py-3">Type</th>
-              <th className="px-4 py-3">Shop</th>
+              <th className="px-4 py-3">Clinic</th>
               <th className="px-4 py-3">Detail</th>
             </tr>
           </thead>

@@ -57,7 +57,7 @@ export default function PlansPage() {
   return (
     <div>
       <h1 className="mb-1 text-2xl font-bold">Plans</h1>
-      <p className="mb-6 text-sm text-gray-400">Subscription tiers shops can be assigned to.</p>
+      <p className="mb-6 text-sm text-gray-400">Subscription tiers clinics can be assigned to.</p>
 
       <div className="mb-6 grid grid-cols-2 gap-4 md:grid-cols-4">
         {plans.map((plan) => (

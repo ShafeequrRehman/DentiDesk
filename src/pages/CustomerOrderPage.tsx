@@ -130,11 +130,11 @@ function clearSavedOrderId(shopId: string) {
 }
 
 const TRACKING_LABELS: Record<string, { label: string; tone: string }> = {
-  awaiting_confirmation: { label: 'Waiting for the shop to accept your order', tone: 'bg-amber-50 text-amber-800' },
-  confirmed: { label: 'Order confirmed - getting started', tone: 'bg-blue-50 text-blue-800' },
-  preparing: { label: 'Preparing your order', tone: 'bg-indigo-50 text-indigo-800' },
+  awaiting_confirmation: { label: 'Waiting for the clinic to accept your appointment', tone: 'bg-amber-50 text-amber-800' },
+  confirmed: { label: 'Appointment confirmed - getting started', tone: 'bg-blue-50 text-blue-800' },
+  preparing: { label: 'Preparing your appointment', tone: 'bg-indigo-50 text-indigo-800' },
   ready: { label: 'Ready', tone: 'bg-emerald-50 text-emerald-800' },
-  cancelled: { label: 'This order was cancelled', tone: 'bg-rose-50 text-rose-800' },
+  cancelled: { label: 'This appointment was cancelled', tone: 'bg-rose-50 text-rose-800' },
 };
 
 type LocationResult =
@@ -170,8 +170,8 @@ function captureLocation(): Promise<LocationResult> {
 type LocationErrorReason = Extract<LocationResult, { ok: false }>['reason'];
 
 const LOCATION_ERROR_MESSAGE: Record<LocationErrorReason, string> = {
-  unsupported: "Your browser doesn't support location - please try a different browser (Chrome works best) to place a delivery order.",
-  denied: 'You denied location access. Please allow location for this site in your browser settings, then try again - delivery orders require it so the rider can find you.',
+  unsupported: "Your browser doesn't support location - please try a different browser (Chrome works best) to place a delivery appointment.",
+  denied: 'You denied location access. Please allow location for this site in your browser settings, then try again - delivery appointments require it so the rider can find you.',
   unavailable: "Couldn't get your location - please check your GPS/network connection and try again.",
   timeout: 'Getting your location took too long - please make sure GPS is on and try again.',
 };
@@ -510,7 +510,7 @@ function ChangeRequestModal({
         <textarea
           value={note}
           onChange={(e) => setNote(e.target.value)}
-          placeholder="Anything else to tell the shop about this request..."
+          placeholder="Anything else to tell the clinic about this request..."
           rows={2}
           className="w-full rounded-xl border border-white/60 bg-white/50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]"
         />
@@ -523,7 +523,7 @@ function ChangeRequestModal({
           disabled={!canSubmit}
           className="mt-4 w-full rounded-2xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] py-3.5 text-sm font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(132,144,10,0.4)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
         >
-          {submitting ? 'Sending Request...' : 'Send Request to Shop'}
+          {submitting ? 'Sending Request...' : 'Send Request to Clinic'}
         </button>
       </div>
     </div>
@@ -617,7 +617,7 @@ function OrderStatusPanel({
           onFinished?.();
         }
       } catch {
-        if (!cancelled) setError("Couldn't load this order.");
+        if (!cancelled) setError("Couldn't load this appointment.");
       }
     }
     void poll();
@@ -635,7 +635,7 @@ function OrderStatusPanel({
     );
   }
   if (!status) {
-    return <div className="glass-app-bg flex min-h-screen items-center justify-center text-sm font-bold text-gray-500">Loading your order...</div>;
+    return <div className="glass-app-bg flex min-h-screen items-center justify-center text-sm font-bold text-gray-500">Loading your appointment...</div>;
   }
 
   const tracking = TRACKING_LABELS[status.trackingStatus] || TRACKING_LABELS.awaiting_confirmation;
@@ -649,9 +649,9 @@ function OrderStatusPanel({
     <div className="glass-app-bg min-h-screen p-6">
       <div className="glass-strong mx-auto max-w-md rounded-[28px] p-8 text-center">
         <CheckCircle2 className="mx-auto mb-3 text-emerald-500" size={56} />
-        <h1 className="text-2xl font-black text-gray-900">Order #{status.dailyOrderNumber}</h1>
+        <h1 className="text-2xl font-black text-gray-900">Appointment #{status.dailyOrderNumber}</h1>
         <div className={`mt-4 rounded-2xl px-4 py-3 text-sm font-black shadow-inner ${status.status === 'cancelled' ? TRACKING_LABELS.cancelled.tone : tracking.tone}`}>
-          {status.status === 'cancelled' ? TRACKING_LABELS.cancelled.label : status.status === 'completed' ? 'Order completed - thank you!' : tracking.label}
+          {status.status === 'cancelled' ? TRACKING_LABELS.cancelled.label : status.status === 'completed' ? 'Appointment completed - thank you!' : tracking.label}
         </div>
 
         <OrderProgressStepper status={status} />
@@ -693,7 +693,7 @@ function OrderStatusPanel({
 
         {changeRequest && changeRequest.status === 'pending' ? (
           <div className="mt-3 rounded-2xl bg-amber-50/80 p-4 text-left text-xs font-bold text-amber-800 shadow-inner">
-            <p>Your change request is waiting for the shop's approval:</p>
+            <p>Your change request is waiting for the clinic's approval:</p>
             <ul className="mt-1.5 space-y-0.5">
               {changeRequest.addItems.map((item, index) => (
                 <li key={`add-${index}`}>+ {item.quantity}x {item.name}{item.variation ? ` (${item.variation})` : ''}</li>
@@ -709,7 +709,7 @@ function OrderStatusPanel({
           </div>
         ) : changeRequest && changeRequest.status === 'approved' ? (
           <div className="mt-3 rounded-2xl bg-emerald-50/80 p-4 text-left text-xs font-bold text-emerald-700 shadow-inner">
-            Your last change request was approved and is reflected in your order above.
+            Your last change request was approved and is reflected in your appointment above.
           </div>
         ) : null}
 
@@ -729,7 +729,7 @@ function OrderStatusPanel({
             onClick={() => navigate(`/order/${shopId}`)}
             className="glass-dark mt-3 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-black transition hover:brightness-110"
           >
-            <RotateCcw size={15} /> Start a New Order
+            <RotateCcw size={15} /> Start a New Appointment
           </button>
         ) : (
           <p className="mt-5 text-[11px] font-semibold text-gray-400">This page updates automatically - no need to refresh.</p>
@@ -785,7 +785,7 @@ function CustomerShell({
             tab === 'track' ? 'bg-[#E2F33C] text-black' : 'text-white/60 hover:text-white'
           }`}
         >
-          <Clock size={14} /> Track Order
+          <Clock size={14} /> Track Appointment
         </button>
       </div>
       {tab === 'track' ? (
@@ -945,7 +945,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
         setMenu(result);
       } catch (err) {
         const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-        setLoadError(message || "Couldn't load this shop's menu. Please try again.");
+        setLoadError(message || "Couldn't load this clinic's menu. Please try again.");
       } finally {
         setLoading(false);
       }
@@ -1113,7 +1113,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
       setPlacedOrder(result);
     } catch (err) {
       const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
-      setPlaceError(message || 'Could not place your order - please try again.');
+      setPlaceError(message || 'Could not place your appointment - please try again.');
     } finally {
       setPlacing(false);
     }
@@ -1142,7 +1142,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-black">{menu?.shopName || 'Menu'}</h1>
-            <p className="text-xs font-semibold text-white/60">Order Takeaway or Delivery</p>
+            <p className="text-xs font-semibold text-white/60">Appointment Takeaway or Delivery</p>
           </div>
           {installPromptEvent ? (
             <button
@@ -1162,7 +1162,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
 
       {!menu?.isOpen ? (
         <div className="glass mx-5 mt-4 flex items-center gap-2 rounded-2xl p-4 text-xs font-bold text-amber-800">
-          <AlertCircle size={16} /> This shop is currently closed and isn't taking orders right now.
+          <AlertCircle size={16} /> This clinic is currently closed and isn't taking appointments right now.
         </div>
       ) : null}
 
@@ -1270,7 +1270,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
         <div className="glass-overlay fixed inset-0 z-30 flex items-end sm:items-center sm:justify-center">
           <div className="glass-strong max-h-[90vh] w-full overflow-y-auto rounded-t-[28px] p-6 sm:max-w-md sm:rounded-[28px]">
             <div className="mb-4 flex items-center justify-between">
-              <h2 className="text-lg font-black text-gray-900">Your Order</h2>
+              <h2 className="text-lg font-black text-gray-900">Your Appointment</h2>
               <button type="button" onClick={() => setShowCart(false)}><X size={20} className="text-gray-400" /></button>
             </div>
 
@@ -1296,7 +1296,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
             </div>
 
             <div className="mt-5 space-y-3">
-              <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-400">Order Type</p>
+              <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-400">Appointment Type</p>
               <div className="flex gap-2">
                 {(['TakeAway', 'Delivery'] as OrderType[]).map((type) => (
                   <button
@@ -1316,7 +1316,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                 <div>
                   <input value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Delivery address" className="w-full rounded-xl border border-white/60 bg-white/50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" />
                   <p className="mt-1.5 flex items-center gap-1.5 text-[11px] font-bold text-amber-700">
-                    <MapPin size={12} /> We'll ask to share your live location when you place the order - this is required for delivery so the rider can find you.
+                    <MapPin size={12} /> We'll ask to share your live location when you place the appointment - this is required for delivery so the rider can find you.
                   </p>
                 </div>
               ) : null}
@@ -1326,7 +1326,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                   <div className="flex items-center gap-2">
                     <AlertCircle size={14} className="shrink-0" />
                     <span>
-                      You already have an active order{activeOrderWarning.table ? ` at Table ${activeOrderWarning.table}` : ''} (#{activeOrderWarning.dailyOrderNumber}).
+                      You already have an active appointment{activeOrderWarning.table ? ` at Table ${activeOrderWarning.table}` : ''} (#{activeOrderWarning.dailyOrderNumber}).
                       Please wait until it's completed before placing another.
                     </span>
                   </div>
@@ -1335,7 +1335,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                     onClick={() => navigate(`/order/${shopId}/status/${activeOrderWarning.id}`)}
                     className="mt-2 w-full rounded-lg bg-amber-800/10 py-2 text-xs font-black text-amber-900 transition hover:bg-amber-800/20"
                   >
-                    Track that order
+                    Track that appointment
                   </button>
                 </div>
               ) : null}
@@ -1360,9 +1360,9 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                 ) : null}
               </div>
               {paymentMethod === 'Online' ? (
-                <p className="text-[11px] font-semibold text-gray-400">You'll pay the shop directly online (bank transfer, EasyPaisa, or JazzCash) - they'll confirm your order once payment is received.</p>
+                <p className="text-[11px] font-semibold text-gray-400">You'll pay the clinic directly online (bank transfer, EasyPaisa, or JazzCash) - they'll confirm your appointment once payment is received.</p>
               ) : paymentMethod === 'JazzCash' || paymentMethod === 'EasyPaisa' ? (
-                <p className="text-[11px] font-semibold text-gray-400">You'll be taken to {paymentMethod}'s secure payment page next - your order is confirmed automatically once payment clears.</p>
+                <p className="text-[11px] font-semibold text-gray-400">You'll be taken to {paymentMethod}'s secure payment page next - your appointment is confirmed automatically once payment clears.</p>
               ) : null}
 
               <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Any special instructions..." className="w-full rounded-xl border border-white/60 bg-white/50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" rows={2} />
@@ -1375,7 +1375,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                 disabled={!canSubmit || placing || Boolean(activeOrderWarning)}
                 className="w-full rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] py-4 text-sm font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(132,144,10,0.4)] transition hover:brightness-105 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {placing ? (orderType === 'Delivery' ? 'Getting Your Location...' : 'Placing Order...') : `Place Order · Rs ${formatter.format(cartTotal)}`}
+                {placing ? (orderType === 'Delivery' ? 'Getting Your Location...' : 'Placing Appointment...') : `Place Appointment · Rs ${formatter.format(cartTotal)}`}
               </button>
             </div>
           </div>

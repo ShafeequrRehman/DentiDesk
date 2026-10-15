@@ -14,7 +14,7 @@ function requireSuperAdmin(req, res, next) {
 // the software" and "runs a shop" clean and auditable.
 function requireShopOwner(req, res, next) {
   if (!req.user || req.user.role !== "shopowner") {
-    return res.status(403).json({ message: "Shop Owner access required" });
+    return res.status(403).json({ message: "Clinic Owner access required" });
   }
   next();
 }
@@ -24,10 +24,10 @@ function requireShopOwner(req, res, next) {
 // requirePermission() check for employees.
 function requireShopMember(req, res, next) {
   if (!req.user || (req.user.role !== "shopowner" && req.user.role !== "employee")) {
-    return res.status(403).json({ message: "Shop access required" });
+    return res.status(403).json({ message: "Clinic access required" });
   }
   if (!req.user.shopId) {
-    return res.status(403).json({ message: "No shop associated with this account" });
+    return res.status(403).json({ message: "No clinic associated with this account" });
   }
   next();
 }

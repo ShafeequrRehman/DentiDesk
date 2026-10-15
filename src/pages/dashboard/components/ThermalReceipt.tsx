@@ -16,7 +16,7 @@ export default function ThermalReceipt({
   previousDues: _previousDues = 0,
 }: {
   order: SavedOrder;
-  type: 'kitchen' | 'cashier';
+  type: 'cashier';
   logoSrc?: string | null;
   previousDues?: number;
 }) {
@@ -121,11 +121,10 @@ export default function ThermalReceipt({
           cashier receipt; the kitchen ticket renders it smaller since staff
           there care more about the item list than a huge number. */}
       <div className="border-y-4 border-black py-2 my-2 text-center">
-        <h2 className="text-[16px] font-bold uppercase mb-0.5">Order No.</h2>
-        <h2 className={`font-black uppercase tracking-normal ${type === 'kitchen' ? 'text-[40px] leading-[40px]' : 'text-[68px] leading-[68px]'}`}>
+        <h2 className="text-[16px] font-bold uppercase mb-0.5">Appointment No.</h2>
+        <h2 className={`font-black uppercase tracking-normal text-[68px] leading-[68px]`}>
           {orderNumber}
         </h2>
-        {type === 'kitchen' && <p className="text-sm font-bold uppercase mt-2">*** KITCHEN TICKET ***</p>}
       </div>
 
       {/* Metadata */}
@@ -133,8 +132,8 @@ export default function ThermalReceipt({
         <p>DATE: {dateString}</p>
         <p>TIME: {timeString}</p>
         <p>TYPE: {order.orderType.toUpperCase()}</p>
-        {order.customer && order.customer.name && order.customer.name !== 'Walk-in Customer' && (
-          <p>CUSTOMER: {order.customer.name.toUpperCase()}</p>
+        {order.customer && order.customer.name && !['Walk-in Customer', 'Walk-in Patient'].includes(order.customer.name) && (
+          <p>PATIENT: {order.customer.name.toUpperCase()}</p>
         )}
         {/* Phone/address only belong on the customer's own copy, not the
             kitchen ticket. Phone stays gated on a real (non-Walk-in) name -
@@ -146,7 +145,7 @@ export default function ThermalReceipt({
             can be placed with an address but no typed name (name/phone are
             optional there too), and the address is exactly the information
             the delivery needs - it must still print even then. */}
-        {type === 'cashier' && order.customer && order.customer.name && order.customer.name !== 'Walk-in Customer' && order.customer.phone && order.customer.phone !== '03000000000' && (
+        {type === 'cashier' && order.customer && order.customer.name && !['Walk-in Customer', 'Walk-in Patient'].includes(order.customer.name) && order.customer.phone && order.customer.phone !== '03000000000' && (
           <p>PHONE: {order.customer.phone}</p>
         )}
         {type === 'cashier' && order.customer?.address && (

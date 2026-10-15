@@ -10,12 +10,12 @@
 // Keep `module` values stable - the Super Admin and Shop Owner frontends
 // group the permission-picker UI by this field.
 const PERMISSIONS = [
-  { key: "sales.create", label: "Create Sales", module: "Sales", description: "Ring up new orders at the POS screen." },
-  { key: "sales.edit", label: "Edit Sales", module: "Sales", description: "Edit pending orders (add items, change details)." },
-  { key: "sales.delete", label: "Delete / Cancel Sales", module: "Sales", description: "Cancel pending orders." },
-  { key: "sales.refund", label: "Refund Sales", module: "Sales", description: "Process refunds on completed orders." },
-  { key: "sales.print", label: "Print Bills", module: "Sales", description: "Print or reprint customer and kitchen receipts." },
-  { key: "inventory.manage", label: "Manage Inventory", module: "Inventory", description: "Add, edit, and manage products, categories, and stock levels." },
+  { key: "sales.create", label: "Create Sales", module: "Sales", description: "Ring up new appointments at the POS screen." },
+  { key: "sales.edit", label: "Edit Sales", module: "Sales", description: "Edit pending appointments (add items, change details)." },
+  { key: "sales.delete", label: "Delete / Cancel Sales", module: "Sales", description: "Cancel pending appointments." },
+  { key: "sales.refund", label: "Refund Sales", module: "Sales", description: "Process refunds on completed appointments." },
+  { key: "sales.print", label: "Print Bills", module: "Sales", description: "Print or reprint patient receipts." },
+  { key: "inventory.manage", label: "Manage Inventory", module: "Inventory", description: "Add, edit, and manage Drs/Services, categories, and stock levels." },
   // Narrower than inventory.manage - grants the Ingredient Stock page
   // (ingredients, categories, incoming purchases) WITHOUT Recipe
   // Management access. Introduced for the Stock Manager role (see
@@ -26,12 +26,12 @@ const PERMISSIONS = [
   // and its callers) - inventory.manage still covers everything stock.manage
   // does, for roles (Manager, Store Keeper) that should keep seeing both
   // Ingredient Stock and Recipe Management.
-  { key: "stock.manage", label: "Manage Ingredient Stock", module: "Inventory", description: "Add ingredients/categories, log incoming purchases, and manage supplier records - without Recipe Management access." },
-  { key: "customers.manage", label: "Manage Customers", module: "Customers", description: "Add, edit, and search customer records." },
-  { key: "dues.manage", label: "Manage Customer Dues", module: "Customers", description: "Adjust and clear customer outstanding balances." },
+  { key: "stock.manage", label: "Manage Medicine Stock", module: "Inventory", description: "Add ingredients/categories, log incoming purchases, and manage supplier records - without Recipe Management access." },
+  { key: "customers.manage", label: "Manage Patients", module: "Customers", description: "Add, edit, and search patient records." },
+  { key: "dues.manage", label: "Manage Patient Dues", module: "Customers", description: "Adjust and clear patient outstanding balances." },
   { key: "suppliers.manage", label: "Manage Suppliers", module: "Purchasing", description: "Add, edit, and manage supplier records." },
   { key: "purchases.manage", label: "Manage Purchases", module: "Purchasing", description: "Create and manage purchase orders." },
-  { key: "expenses.manage", label: "Manage Expenses", module: "Accounting", description: "Record and manage shop expenses." },
+  { key: "expenses.manage", label: "Manage Expenses", module: "Accounting", description: "Record and manage clinic expenses." },
   { key: "reports.view", label: "View Reports", module: "Reports", description: "View sales, inventory, and financial reports." },
   // Two narrow slices of "Reports" for roles that must never see
   // restaurant-wide revenue/COGS/net-profit figures (see
@@ -39,13 +39,13 @@ const PERMISSIONS = [
   // only the data these keys authorize - not just a UI-hidden superset of
   // the full report). Independent of reports.view: a role can hold one,
   // both, or neither of these without ever gaining the full Day-End report.
-  { key: "reports.view.own_sales", label: "View Own Sales Report", module: "Reports", description: "View only their own daily personal sales - no shop-wide analytics, cost, or profit figures." },
-  { key: "reports.view.inventory", label: "View Inventory Reports", module: "Reports", description: "View kitchen stock purchase logs and supplier dues - no revenue or profit figures." },
+  { key: "reports.view.own_sales", label: "View Own Sales Report", module: "Reports", description: "View only their own daily personal sales - no clinic-wide analytics, cost, or profit figures." },
+  { key: "reports.view.inventory", label: "View Inventory Reports", module: "Reports", description: "View medicine stock purchase logs and supplier dues - no revenue or profit figures." },
   { key: "employees.manage", label: "Manage Employees", module: "Employees", description: "Create, edit, and remove employee accounts and roles." },
-  { key: "settings.manage", label: "Manage Settings", module: "Settings", description: "Change shop profile, receipt, and hardware settings." },
-  { key: "whatsapp.manage", label: "Manage WhatsApp", module: "Settings", description: "Connect WhatsApp and send messages to customers." },
-  { key: "shop.session.manage", label: "Open / Close Shop", module: "Sales", description: "Open the shop to start taking orders, and close it at end of day to lock in the shift's order count and totals." },
-  { key: "orders.record.view", label: "View Daily Record", module: "Sales", description: "View the full list of every order (pending, completed, paid, cancelled) placed during the current shift." },
+  { key: "settings.manage", label: "Manage Settings", module: "Settings", description: "Change clinic profile, receipt, and hardware settings." },
+  { key: "whatsapp.manage", label: "Manage WhatsApp", module: "Settings", description: "Connect WhatsApp and send messages to patients." },
+  { key: "shop.session.manage", label: "Open / Close Clinic", module: "Sales", description: "Open the clinic to start taking appointments, and close it at end of day to lock in the shift's appointment count and totals." },
+  { key: "orders.record.view", label: "View Daily Record", module: "Sales", description: "View the full list of every appointment (pending, completed, paid, cancelled) placed during the current shift." },
   // Sidebar/Route Bypass Bug Fix: Dashboard, Dining Tables, and Connect
   // Devices used to have NO permission requirement at all in
   // dashboard-pages.ts ("deliberately left ungated") - so unchecking
@@ -69,7 +69,7 @@ const PERMISSIONS = [
   // the one a Shop Owner can now also revoke for a single employee (e.g.
   // "Hasan" in the override modal) without touching the whole role. Either
   // one hiding it is enough - see dashboard-pages.ts/DashboardPageClient.tsx.
-  { key: "view.dashboard", label: "View Dashboard", module: "Workspace Access", description: "See the main Dashboard home page (sales/order overview) after logging in." },
+  { key: "view.dashboard", label: "View Dashboard", module: "Workspace Access", description: "See the main Dashboard home page (sales/appointment overview) after logging in." },
   { key: "manage.devices", label: "Manage Connect Devices", module: "Workspace Access", description: "View and manage the Connect Devices page - local network/offline sync setup." },
 ];
 

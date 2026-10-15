@@ -49,6 +49,8 @@ export const DASHBOARD_PAGES: DashboardPageDef[] = [
   { key: 'dashboard', label: 'Dashboard', href: '/dashboard', permission: 'view.dashboard' },
   { key: 'pos', label: 'POS', href: '/dashboard/pos', permission: 'sales.create', hotkey: 'F1' },
   { key: 'sales', label: 'Sales', href: '/dashboard/sales', permission: 'sales.create', hotkey: 'F2' },
+  // Drs & Services: each Dr's appointments, checkups and prescriptions.
+  { key: 'doctors', label: 'Drs & Services', href: '/dashboard/doctors', permission: ['sales.create', 'orders.record.view'] },
   { key: 'accounting', label: 'Accounting', href: '/dashboard/accounting', permission: 'expenses.manage', hotkey: 'F3' },
   { key: 'purchase', label: 'Purchase', href: '/dashboard/purchase', permission: 'purchases.manage', hotkey: 'F4' },
   // Moved out of Settings so they're directly reachable from the sidebar
@@ -58,22 +60,13 @@ export const DASHBOARD_PAGES: DashboardPageDef[] = [
   // 'stock.manage' (Stock Manager role - see config/permissions.js -
   // deliberately excluded from Recipe Management below, matching that
   // role's "Ingredient Stock only" restriction).
-  { key: 'ingredient-stock', label: 'Ingredient Stock', href: '/dashboard/ingredient-stock', permission: ['inventory.manage', 'stock.manage'], hotkey: 'F5' },
-  { key: 'dues', label: 'Customer Dues', href: '/dashboard/dues', permission: 'dues.manage', hotkey: 'F7' },
+  { key: 'ingredient-stock', label: 'Medicine Stock', href: '/dashboard/ingredient-stock', permission: ['inventory.manage', 'stock.manage'], hotkey: 'F5' },
+  { key: 'dues', label: 'Patient Dues', href: '/dashboard/dues', permission: 'dues.manage', hotkey: 'F7' },
   { key: 'ledger', label: 'Ledger', href: '/dashboard/ledger', permission: 'dues.manage', hotkey: 'F8' },
   // The shop's own bank accounts - same dues.manage gate as Dues/Ledger
   // above, since Bank exists to back Customer Dues payments made "via
   // Bank" (see BankPage.tsx/DuesPage.tsx's paymentMethod picker).
   { key: 'bank', label: 'Bank', href: '/dashboard/bank', permission: 'dues.manage' },
-  // The shop's own grain stock (Rice, Gandam, ...) - same dues.manage gate
-  // as Bank above, since Grain Stock exists to back Customer Dues payments
-  // made "via Grain Stock" (see GrainStockPage.tsx/DuesPage.tsx's
-  // paymentMethod picker).
-  { key: 'grain-stock', label: 'Grain Stock', href: '/dashboard/grain-stock', permission: 'dues.manage' },
-  // Single running khata each, same dues.manage gate - see
-  // LabourPage.tsx/MunshiPage.tsx/DuesPage.tsx's payment-method picker.
-  { key: 'labour-khata', label: 'Labour Khata', href: '/dashboard/labour-khata', permission: 'dues.manage' },
-  { key: 'munshi-khata', label: 'Munshi Khata', href: '/dashboard/munshi-khata', permission: 'dues.manage' },
   { key: 'record', label: 'Record', href: '/dashboard/record', permission: 'orders.record.view' },
   { key: 'shifts', label: 'Shifts', href: '/dashboard/shifts', permission: 'shop.session.manage' },
   // Sidebar/Route Bypass Bug Fix: same story as Dining Tables above - used

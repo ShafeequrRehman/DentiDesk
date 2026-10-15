@@ -18,11 +18,9 @@ import IngredientStockPage from '@/pages/dashboard/IngredientStockPage';
 import DuesPage from '@/pages/dashboard/DuesPage';
 import LedgerPage from '@/pages/dashboard/LedgerPage';
 import BankPage from '@/pages/dashboard/BankPage';
-import GrainStockPage from '@/pages/dashboard/GrainStockPage';
-import LabourPage from '@/pages/dashboard/LabourPage';
-import MunshiPage from '@/pages/dashboard/MunshiPage';
 import RecordPage from '@/pages/dashboard/RecordPage';
 import ShiftsPage from '@/pages/dashboard/ShiftsPage';
+import DoctorsPage from '@/pages/dashboard/DoctorsPage';
 import PayrollPage from '@/pages/dashboard/PayrollPage';
 import OfflineSyncPage from '@/pages/dashboard/OfflineSyncPage';
 import ReportsPage from '@/pages/dashboard/ReportsPage';
@@ -31,7 +29,6 @@ import EmployeesPage from '@/pages/dashboard/EmployeesPage';
 import SettingsPage from '@/pages/dashboard/SettingsPage';
 import WhatsappPage from '@/pages/dashboard/WhatsappPage';
 import HelpPage from '@/pages/dashboard/HelpPage';
-import KitchenPage from '@/pages/dashboard/KitchenPage';
 import SuperAdminShell from '@/pages/superadmin/components/SuperAdminShell';
 import OverviewPage from '@/pages/superadmin/OverviewPage';
 import ShopsPage from '@/pages/superadmin/ShopsPage';
@@ -117,9 +114,9 @@ export default function App() {
               <Route path="dues" element={<DuesPage />} />
               <Route path="ledger" element={<LedgerPage />} />
               <Route path="bank" element={<BankPage />} />
-              <Route path="grain-stock" element={<GrainStockPage />} />
-              <Route path="labour-khata" element={<LabourPage />} />
-              <Route path="munshi-khata" element={<MunshiPage />} />
+            </Route>
+            <Route element={<RequirePermission permission={['sales.create', 'orders.record.view']} />}>
+              <Route path="doctors" element={<DoctorsPage />} />
             </Route>
             <Route element={<RequirePermission permission="orders.record.view" />}>
               <Route path="record" element={<RecordPage />} />
@@ -160,7 +157,6 @@ export default function App() {
                 every order via fetchOrders() with zero gating before this -
                 same tier as POS/Sales/Record, whichever the account holds. */}
             <Route element={<RequirePermission permission={['sales.create', 'orders.record.view']} />}>
-              <Route path="kitchen" element={<KitchenPage />} />
             </Route>
           </Route>
         </Route>

@@ -389,7 +389,7 @@ export async function runSyncNow(): Promise<OfflineSyncResult> {
           imported: 0,
           skipped: 0,
           failed: 0,
-          error: 'Could not reconcile opening the shop offline with the server yet - will retry automatically.',
+          error: 'Could not reconcile opening the clinic offline with the server yet - will retry automatically.',
         };
       }
     }

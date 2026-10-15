@@ -1,4 +1,4 @@
-import { useParams, useSearchParams } from 'react-router-dom';
+import { useParams } from 'react-router-dom';
 import { useEffect, useState } from 'react';
 import { fetchOrder, fetchCustomerOutstanding } from '@/lib/pos-api';
 import { SavedOrder } from '@/lib/pos-types';
@@ -93,8 +93,7 @@ async function waitForReceiptLayout() {
 
 export default function StandaloneReceiptPrintPage() {
   const params = useParams<{ id: string }>();
-  const [searchParams] = useSearchParams();
-  const receiptType = searchParams.get('type') === 'cashier' ? 'cashier' : 'kitchen';
+  const receiptType = 'cashier' as const;
   const [order, setOrder] = useState<SavedOrder | null>(null);
   // Dues carried forward from the customer's OTHER unpaid orders - see
   // PrintOrderPage.tsx for the same pattern.

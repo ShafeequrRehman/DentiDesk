@@ -10,7 +10,7 @@ const { shopScope } = require("../middleware/attachShopScope");
 // Response shape is kept identical to the old Waiter-collection version
 // ({ id, name, isActive }) so POSPage.tsx/EditOrderPage.tsx and their
 // mobile equivalents need no changes.
-const WAITER_DESIGNATIONS = ["waiter", "order taker"];
+const WAITER_DESIGNATIONS = ["waiter", "order taker", "appointment taker"];
 
 exports.getWaiters = async (req, res) => {
   const staff = await User.find({

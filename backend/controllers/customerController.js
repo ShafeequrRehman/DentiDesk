@@ -6,9 +6,6 @@ const User = require("../models/User");
 const { shopScope } = require("../middleware/attachShopScope");
 const { escapeRegex } = require("../utils/escapeRegex");
 const { recordCustomerBankMovement } = require("./bankController");
-const { recordCustomerGrainMovement } = require("./grainController");
-const { recordCustomerLabourMovement } = require("./labourController");
-const { recordCustomerMunshiMovement } = require("./munshiController");
 const { recordCashMovement } = require("./cashController");
 
 // The JWT (req.user) only ever carries id/role/shopId/permissions - never
@@ -121,7 +118,7 @@ exports.updateCustomer = async (req, res) => {
     { new: true }
   );
   if (!customer) {
-    return res.status(404).json({ error: "Customer not found" });
+    return res.status(404).json({ error: "Patient not found" });
   }
   res.json(serializeCustomer(customer));
 };
@@ -138,7 +135,7 @@ exports.updateCustomer = async (req, res) => {
 exports.deleteCustomer = async (req, res) => {
   const customer = await Customer.findOneAndDelete({ _id: req.params.id, ...shopScope(req) });
   if (!customer) {
-    return res.status(404).json({ error: "Customer not found" });
+    return res.status(404).json({ error: "Patient not found" });
   }
   res.json({ success: true });
 };
@@ -457,14 +454,12 @@ exports.getCustomerOutstanding = async (req, res) => {
 async function applyUpdateCustomerDues(scope, phone, body, createdBy) {
   const nextPreviousDues = Number(body.previousDues || 0);
   const note = String(body.note || "").trim();
-  const paymentMethod = ["bank", "grain", "labour", "munshi"].includes(body.paymentMethod) ? body.paymentMethod : "cash";
+  const paymentMethod = body.paymentMethod === "bank" ? "bank" : "cash";
   const bankId = body.bankId ? String(body.bankId) : "";
-  const grainId = body.grainId ? String(body.grainId) : "";
-  const grainKg = Math.max(Number(body.grainKg) || 0, 0);
 
   const customer = await Customer.findOne({ phone, ...scope });
   if (!customer) {
-    throw Object.assign(new Error("Customer not found"), { statusCode: 404 });
+    throw Object.assign(new Error("Patient not found"), { statusCode: 404 });
   }
 
   const delta = nextPreviousDues - Number(customer.previousDues || 0);
@@ -489,99 +484,12 @@ async function applyUpdateCustomerDues(scope, phone, body, createdBy) {
     });
   }
 
-  // Same idea, but for grain stock - the shop handing a customer credit
-  // "via Grain Stock" means grain (kg + its rupee value) leaves that
-  // grain's own balance instead of Cash in Hand - see
-  // grainController.recordCustomerGrainMovement.
-  let grain = null;
-  if (paymentMethod === "grain" && grainId && delta > 0) {
-    grain = await recordCustomerGrainMovement({
-      grainId,
-      shopId: scope.shopId,
-      type: "withdrawal",
-      kg: grainKg,
-      amount: delta,
-      note,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      createdBy,
-    });
-  }
-
-  // Labour/Munshi's "+ Add Dues"/"Paid Amount" always arrives as a
-  // NEGATIVE delta from DuesPage.tsx's handleAddManualDue (see the
-  // delta < 0 branches below for the real, normal-path behavior) - these
-  // delta > 0 branches only exist as a defensive fallback for some other
-  // caller sending a positive delta with paymentMethod labour/munshi, in
-  // which case it's treated the OLD way (cash-additive, khata drawn down)
-  // rather than silently doing nothing.
-  if (paymentMethod === "labour" && delta > 0) {
-    await recordCustomerLabourMovement({
-      shopId: scope.shopId,
-      type: "due_given",
-      direction: "out",
-      amount: delta,
-      note,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      createdBy,
-    });
-  }
-  if (paymentMethod === "munshi" && delta > 0) {
-    await recordCustomerMunshiMovement({
-      shopId: scope.shopId,
-      type: "due_given",
-      direction: "out",
-      amount: delta,
-      note,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      createdBy,
-    });
-  }
-  // Labour/Munshi's "+ Add Dues"/"Paid Amount" runs the OPPOSITE way from
-  // Cash/Bank/Grain (see this function's DuesPage.tsx caller,
-  // handleAddManualDue, for the full reasoning): the shop owner treats it
-  // as the customer's due being cleared THROUGH that khata, which holds
-  // the money on the shop's behalf rather than it landing at the till. So
-  // a Labour/Munshi "Paid Amount" always sends a NEGATIVE delta
-  // (previousDues goes DOWN), and that money is deposited into the
-  // matching khata instead of being drawn out of it - Cash in Hand is
-  // deliberately left untouched (see the guard below).
-  if (paymentMethod === "labour" && delta < 0) {
-    await recordCustomerLabourMovement({
-      shopId: scope.shopId,
-      type: "due_recovery",
-      direction: "in",
-      amount: Math.abs(delta),
-      note,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      createdBy,
-    });
-  }
-  if (paymentMethod === "munshi" && delta < 0) {
-    await recordCustomerMunshiMovement({
-      shopId: scope.shopId,
-      type: "due_recovery",
-      direction: "in",
-      amount: Math.abs(delta),
-      note,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      createdBy,
-    });
-  }
-
   // Cash in Hand (Dashboard): a Cash-method "+ Add Dues" is the shop
   // physically handing the customer an advance/credit - real cash leaving
   // the till right now, the mirror image of settleCustomerDues's
-  // due_recovery below. Only when it wasn't already a bank withdrawal or a
-  // grain withdrawal above (those move their own balance INSTEAD of Cash
-  // in Hand). Labour/Munshi are excluded entirely - see their own comment
-  // just above, their "Paid Amount" never touches Cash in Hand at all,
-  // only that khata and this customer's own due.
-  if (!bank && !grain && paymentMethod !== "munshi" && paymentMethod !== "labour" && delta > 0) {
+  // due_recovery below. Only when it wasn't already a bank withdrawal
+  // above (that moves the bank's own balance INSTEAD of Cash in Hand).
+  if (!bank && delta > 0) {
     await recordCashMovement({
       shopId: scope.shopId,
       type: "due_given",
@@ -603,10 +511,8 @@ async function applyUpdateCustomerDues(scope, phone, body, createdBy) {
       note,
       balanceAfter: nextPreviousDues,
       createdBy,
-      paymentMethod: bank ? "bank" : grain ? "grain" : paymentMethod === "labour" ? "labour" : paymentMethod === "munshi" ? "munshi" : "cash",
+      paymentMethod: bank ? "bank" : "cash",
       bankName: bank?.name || "",
-      grainName: grain?.name || "",
-      grainKg: grain ? grainKg : 0,
     });
   }
   await customer.save();
@@ -649,31 +555,18 @@ exports.updateCustomerDues = async (req, res) => {
 async function applySettleCustomerDues(scope, phone, body, createdBy) {
   const amount = Math.max(Number(body.amount) || 0, 0);
   const note = String(body.note || "").trim();
-  const paymentMethod = ["bank", "grain", "labour", "munshi"].includes(body.paymentMethod) ? body.paymentMethod : "cash";
+  const paymentMethod = body.paymentMethod === "bank" ? "bank" : "cash";
   const bankId = body.bankId ? String(body.bankId) : "";
-  const grainId = body.grainId ? String(body.grainId) : "";
-  const grainKg = Math.max(Number(body.grainKg) || 0, 0);
   if (amount <= 0) {
     throw Object.assign(new Error("amount must be greater than 0"), { statusCode: 400 });
   }
 
   const customer = await Customer.findOne({ phone, ...scope });
   if (!customer) {
-    throw Object.assign(new Error("Customer not found"), { statusCode: 404 });
+    throw Object.assign(new Error("Patient not found"), { statusCode: 404 });
   }
 
-  // Labour/Munshi's "- Pay Dues"/"Received Amount" runs the OPPOSITE way
-  // from Cash/Bank/Grain here - the shop owner treats collecting a due
-  // "through Labour/Munshi" as cash actually being handed OUT via that
-  // khata (drawing down what's held there and at the till), which is why
-  // the customer's own due goes UP instead of down (the mirror image of
-  // their "Paid Amount", which brings it down - see
-  // applyUpdateCustomerDues's own comment on that). Every other method
-  // keeps the normal "payment collected, due goes down" direction.
-  const isKhataReversed = paymentMethod === "labour" || paymentMethod === "munshi";
-  const previousDues = isKhataReversed
-    ? Number(customer.previousDues || 0) + amount
-    : Number(customer.previousDues || 0) - amount;
+  const previousDues = Number(customer.previousDues || 0) - amount;
   customer.previousDues = previousDues;
 
   // Move the bank's own money FIRST (if applicable) so its real name is
@@ -693,67 +586,15 @@ async function applySettleCustomerDues(scope, phone, body, createdBy) {
     });
   }
 
-  // Same idea, but for grain stock - a customer paying dues "via Grain
-  // Stock" means the grain they handed over (kg + its rupee value) adds
-  // onto that grain's own balance instead of Cash in Hand - see
-  // grainController.recordCustomerGrainMovement.
-  let grain = null;
-  if (paymentMethod === "grain" && grainId) {
-    grain = await recordCustomerGrainMovement({
-      grainId,
-      shopId: scope.shopId,
-      type: "deposit",
-      kg: grainKg,
-      amount,
-      note,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      createdBy,
-    });
-  }
-
-  // Labour/Munshi both draw DOWN their own khata on "Received Amount" -
-  // see isKhataReversed's own comment above for why (money moves out
-  // through that khata, not in) - unlike Cash/Bank/Grain, which log the
-  // usual "money collected" deposit.
-  if (paymentMethod === "labour") {
-    await recordCustomerLabourMovement({
-      shopId: scope.shopId,
-      type: "due_given",
-      direction: "out",
-      amount,
-      note,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      createdBy,
-    });
-  }
-  if (paymentMethod === "munshi") {
-    await recordCustomerMunshiMovement({
-      shopId: scope.shopId,
-      type: "due_given",
-      direction: "out",
-      amount,
-      note,
-      customerName: customer.name,
-      customerPhone: customer.phone,
-      createdBy,
-    });
-  }
-
   // Total Recovery / Cash in Hand (Dashboard): a Cash-method "Pay Dues" is
-  // real cash landing at the till right now, same as a Cash-method order
-  // payment (orderController.js's own completeAndSettle branch) -
-  // recorded here so the Dashboard's Cash in Hand figure and today's
-  // Total Recovery both reflect it. Only when the money did NOT already
-  // go into a bank or grain stock above (those move their own balance
-  // INSTEAD of Cash in Hand). Labour/Munshi move Cash in Hand OUT instead
-  // of in - see isKhataReversed's own comment above.
-  if (!bank && !grain) {
+  // real cash landing at the till right now - recorded here so the
+  // Dashboard's Cash in Hand figure and today's Total Recovery both
+  // reflect it. Only when the money did NOT already go into a bank above.
+  if (!bank) {
     await recordCashMovement({
       shopId: scope.shopId,
-      type: isKhataReversed ? "due_given" : "due_recovery",
-      direction: isKhataReversed ? "out" : "in",
+      type: "due_recovery",
+      direction: "in",
       amount,
       note: note || `Due payment - ${customer.name || customer.phone}`,
       relatedCustomerName: customer.name,
@@ -762,22 +603,14 @@ async function applySettleCustomerDues(scope, phone, body, createdBy) {
     });
   }
 
-  // History entry type follows the REAL direction the due moved, not
-  // just "this came through the Pay Dues endpoint" - for Labour/Munshi
-  // that's actually an increase (isKhataReversed above), so it's logged
-  // as "add" (shows as "+ Rs X paid" in red on DuesPage.tsx) rather than
-  // "settle" (which would misleadingly show "- Rs X received" in green
-  // for a due that just went UP).
   customer.duesHistory.push({
-    type: isKhataReversed ? "add" : "settle",
+    type: "settle",
     amount,
     note,
     balanceAfter: previousDues,
     createdBy,
-    paymentMethod: bank ? "bank" : grain ? "grain" : paymentMethod === "labour" ? "labour" : paymentMethod === "munshi" ? "munshi" : "cash",
+    paymentMethod: bank ? "bank" : "cash",
     bankName: bank?.name || "",
-    grainName: grain?.name || "",
-    grainKg: grain ? grainKg : 0,
   });
 
   await customer.save();
@@ -828,7 +661,7 @@ exports.deleteDuesHistoryEntry = async (req, res) => {
 
     const customer = await Customer.findOne({ phone, ...shopScope(req) });
     if (!customer) {
-      return res.status(404).json({ message: "Customer not found" });
+      return res.status(404).json({ message: "Patient not found" });
     }
 
     const targetTime = new Date(createdAt).getTime();

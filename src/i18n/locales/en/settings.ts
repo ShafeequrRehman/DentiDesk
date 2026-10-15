@@ -17,11 +17,11 @@ export const settings = {
   saveChanges: "Save Changes",
 
   menu: {
-    shopProfile: "Shop Profile",
-    manageProducts: "Manage Products",
+    shopProfile: "Clinic Profile",
+    manageProducts: "Manage Appointments",
     manageReceipt: "Manage Receipt",
     sidebarPages: "Sidebar Pages",
-    customerOrdering: "Customer Ordering",
+    customerOrdering: "Patient Ordering",
     paymentsTax: "Payments & Tax",
     hardwarePos: "Hardware / POS",
     security: "Security",
@@ -41,30 +41,30 @@ export const settings = {
 
   receiptPrintLogo: {
     title: "Receipt Print Logo",
-    quickAccessDescription: "Quick access for the logo used on printed cashier and kitchen receipts.",
+    quickAccessDescription: "Quick access for the logo used on printed patient receipts.",
     openPrintSettings: "Open Print Settings",
-    hardwareDescription: "Choose the logo that appears at the top of printed cashier and kitchen receipts.",
+    hardwareDescription: "Choose the logo that appears at the top of printed patient receipts.",
   },
 
   // Sentence is split around the bold inline <span> highlights in the JSX
   // (Manage Staff / "Waiter" / "Order Taker") rather than one long string.
   waiterMoved: {
     title: "Waiter Setup Has Moved",
-    descriptionPart1: "Waiters and order takers are now added from",
+    descriptionPart1: "Waiters and appointment takers are now added from",
     manageStaff: "Manage Staff",
     descriptionPart2: "Add a staff member there with designation",
     waiter: "Waiter",
     or: "or",
-    orderTaker: "Order Taker",
+    orderTaker: "Appointment Taker",
     descriptionPart3: "and they'll automatically show up in the POS waiter dropdown.",
   },
 
   fields: {
-    shopName: "Shop Name",
-    shopNamePlaceholder: "Your shop's name",
+    shopName: "Clinic Name",
+    shopNamePlaceholder: "Your clinic's name",
     businessEmail: "Business Email",
-    shopAddress: "Shop Address",
-    shopAddressPlaceholder: "Your shop's address",
+    shopAddress: "Clinic Address",
+    shopAddressPlaceholder: "Your clinic's address",
     businessStartTime: "Business Start Time",
     businessEndTime: "Business End Time",
     currency: "Currency",
@@ -76,7 +76,7 @@ export const settings = {
     title: "Device Preferences",
     dualScreenDisplay: {
       label: "Dual Screen Display",
-      description: "Enable customer-facing checkout screen.",
+      description: "Enable patient-facing checkout screen.",
     },
     autoPrintReceipts: {
       label: "Auto-print Receipts",
@@ -88,8 +88,6 @@ export const settings = {
     devicePrintersTitle: "Device Printers",
     counterPrinter: "Counter Printer",
     selectCounterPrinter: "Select Counter Printer",
-    kitchenPrinter: "Kitchen Printer",
-    selectKitchenPrinter: "Select Kitchen Printer",
   },
 
   printLogoCard: {
@@ -109,6 +107,6 @@ export const settings = {
 
   toasts: {
     settingsSaved: "Settings saved.",
-    syncFailed: "Settings saved, but the shop name/address failed to sync - check your connection and try again.",
+    syncFailed: "Settings saved, but the clinic name/address failed to sync - check your connection and try again.",
   },
 } as const;

@@ -29,7 +29,7 @@ async function dropLegacyCustomerPhoneIndex() {
     const legacyIndex = indexes.find((index) => index.name === "phone_1");
     if (legacyIndex) {
       await collection.dropIndex("phone_1");
-      console.log('[Seed] Dropped legacy global-unique "phone_1" index on customers (superseded by the per-shop shopId+phone index).');
+      console.log('[Seed] Dropped legacy global-unique "phone_1" index on patients (superseded by the per-clinic shopId+phone index).');
     }
     // Recreate whatever the schema currently declares (the compound
     // shopId+phone unique index) if it's missing. If this throws because
@@ -39,7 +39,7 @@ async function dropLegacyCustomerPhoneIndex() {
     // within the same shop and need to be merged/cleaned up by hand.
     await Customer.syncIndexes();
   } catch (error) {
-    console.error("[Seed] Failed to migrate customers phone index:", error.message);
+    console.error("[Seed] Failed to migrate patients phone index:", error.message);
   }
 }
 
@@ -89,10 +89,10 @@ async function mergeDuplicateOpenShopSessions() {
         await extra.save();
       }
 
-      console.log(`[Seed] Shop ${shopId} had ${sessions.length} simultaneously-open sessions - merged into one (orderCounter=${maxCounter}), closed ${extras.length} duplicate(s).`);
+      console.log(`[Seed] Clinic ${shopId} had ${sessions.length} simultaneously-open sessions - merged into one (orderCounter=${maxCounter}), closed ${extras.length} duplicate(s).`);
     }
   } catch (error) {
-    console.error("[Seed] Failed to merge duplicate open shop sessions:", error.message);
+    console.error("[Seed] Failed to merge duplicate open clinic sessions:", error.message);
   }
 }
 
@@ -161,7 +161,7 @@ async function backfillIngredientStockPrecision() {
       console.log(`[Seed] Rounded floating-point drift out of currentStock/averageCost on ${result.modifiedCount} ingredient(s).`);
     }
   } catch (error) {
-    console.error("[Seed] Failed to backfill ingredient stock precision:", error.message);
+    console.error("[Seed] Failed to backfill medicine stock precision:", error.message);
   }
 }
 

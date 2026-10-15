@@ -7,9 +7,6 @@ const Customer = require("../models/Customer");
 const Product = require("../models/Product");
 const Ingredient = require("../models/Ingredient");
 const Bank = require("../models/Bank");
-const Grain = require("../models/Grain");
-const LabourAccount = require("../models/LabourAccount");
-const MunshiAccount = require("../models/MunshiAccount");
 const CashRegister = require("../models/CashRegister");
 const DashboardAdjustment = require("../models/DashboardAdjustment");
 const { shopScope } = require("../middleware/attachShopScope");
@@ -17,7 +14,7 @@ const { shopScope } = require("../middleware/attachShopScope");
 // The fixed category heading every ingredient-purchase batch is grouped
 // under in the expense breakdown - see getDayEndReport's own comment on why
 // this is shown but never added into otherExpenses/netProfit.
-const KITCHEN_STOCK_CATEGORY = "Kitchen Stock";
+const KITCHEN_STOCK_CATEGORY = "Medicine Stock";
 
 // Same idea as KITCHEN_STOCK_CATEGORY, but the OPPOSITE accounting
 // treatment - see getDayEndReport's StaffPayment aggregate below for why
@@ -514,9 +511,6 @@ exports.getDashboardSummary = async (req, res) => {
       products,
       ingredients,
       banks,
-      grains,
-      labourAccount,
-      munshiAccount,
       cashRegister,
       vendorDueAgg,
       todaysPurchaseAgg,
@@ -550,16 +544,6 @@ exports.getDashboardSummary = async (req, res) => {
       // (see balanceAsOfEnd above) but is always selected here since which
       // range is active is only known after this query already ran.
       Bank.find({ shopId: shopObjectId }).select("balance history").lean(),
-      // Grain Stock - every grain (Rice, Gandam, ...) this shop has added
-      // (Grain Stock page), same "current rupee value on hand" idea as
-      // Bank above - see grainController.js's own comment.
-      Grain.find({ shopId: shopObjectId }).select("balance history").lean(),
-      // Labour/Munshi Khata - each shop's own single running balance (not
-      // a list of named accounts like Bank/Grain) - see LabourAccount.js/
-      // MunshiAccount.js's own comment on why they track ON TOP of Cash in
-      // Hand rather than instead of it.
-      LabourAccount.findOne({ shopId: shopObjectId }).select("balance history").lean(),
-      MunshiAccount.findOne({ shopId: shopObjectId }).select("balance history").lean(),
       CashRegister.findOne({ shopId: shopObjectId }).select("balance history").lean(),
       // Vendor Balance - total still owed to suppliers across every
       // received (not pending/cancelled) stock batch ever logged, same
@@ -663,9 +647,6 @@ exports.getDashboardSummary = async (req, res) => {
     }, 0);
     const stockValue = ingredientStockValue + untrackedProductStockValue;
     const balanceOnBank = banks.reduce((sum, b) => sum + balanceAsOfEnd(b.balance, b.history), 0);
-    const grainStockValue = grains.reduce((sum, g) => sum + balanceAsOfEnd(g.balance, g.history), 0);
-    const labourBalance = balanceAsOfEnd(labourAccount?.balance, labourAccount?.history);
-    const munshiBalance = balanceAsOfEnd(munshiAccount?.balance, munshiAccount?.history);
     const cashInHand = balanceAsOfEnd(cashRegister?.balance, cashRegister?.history);
     const vendorBalance = vendorDueAgg[0]?.total || 0;
     const totalPurchaseToday = todaysPurchaseAgg[0]?.total || 0;
@@ -726,9 +707,6 @@ exports.getDashboardSummary = async (req, res) => {
       totalRecoveryToday: adjusted("totalRecoveryToday", totalRecoveryToday),
       cashInHand,
       balanceOnBank,
-      grainStockValue,
-      labourBalance,
-      munshiBalance,
       stockValue: adjusted("stockValue", stockValue),
       vendorBalance: adjusted("vendorBalance", vendorBalance),
       customerUdharTotal: adjusted("customerUdharTotal", customerUdharTotal),
@@ -1007,9 +985,9 @@ exports.getLedgerTransactions = async (req, res) => {
         date: order.createdAt,
         amount: Number(order.total || 0),
         direction: "in",
-        label: `Order #${order.dailyOrderNumber ?? order.shopSequenceNumber ?? String(order._id).slice(-4)}`,
+        label: `Appointment #${order.dailyOrderNumber ?? order.shopSequenceNumber ?? String(order._id).slice(-4)}`,
         detail: [
-          order.customer?.name || "Walk-in Customer",
+          order.customer?.name || "Walk-in Patient",
           order.paymentMethod || "Cash",
           isCredit ? `Rs ${order.remainingAmount} still due` : "Fully paid",
         ].filter(Boolean).join(" · "),

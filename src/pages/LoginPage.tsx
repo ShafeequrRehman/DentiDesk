@@ -129,7 +129,7 @@ function LoginPageContent() {
         } else if (error.response?.status === 402) {
           // License expired / shop suspended - a professional, specific
           // message rather than a generic "invalid credentials" error.
-          setErrorMessage(data?.message || "Your shop's license has expired or the shop has been suspended. Please contact the software provider.");
+          setErrorMessage(data?.message || "Your clinic's license has expired or the clinic has been suspended. Please contact the software provider.");
         } else if (!error.response) {
           // Request never got a response at all: backend unreachable,
           // CORS failure, or timeout. This is a network-layer failure,
@@ -266,7 +266,7 @@ function LoginShell({
         </form>
 
         <p className="mt-6 text-center text-sm text-gray-400">
-          Your login stays available for backend order syncing until you log out or the token expires.
+          Your login stays available for backend appointment syncing until you log out or the token expires.
         </p>
       </div>
     </div>

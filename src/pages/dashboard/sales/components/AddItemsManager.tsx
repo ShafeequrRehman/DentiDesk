@@ -90,15 +90,15 @@ export default function AddItemsManager({
     <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_280px] sm:gap-4 lg:grid-cols-[minmax(0,1fr)_320px] lg:gap-5">
       <div className="min-w-0 space-y-4">
         <div className="flex gap-2 rounded-full bg-[#F6F7FB] p-1.5">
-          <button type="button" onClick={() => setTab('items')} className={`rounded-full px-4 py-2 text-sm font-black ${tab === 'items' ? 'bg-black text-white' : 'text-gray-500'}`}>Add To Order</button>
-          <button type="button" onClick={() => setTab('catalog')} className={`rounded-full px-4 py-2 text-sm font-black ${tab === 'catalog' ? 'bg-black text-white' : 'text-gray-500'}`}>Manage Products</button>
+          <button type="button" onClick={() => setTab('items')} className={`rounded-full px-4 py-2 text-sm font-black ${tab === 'items' ? 'bg-black text-white' : 'text-gray-500'}`}>Add To Appointment</button>
+          <button type="button" onClick={() => setTab('catalog')} className={`rounded-full px-4 py-2 text-sm font-black ${tab === 'catalog' ? 'bg-black text-white' : 'text-gray-500'}`}>Manage Appointments</button>
         </div>
 
         {tab === 'items' ? (
           <>
             <div className="relative">
               <Search className="absolute left-4 top-1/2 -translate-y-1/2 text-gray-400" size={18} />
-              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search products" className="w-full rounded-full border border-slate-300 focus:border-slate-400 bg-[#F8F9FB] py-4 pl-12 pr-4 outline-none" />
+              <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="Search Drs/Services" className="w-full rounded-full border border-slate-300 focus:border-slate-400 bg-[#F8F9FB] py-4 pl-12 pr-4 outline-none" />
             </div>
 
             <div className="flex flex-wrap gap-2">
@@ -149,7 +149,7 @@ export default function AddItemsManager({
         ) : (
           <div className="space-y-4">
             <div className="grid gap-2 sm:grid-cols-2">
-              <input value={productForm.name} onChange={(event) => setProductForm((previous) => ({ ...previous, name: event.target.value }))} placeholder="Product name" className="rounded-2xl border border-slate-300 focus:border-slate-400 px-4 py-3 outline-none" />
+              <input value={productForm.name} onChange={(event) => setProductForm((previous) => ({ ...previous, name: event.target.value }))} placeholder="Dr & Service" className="rounded-2xl border border-slate-300 focus:border-slate-400 px-4 py-3 outline-none" />
               <input value={productForm.variation} onChange={(event) => setProductForm((previous) => ({ ...previous, variation: event.target.value }))} placeholder="Variation" className="rounded-2xl border border-slate-300 focus:border-slate-400 px-4 py-3 outline-none" />
               <input value={productForm.price || ''} onChange={(event) => /^\d*$/.test(event.target.value) && setProductForm((previous) => ({ ...previous, price: Number(event.target.value || 0) }))} placeholder="Price" className="rounded-2xl border border-slate-300 focus:border-slate-400 px-4 py-3 outline-none" />
               <input value={productForm.stock || ''} onChange={(event) => /^\d*$/.test(event.target.value) && setProductForm((previous) => ({ ...previous, stock: Number(event.target.value || 0) }))} placeholder="Stock" className="rounded-2xl border border-slate-300 focus:border-slate-400 px-4 py-3 outline-none" />
@@ -160,7 +160,7 @@ export default function AddItemsManager({
             </div>
             <textarea value={productForm.description} onChange={(event) => setProductForm((previous) => ({ ...previous, description: event.target.value }))} placeholder="Description" className="min-h-24 w-full rounded-2xl border border-slate-300 focus:border-slate-400 px-4 py-3 outline-none" />
             <button type="button" onClick={() => void saveProduct()} className="rounded-full bg-[#E2F33C] px-4 py-2 text-sm font-black text-black">
-              {editingProductId ? 'Update Product' : 'Create Product'}
+              {editingProductId ? 'Update Drs/Service' : 'Create Drs/Service'}
             </button>
 
             <div className="space-y-2">
@@ -202,7 +202,7 @@ export default function AddItemsManager({
       <div className="min-w-0 rounded-[28px] bg-[#F8F9FB] p-4">
         <h3 className="mb-4 text-sm font-black uppercase tracking-[0.18em] text-gray-400">Items To Save</h3>
         <div className="space-y-3">
-          {draftItems.length === 0 ? <p className="text-sm text-gray-500">Choose products or create a manual item.</p> : null}
+          {draftItems.length === 0 ? <p className="text-sm text-gray-500">Choose Drs/Services or create a manual item.</p> : null}
           {draftItems.map((item, index) => (
             <div key={`${item.name}-${item.variation}-${index}`} className="rounded-[22px] bg-white p-3">
               <div className="flex items-center justify-between gap-3">

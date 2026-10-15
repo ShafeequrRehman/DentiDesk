@@ -1571,7 +1571,7 @@ export function IngredientStockSection({
                           <input
                             value={purchaseContactQuery}
                             onChange={(e) => searchPurchaseContacts(e.target.value)}
-                            placeholder="Search a customer by name..."
+                            placeholder="Search a patient by name..."
                             className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                           />
                           {purchaseContactQuery.trim().length >= 2 ? (
@@ -1579,7 +1579,7 @@ export function IngredientStockSection({
                               {purchaseContactSearching ? (
                                 <p className="px-3 py-2 text-xs font-bold text-slate-400">Searching...</p>
                               ) : purchaseContactResults.length === 0 ? (
-                                <p className="px-3 py-2 text-xs font-bold text-slate-400">No matching customers.</p>
+                                <p className="px-3 py-2 text-xs font-bold text-slate-400">No matching patients.</p>
                               ) : (
                                 purchaseContactResults.map((customer) => (
                                   <button
@@ -1597,7 +1597,7 @@ export function IngredientStockSection({
                         </div>
                       )}
                       <p className="text-[10px] font-bold text-slate-400">
-                        Links this purchase to a Khata contact's account so their sales and purchase dues net into one balance on the Unified Khata page. Leave this empty for a plain supplier who isn't a shop customer.
+                        Links this purchase to a Khata contact's account so their sales and purchase dues net into one balance on the Unified Khata page. Leave this empty for a plain supplier who isn't a clinic patient.
                       </p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">

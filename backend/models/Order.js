@@ -148,6 +148,16 @@ const orderSchema = new mongoose.Schema(
     billTid: { type: String, default: "" },
     billName: { type: String, default: "" },
     cashRecipientName: { type: String, default: "" },
+    // Clinic appointment slot - which Dr, on which day, at which time.
+    // A slot stays booked for that Dr until the checkup is marked done
+    // (checkupStatus "done"), then it frees up again.
+    appointmentDate: { type: String, default: "", index: true }, // YYYY-MM-DD
+    appointmentTime: { type: String, default: "" }, // HH:mm (24h)
+    doctorName: { type: String, default: "", index: true },
+    checkupStatus: { type: String, enum: ["", "waiting", "done"], default: "" },
+    prescription: { type: String, default: "" },
+    checkedAt: { type: Date, default: null },
+    checkedBy: { type: String, default: "" },
     status: { type: String, enum: ["pending", "completed", "cancelled", "paid"], default: "pending" },
     paymentMethod: { type: String, enum: ["Cash", "Card", "E-Wallet", "Bank"], default: "Cash" },
     // Dashboard "Cash in Hand / Balance on Bank" routing: which Bank

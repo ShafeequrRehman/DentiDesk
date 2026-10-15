@@ -9,7 +9,7 @@ export const STAFF_DESIGNATIONS = [
   "Chief",
   "Manager",
   "Cashier",
-  "Order Taker",
+  "Appointment Taker",
   "Waiter",
   "Cook",
   "Helper",

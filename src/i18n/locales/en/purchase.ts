@@ -10,7 +10,7 @@ export const purchase = {
   },
   searchPlaceholder: "Track PO number or supplier...",
   newPurchaseOrder: "New Purchase Order",
-  defaultShopName: "Shop",
+  defaultShopName: "Clinic",
   unspecifiedCompany: "Unspecified",
   generatedAt: "Generated: {{date}}",
 
@@ -84,7 +84,7 @@ export const purchase = {
   },
 
   stats: {
-    shop: "Shop",
+    shop: "Clinic",
     totalPurchased: "Total Purchased",
     totalPaid: "Total Paid",
     totalDue: "Total Due",

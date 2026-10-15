@@ -20,18 +20,18 @@ export const shopClosingSummary = {
   stats: {
     totalRevenue: "Total Revenue",
     netProfit: "Net Profit",
-    totalOrders: "Total Orders",
+    totalOrders: "Total Appointments",
     outstandingDue: "Outstanding Due",
   },
 
   expensesBreakdown: {
     title: "Expenses Breakdown",
-    kitchenStock: "Kitchen Stock (ingredient purchases)",
+    kitchenStock: "Medicine Stock (purchases)",
     manualOperations: "Manual Operations (other expenses)",
   },
 
   ordersByType: {
-    title: "Orders by Type",
+    title: "Appointments by Type",
     dineIn: "Dine-In",
     takeaway: "Takeaway",
     delivery: "Delivery",
@@ -45,7 +45,7 @@ export const shopClosingSummary = {
   printReceipt: "Print Receipt",
   sendWhatsapp: "Send WhatsApp",
   sending: "Sending...",
-  confirmAndCloseShop: "Confirm & Close Shop",
+  confirmAndCloseShop: "Confirm & Close Clinic",
   closingInProgress: "Closing...",
 
   toasts: {

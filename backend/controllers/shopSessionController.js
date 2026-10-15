@@ -92,7 +92,7 @@ exports.openSession = async (req, res) => {
 
     const existing = await ShopSession.findOne({ shopId, status: "open" }).lean();
     if (existing) {
-      return res.status(409).json({ error: "The shop is already open." });
+      return res.status(409).json({ error: "The clinic is already open." });
     }
 
     const user = req.user?.id ? await User.findById(req.user.id).select("name username").lean() : null;
@@ -116,7 +116,7 @@ exports.openSession = async (req, res) => {
       // path gives, just reached via the database's own duplicate-key
       // rejection instead of the earlier find.
       if (createError?.code === 11000) {
-        return res.status(409).json({ error: "The shop is already open." });
+        return res.status(409).json({ error: "The clinic is already open." });
       }
       throw createError;
     }
@@ -138,7 +138,7 @@ exports.closeSession = async (req, res) => {
 
     const session = await ShopSession.findOne({ shopId, status: "open" });
     if (!session) {
-      return res.status(409).json({ error: "The shop is not currently open." });
+      return res.status(409).json({ error: "The clinic is not currently open." });
     }
 
     const unresolvedOrders = await Order.find(buildUnresolvedQuery(shopId, session.openedAt))

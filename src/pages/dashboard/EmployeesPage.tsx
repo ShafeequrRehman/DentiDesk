@@ -522,7 +522,7 @@ function StaffFormModal({
 
         <div>
           <label className="mb-1 block text-xs text-gray-500">
-            Designation (job title - Waiter/Order Taker show up in the POS waiter list)
+            Designation (job title - Waiter/Appointment Taker show up in the POS waiter list)
           </label>
           {useCustomDesignation ? (
             <div className="flex gap-2">

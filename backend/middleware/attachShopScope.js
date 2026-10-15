@@ -7,7 +7,7 @@
 // boundaries by design.
 function shopScope(req) {
   if (!req.user || !req.user.shopId) {
-    throw Object.assign(new Error("No shop associated with this account"), { statusCode: 403 });
+    throw Object.assign(new Error("No clinic associated with this account"), { statusCode: 403 });
   }
   return { shopId: req.user.shopId };
 }

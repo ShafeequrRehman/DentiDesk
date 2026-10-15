@@ -47,7 +47,7 @@ export default function SettingsPage() {
   return (
     <div className="max-w-xl">
       <h1 className="mb-1 text-2xl font-bold">Software Settings</h1>
-      <p className="mb-6 text-sm text-gray-400">Product-wide defaults, not specific to any single shop.</p>
+      <p className="mb-6 text-sm text-gray-400">Drs/Service-wide defaults, not specific to any single clinic.</p>
 
       <div className="space-y-4 rounded-2xl border border-white/10 bg-white/5 p-5 text-sm">
         <div className="grid grid-cols-2 gap-3">
@@ -60,7 +60,7 @@ export default function SettingsPage() {
           <LabeledInput label="Expiry Warning (days)" value={String(form.licenseExpiryWarningDays)} type="number" onChange={(v) => update("licenseExpiryWarningDays", Number(v))} />
         </div>
         <div>
-          <label className="mb-1 block text-xs text-gray-400">Announcement (shown to all shops, optional)</label>
+          <label className="mb-1 block text-xs text-gray-400">Announcement (shown to all clinics, optional)</label>
           <textarea
             value={form.announcement}
             onChange={(e) => update("announcement", e.target.value)}

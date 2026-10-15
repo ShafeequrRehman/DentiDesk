@@ -24,7 +24,7 @@ export default function ShopsPage() {
         setShops(shopList);
         setPlans(planList);
       })
-      .catch((err) => setError(err?.response?.data?.message || "Failed to load shops"))
+      .catch((err) => setError(err?.response?.data?.message || "Failed to load clinics"))
       .finally(() => setLoading(false));
   };
 
@@ -33,7 +33,7 @@ export default function ShopsPage() {
   const toggleStatus = async (shop: ShopSummary) => {
     const next = shop.status === "active" ? "suspended" : "active";
     const confirmed = await confirm(`${next === "suspended" ? "Suspend" : "Activate"} "${shop.name}"?`, {
-      title: next === "suspended" ? "Suspend shop" : "Activate shop",
+      title: next === "suspended" ? "Suspend clinic" : "Activate clinic",
       confirmText: next === "suspended" ? "Suspend" : "Activate",
       tone: next === "suspended" ? "danger" : "default",
     });
@@ -47,15 +47,15 @@ export default function ShopsPage() {
     <div>
       <div className="mb-6 flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold">Shops</h1>
-          <p className="text-sm text-gray-400">Every customer running this software, and their license status.</p>
+          <h1 className="text-2xl font-bold">Clinics</h1>
+          <p className="text-sm text-gray-400">Every patient running this software, and their license status.</p>
         </div>
         <button
           type="button"
           onClick={() => setShowCreate(true)}
           className="flex items-center gap-2 rounded-full bg-[#E2F33C] px-4 py-2.5 text-sm font-bold text-black transition hover:brightness-95"
         >
-          <Plus size={16} /> New Shop
+          <Plus size={16} /> New Clinic
         </button>
       </div>
 
@@ -65,7 +65,7 @@ export default function ShopsPage() {
         <table className="w-full text-left text-sm">
           <thead className="bg-white/5 text-xs uppercase text-gray-400">
             <tr>
-              <th className="px-4 py-3">Shop</th>
+              <th className="px-4 py-3">Clinic</th>
               <th className="px-4 py-3">Owner</th>
               <th className="px-4 py-3">Plan</th>
               <th className="px-4 py-3">License</th>
@@ -77,7 +77,7 @@ export default function ShopsPage() {
             {loading ? (
               <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500">Loading...</td></tr>
             ) : shops.length === 0 ? (
-              <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500">No shops yet.</td></tr>
+              <tr><td colSpan={6} className="px-4 py-6 text-center text-gray-500">No clinics yet.</td></tr>
             ) : (
               shops.map((shop) => (
                 <tr key={shop._id} className="hover:bg-white/5">
@@ -113,7 +113,7 @@ export default function ShopsPage() {
                     <div className="flex flex-wrap items-center justify-end gap-2">
                       <button
                         type="button"
-                        title={shop.hasCancelOrderKey ? "Change this shop's Cancel Order Key" : "This shop has no Cancel Order Key yet - set one so staff can cancel orders in the POS"}
+                        title={shop.hasCancelOrderKey ? "Change this clinic's Cancel Appointment Key" : "This clinic has no Cancel Appointment Key yet - set one so staff can cancel appointments in the POS"}
                         onClick={() => setResetKeyTarget(shop)}
                         className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition ${
                           shop.hasCancelOrderKey
@@ -126,7 +126,7 @@ export default function ShopsPage() {
                       </button>
                       <button
                         type="button"
-                        title={shop.hasPageVisibilityKey ? "Change this shop's Page Visibility Key" : "This shop has no Page Visibility Key yet - set one so the Shop Owner can control their own sidebar pages"}
+                        title={shop.hasPageVisibilityKey ? "Change this clinic's Page Visibility Key" : "This clinic has no Page Visibility Key yet - set one so the Clinic Owner can control their own sidebar pages"}
                         onClick={() => setResetPageKeyTarget(shop)}
                         className={`flex items-center gap-1.5 rounded-full border px-3 py-2 text-xs font-semibold transition ${
                           shop.hasPageVisibilityKey
@@ -137,11 +137,11 @@ export default function ShopsPage() {
                         <Eye size={14} />
                         {shop.hasPageVisibilityKey ? "Page Key" : "Set Page Key"}
                       </button>
-                      <IconButton title="Edit shop" onClick={() => setEditTarget(shop)}><Pencil size={15} /></IconButton>
+                      <IconButton title="Edit clinic" onClick={() => setEditTarget(shop)}><Pencil size={15} /></IconButton>
                       <IconButton title="Extend license" onClick={() => setExtendTarget(shop)}><CalendarPlus size={15} /></IconButton>
                       <IconButton title="Reset owner password" onClick={() => setResetTarget(shop)}><KeyRound size={15} /></IconButton>
                       <IconButton
-                        title={shop.status === "active" ? "Suspend shop" : "Activate shop"}
+                        title={shop.status === "active" ? "Suspend clinic" : "Activate clinic"}
                         onClick={() => toggleStatus(shop)}
                         danger={shop.status === "active"}
                       >
@@ -230,7 +230,7 @@ function CreateShopModal({ plans, onClose, onCreated }: { plans: PlanSummary[]; 
       setCredentials({ ...result.credentials, cancelOrderKey: result.cancelOrderKey });
       onCreated();
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to create shop");
+      setError(err?.response?.data?.message || "Failed to create clinic");
     } finally {
       setSubmitting(false);
     }
@@ -238,12 +238,12 @@ function CreateShopModal({ plans, onClose, onCreated }: { plans: PlanSummary[]; 
 
   if (credentials) {
     return (
-      <ModalShell title="Shop Created" onClose={onClose}>
-        <p className="mb-4 text-sm text-gray-300">Save these now - none of them are shown again. Give the Cancel Order Key to the Shop Owner separately from the login credentials; it's what lets them cancel an order in the POS.</p>
+      <ModalShell title="Clinic Created" onClose={onClose}>
+        <p className="mb-4 text-sm text-gray-300">Save these now - none of them are shown again. Give the Cancel Appointment Key to the Clinic Owner separately from the login credentials; it's what lets them cancel an appointment in the POS.</p>
         <div className="mb-4 space-y-2 rounded-lg border border-white/10 bg-black/30 p-3 text-sm">
           <div><span className="text-gray-500">Username: </span><span className="font-mono">{credentials.username}</span></div>
           <div><span className="text-gray-500">Password: </span><span className="font-mono">{credentials.password}</span></div>
-          <div><span className="text-gray-500">Cancel Order Key: </span><span className="font-mono">{credentials.cancelOrderKey}</span></div>
+          <div><span className="text-gray-500">Cancel Appointment Key: </span><span className="font-mono">{credentials.cancelOrderKey}</span></div>
         </div>
         <button type="button" onClick={onClose} className="w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black">Done</button>
       </ModalShell>
@@ -251,25 +251,25 @@ function CreateShopModal({ plans, onClose, onCreated }: { plans: PlanSummary[]; 
   }
 
   return (
-    <ModalShell title="New Shop" onClose={onClose}>
+    <ModalShell title="New Clinic" onClose={onClose}>
       <div className="max-h-[60vh] space-y-3 overflow-y-auto pr-1 text-sm">
-        <Field label="Shop Name" value={form.shopName} onChange={(v) => update("shopName", v)} />
+        <Field label="Clinic Name" value={form.shopName} onChange={(v) => update("shopName", v)} />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Phone" value={form.phone} onChange={(v) => update("phone", v)} />
           <Field label="Email" value={form.email} onChange={(v) => update("email", v)} />
         </div>
         <Field label="Address" value={form.address} onChange={(v) => update("address", v)} />
 
-        <div className="pt-2 text-xs font-semibold uppercase text-gray-500">Shop Owner Account</div>
+        <div className="pt-2 text-xs font-semibold uppercase text-gray-500">Clinic Owner Account</div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Owner Username" value={form.ownerUsername} onChange={(v) => update("ownerUsername", v)} />
           <Field label="Owner Password" value={form.ownerPassword} onChange={(v) => update("ownerPassword", v)} type="password" />
         </div>
         <Field label="Owner Name" value={form.ownerName} onChange={(v) => update("ownerName", v)} />
 
-        <div className="pt-2 text-xs font-semibold uppercase text-gray-500">Order Cancellation</div>
-        <Field label="Cancel Order Key" value={form.cancelOrderKey} onChange={(v) => update("cancelOrderKey", v)} type="password" />
-        <p className="-mt-2 text-xs text-gray-500">Required to cancel an order in this shop's POS. Give it to the Shop Owner separately from their login - never shown again after this screen.</p>
+        <div className="pt-2 text-xs font-semibold uppercase text-gray-500">Appointment Cancellation</div>
+        <Field label="Cancel Appointment Key" value={form.cancelOrderKey} onChange={(v) => update("cancelOrderKey", v)} type="password" />
+        <p className="-mt-2 text-xs text-gray-500">Required to cancel an appointment in this clinic's POS. Give it to the Clinic Owner separately from their login - never shown again after this screen.</p>
 
         <div className="pt-2 text-xs font-semibold uppercase text-gray-500">Plan &amp; License</div>
         <div className="grid grid-cols-2 gap-3">
@@ -298,7 +298,7 @@ function CreateShopModal({ plans, onClose, onCreated }: { plans: PlanSummary[]; 
         onClick={submit}
         className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black disabled:opacity-50"
       >
-        {submitting ? "Creating..." : "Create Shop"}
+        {submitting ? "Creating..." : "Create Clinic"}
       </button>
     </ModalShell>
   );
@@ -367,9 +367,9 @@ function EditShopModal({ shop, plans, onClose, onSaved }: { shop: ShopSummary; p
   };
 
   return (
-    <ModalShell title={`Edit Shop — ${shop.name}`} onClose={onClose}>
+    <ModalShell title={`Edit Clinic — ${shop.name}`} onClose={onClose}>
       <div className="max-h-[65vh] space-y-3 overflow-y-auto pr-1 text-sm">
-        <Field label="Shop Name" value={form.name} onChange={(v) => update("name", v)} />
+        <Field label="Clinic Name" value={form.name} onChange={(v) => update("name", v)} />
         <div className="grid grid-cols-2 gap-3">
           <Field label="Phone" value={form.phone} onChange={(v) => update("phone", v)} />
           <Field label="Email" value={form.email} onChange={(v) => update("email", v)} />
@@ -425,7 +425,7 @@ function EditShopModal({ shop, plans, onClose, onSaved }: { shop: ShopSummary; p
 
         {shop.owner ? (
           <>
-            <div className="pt-2 text-xs font-semibold uppercase text-gray-500">Shop Owner Account</div>
+            <div className="pt-2 text-xs font-semibold uppercase text-gray-500">Clinic Owner Account</div>
             <div className="grid grid-cols-2 gap-3">
               <Field label="Owner Username" value={form.ownerUsername} onChange={(v) => update("ownerUsername", v)} />
               <Field label="Owner Name" value={form.ownerName} onChange={(v) => update("ownerName", v)} />
@@ -437,7 +437,7 @@ function EditShopModal({ shop, plans, onClose, onSaved }: { shop: ShopSummary; p
             <p className="text-xs text-gray-500">To change the owner's password, use "Reset owner password" from the table instead.</p>
           </>
         ) : (
-          <p className="text-xs text-gray-500">No Shop Owner account found for this shop.</p>
+          <p className="text-xs text-gray-500">No Clinic Owner account found for this clinic.</p>
         )}
       </div>
 
@@ -511,7 +511,7 @@ function ResetPasswordModal({ shop, onClose }: { shop: ShopSummary; onClose: () 
   if (done) {
     return (
       <ModalShell title="Password Reset" onClose={onClose}>
-        <p className="text-sm text-gray-300">The Shop Owner's password has been updated. Share it with them securely.</p>
+        <p className="text-sm text-gray-300">The Clinic Owner's password has been updated. Share it with them securely.</p>
         <button type="button" onClick={onClose} className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black">Done</button>
       </ModalShell>
     );
@@ -541,7 +541,7 @@ function ResetCancelKeyModal({ shop, onClose }: { shop: ShopSummary; onClose: ()
       await superAdminApi.resetCancelOrderKey(shop._id, newKey);
       setDone(true);
     } catch (err: any) {
-      setError(err?.response?.data?.message || "Failed to set Cancel Order Key");
+      setError(err?.response?.data?.message || "Failed to set Cancel Appointment Key");
     } finally {
       setSubmitting(false);
     }
@@ -549,23 +549,23 @@ function ResetCancelKeyModal({ shop, onClose }: { shop: ShopSummary; onClose: ()
 
   if (done) {
     return (
-      <ModalShell title="Cancel Order Key Set" onClose={onClose}>
+      <ModalShell title="Cancel Appointment Key Set" onClose={onClose}>
         <p className="text-sm text-gray-300">
-          The Cancel Order Key for "{shop.name}" is now: <span className="font-mono text-white">{newKey}</span>
+          The Cancel Appointment Key for "{shop.name}" is now: <span className="font-mono text-white">{newKey}</span>
         </p>
-        <p className="mt-2 text-xs text-gray-500">Share it with the Shop Owner securely. It won't be shown again after this screen.</p>
+        <p className="mt-2 text-xs text-gray-500">Share it with the Clinic Owner securely. It won't be shown again after this screen.</p>
         <button type="button" onClick={onClose} className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black">Done</button>
       </ModalShell>
     );
   }
 
   return (
-    <ModalShell title={`Set Cancel Order Key — ${shop.name}`} onClose={onClose}>
-      <p className="mb-3 text-xs text-gray-500">This is the secret the Shop Owner (or an employee with cancel permission) must enter in the POS to cancel an order. Not their login password.</p>
-      <Field label="New Cancel Order Key" value={newKey} onChange={setNewKey} type="password" />
+    <ModalShell title={`Set Cancel Appointment Key — ${shop.name}`} onClose={onClose}>
+      <p className="mb-3 text-xs text-gray-500">This is the secret the Clinic Owner (or an employee with cancel permission) must enter in the POS to cancel an appointment. Not their login password.</p>
+      <Field label="New Cancel Appointment Key" value={newKey} onChange={setNewKey} type="password" />
       {error ? <div className="mt-3 rounded-lg border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-200">{error}</div> : null}
       <button type="button" disabled={submitting || newKey.length < 4} onClick={submit} className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black disabled:opacity-50">
-        {submitting ? "Saving..." : "Set Cancel Order Key"}
+        {submitting ? "Saving..." : "Set Cancel Appointment Key"}
       </button>
     </ModalShell>
   );
@@ -601,7 +601,7 @@ function ResetPageVisibilityKeyModal({ shop, onClose }: { shop: ShopSummary; onC
         <p className="text-sm text-gray-300">
           The Page Visibility Key for "{shop.name}" is now: <span className="font-mono text-white">{newKey}</span>
         </p>
-        <p className="mt-2 text-xs text-gray-500">Share it with the Shop Owner securely. It won't be shown again after this screen.</p>
+        <p className="mt-2 text-xs text-gray-500">Share it with the Clinic Owner securely. It won't be shown again after this screen.</p>
         <button type="button" onClick={onClose} className="mt-4 w-full rounded-lg bg-[#E2F33C] py-2 font-bold text-black">Done</button>
       </ModalShell>
     );
@@ -610,7 +610,7 @@ function ResetPageVisibilityKeyModal({ shop, onClose }: { shop: ShopSummary; onC
   return (
     <ModalShell title={`Set Page Visibility Key — ${shop.name}`} onClose={onClose}>
       <p className="mb-3 text-xs text-gray-500">
-        This is the secret the Shop Owner must enter, from their own Settings page, to check or uncheck which
+        This is the secret the Clinic Owner must enter, from their own Settings page, to check or uncheck which
         sidebar pages their dashboard shows. Not their login password.
       </p>
       <Field label="New Page Visibility Key" value={newKey} onChange={setNewKey} type="password" />

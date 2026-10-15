@@ -2,20 +2,20 @@
 // modals, online-order QR controls, receipt/kitchen auto-print status
 // messages) - see src/pages/dashboard/sales/SalesPage.tsx.
 export const sales = {
-  searchPlaceholder: "Search orders, tables, customers, waiters - Enter to check out",
-  orderImageAlt: "Order",
+  searchPlaceholder: "Search appointments, tables, patients, waiters - Enter to check out",
+  orderImageAlt: "Appointment",
 
   stats: {
-    pendingOrders: "Pending Orders",
+    pendingOrders: "Pending Appointments",
     completed: "Completed",
     cancelled: "Cancelled",
     openValue: "Open Value",
   },
 
   shiftContext: {
-    openShift: "Showing orders for the current open shift - not split by calendar date.",
-    lastShift: "Showing orders for this shop's last shift - not split by calendar date.",
-    noShiftRecorded: "No shift recorded yet. Open the shop to start taking orders.",
+    openShift: "Showing appointments for the current open shift - not split by calendar date.",
+    lastShift: "Showing appointments for this clinic's last shift - not split by calendar date.",
+    noShiftRecorded: "No shift recorded yet. Open the clinic to start taking appointments.",
   },
 
   tabs: {
@@ -29,33 +29,36 @@ export const sales = {
     delivery: "Delivery",
   },
 
-  loadingOrders: "Loading orders...",
-  noPendingOrdersFiltered: "No pending orders matched the current filters.",
-  noCompletedOrdersFiltered: "No completed orders matched the current filters.",
+  loadingOrders: "Loading appointments...",
+  noPendingOrdersFiltered: "No pending appointments matched the current filters.",
+  noCompletedOrdersFiltered: "No completed appointments matched the current filters.",
 
   onlineWaitingAcceptance: "Online - Waiting Acceptance",
   onlineStatusPrefix: "Online - {{status}}",
   changeRequestedBadge: "Change Requested",
 
-  orderNumberHeading: "Order #{{number}}",
+  orderNumberHeading: "Appointment #{{number}}",
   tableLabel: "Table {{table}}",
   orderTypeItemsCount: "{{type}} • {{count}} items",
   loadMore: "Load More ({{count}} more)",
 
-  orderDetailLabel: "Order Detail",
-  loadingFullOrderDetails: "Loading full order details...",
+  orderDetailLabel: "Appointment Detail",
+  loadingFullOrderDetails: "Loading full appointment details...",
   sendingEllipsis: "Sending...",
-  sendToKitchen: "Send to Godam",
   printReceipt: "Print Receipt",
   editLocked: "Edit Locked",
 
   boxLabels: {
-    orderNumber: "Order Number",
+    doctor: "Dr",
+    appointmentDate: "Appointment Date",
+    timeSlot: "Time Slot",
+    checkup: "Checkup",
+    orderNumber: "Appointment Number",
     createdAt: "Created At",
-    customer: "Customer",
+    customer: "Patient",
     waiter: "Waiter",
     table: "Table",
-    orderType: "Order Type",
+    orderType: "Appointment Type",
     paymentMethod: "Payment Method",
     deliveryLocation: "Delivery Location",
     previousDues: "Previous Dues",
@@ -72,7 +75,7 @@ export const sales = {
 
   items: "Items",
   addItems: "Add Items",
-  orderLocked: "Order Locked",
+  orderLocked: "Appointment Locked",
   loadingItems: "Loading items...",
   qty: "Qty {{quantity}}",
 
@@ -87,15 +90,15 @@ export const sales = {
     discountFixed: "Discount (Fixed Value)",
   },
 
-  completeOrder: "Complete Order",
-  cancelOrder: "Cancel Order",
-  orderCancelledKept: "This order was cancelled and kept for record.",
+  completeOrder: "Complete Appointment",
+  cancelOrder: "Cancel Appointment",
+  orderCancelledKept: "This appointment was cancelled and kept for record.",
   cancelledBy: "Cancelled by {{name}}",
   reasonLabel: "Reason: {{reason}}",
-  orderCompletedStored: "This order is completed and stored in sales history.",
+  orderCompletedStored: "This appointment is completed and stored in sales history.",
 
-  selectOrderTitle: "Select an order",
-  selectOrderHint: "Choose any order card from the left.",
+  selectOrderTitle: "Select an appointment",
+  selectOrderHint: "Choose any appointment card from the left.",
 
   completePaymentTitle: "Complete Payment",
   amountPaidLabel: "Amount Paid / Cash Received",
@@ -105,20 +108,18 @@ export const sales = {
   confirmPaymentButton: "Confirm Payment",
   payFull: "Pay Full",
 
-  addItemsToOrderTitle: "Add Items To Order",
+  addItemsToOrderTitle: "Add Items To Appointment",
   autoPrintFrameTitle: "Auto Print Frame",
 
   loginTokenMissing: "Login token not found. Sales updates will not sync to MongoDB until you log in again.",
-  localHubUnreachable: "Couldn't reach this till's own Local Hub{{reason}} - restart the app to enable offline order history.",
+  localHubUnreachable: "Couldn't reach this till's own Local Hub{{reason}} - restart the app to enable offline appointment history.",
   failedToStart: "failed to start",
 
-  orderNotInLocalCache: "This order isn't in this till's local cache - try again once back online.",
-  couldNotRefreshOffline: "Couldn't refresh this order offline.",
-  couldNotRefreshOrder: "Could not refresh this order.",
-  noPendingOrderFound: "No pending order found matching \"{{query}}\".",
+  orderNotInLocalCache: "This appointment isn't in this till's local cache - try again once back online.",
+  couldNotRefreshOffline: "Couldn't refresh this appointment offline.",
+  couldNotRefreshOrder: "Could not refresh this appointment.",
+  noPendingOrderFound: "No pending appointment found matching \"{{query}}\".",
 
-  savedKitchenPrintedSyncing: "Saved - kitchen ticket printed. Syncing to the cloud...",
-  savedKitchenPrintedOffline: "Saved - kitchen ticket printed. Will sync once back online.",
   savedSyncingToCloud: "Saved - syncing to the cloud...",
   savedWillSyncOffline: "Saved - will sync once back online.",
   couldNotSaveChange: "Could not save this change.",
@@ -126,28 +127,28 @@ export const sales = {
   invalidPaymentAmountTitle: "Invalid Payment Amount",
   enterValidPaymentAmount: "Enter a valid payment amount.",
   paymentAmountRequiredTitle: "Payment Amount Required",
-  paymentAmountRequiredMessage: "Enter a payment amount, or check \"Put in Pending\" to confirm this order with no payment collected.",
+  paymentAmountRequiredMessage: "Enter a payment amount, or check \"Put in Pending\" to confirm this appointment with no payment collected.",
 
-  zeroPaymentCustomerRequired: "Add the customer's name and phone number before confirming with zero payment - the full amount becomes a due, and dues need a real customer to track them against. Edit the order first, or pay in full instead.",
-  partialPaymentCustomerRequired: "Add the customer's name and phone number before confirming a partial payment - dues need a real customer to track them against. Edit the order first, or pay in full instead.",
+  zeroPaymentCustomerRequired: "Add the patient's name and phone number before confirming with zero payment - the full amount becomes a due, and dues need a real patient to track them against. Edit the appointment first, or pay in full instead.",
+  partialPaymentCustomerRequired: "Add the patient's name and phone number before confirming a partial payment - dues need a real patient to track them against. Edit the appointment first, or pay in full instead.",
 
   confirmZeroPaymentTitle: "Confirm Zero Payment",
-  confirmZeroPaymentMessage: "No payment will be collected right now for Order #{{orderNumber}} - the full ₨{{payable}} will be recorded as a due against {{customerName}}. Continue?",
+  confirmZeroPaymentMessage: "No payment will be collected right now for Appointment #{{orderNumber}} - the full ₨{{payable}} will be recorded as a due against {{customerName}}. Continue?",
 
-  orderCompletedChange: "Order #{{orderNumber}} completed - Rs {{paid}} collected, Rs {{change}} change returned.",
-  orderCompletedNoChange: "Order #{{orderNumber}} completed - Rs {{paid}} collected.",
+  orderCompletedChange: "Appointment #{{orderNumber}} completed - Rs {{paid}} collected, Rs {{change}} change returned.",
+  orderCompletedNoChange: "Appointment #{{orderNumber}} completed - Rs {{paid}} collected.",
 
-  whatsappReceiptSendFailed: "Order completed, but WhatsApp PDF receipt could not be sent.",
-  orderCancelledSuccessfully: "Order {{orderId}} cancelled successfully.",
-  declineOnlineOrderConfirm: "Decline/cancel this online order?",
-  orderMarkedStatus: "Order #{{orderId}} marked {{status}}.",
-  couldNotUpdateOrder: "Could not update this order.",
+  whatsappReceiptSendFailed: "Appointment completed, but WhatsApp PDF receipt could not be sent.",
+  orderCancelledSuccessfully: "Appointment {{orderId}} cancelled successfully.",
+  declineOnlineOrderConfirm: "Decline/cancel this online appointment?",
+  orderMarkedStatus: "Appointment #{{orderId}} marked {{status}}.",
+  couldNotUpdateOrder: "Could not update this appointment.",
 
   assignedRiderNotified: "Assigned to {{name}} - WhatsApp sent.",
   assignedRiderNotNotified: "Assigned to {{name}}, but the WhatsApp message could not be sent.",
   couldNotAssignRider: "Could not assign this rider.",
 
-  changeRequestApproved: "Change request approved - order updated.",
+  changeRequestApproved: "Change request approved - appointment updated.",
   changeRequestDeclined: "Change request declined.",
   couldNotRespondToRequest: "Could not respond to this request.",
 
@@ -158,19 +159,19 @@ export const sales = {
   addedItemsPlain: "Added {{count}} item(s) to {{orderId}}.",
 
   whatsappNeedsInternet: "WhatsApp needs an internet connection - try again once back online.",
-  noValidPhoneNumber: "No valid phone number for this customer.",
-  customerReceiptLabel: "Customer receipt",
+  noValidPhoneNumber: "No valid phone number for this patient.",
+  customerReceiptLabel: "Patient receipt",
   receiptSentWhatsApp: "Receipt sent via WhatsApp to {{phone}}",
   whatsappSendFailed: "Failed to send WhatsApp message. Is it connected?",
   whatsappSendFailedPrefix: "WhatsApp send failed: ",
 
-  whatsappOrderNo: "Order No: *{{number}}*",
+  whatsappOrderNo: "Appointment No: *{{number}}*",
   whatsappTotal: "Total: *PKR {{total}}*",
-  whatsappThankYou: "Thank you for your order!",
+  whatsappThankYou: "Thank you for your appointment!",
 
   customer: {
-    dineInCustomer: "Dine-In Customer",
-    walkInCustomer: "Walk-in Customer",
+    dineInCustomer: "Dine-In Patient",
+    walkInCustomer: "Walk-in Patient",
     waiterPrefix: "Waiter: {{name}}",
     noPhone: "No phone",
   },
@@ -200,7 +201,7 @@ export const sales = {
   },
 
   online: {
-    orderLabel: "Online Order",
+    orderLabel: "Online Appointment",
     paymentStatusLabel: "Payment: {{status}}",
     markStatus: "Mark {{status}}",
     decline: "Decline",
@@ -211,7 +212,9 @@ export const sales = {
     chooseRider: "Choose a rider…",
     reassignNotify: "Reassign & Notify",
     assignNotify: "Assign & Notify",
-    customerRequestedChange: "Customer Requested a Change",
+    customerRequestedChange: "Patient Requested a Change",
     approve: "Approve",
   },
+  checkupDone: "Checked",
+  checkupWaiting: "Waiting",
 } as const;

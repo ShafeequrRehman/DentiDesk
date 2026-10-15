@@ -26,12 +26,12 @@ module.exports = async function requireShopOrderable(req, res, next) {
       return res.status(404).json({ message: "This ordering link is invalid.", reason: "shop_not_found" });
     }
     if (shop.status === "suspended") {
-      return res.status(503).json({ message: "This shop isn't accepting orders right now.", reason: "shop_suspended" });
+      return res.status(503).json({ message: "This clinic isn't accepting appointments right now.", reason: "shop_suspended" });
     }
 
     const license = shop.licenseId ? await License.findById(shop.licenseId).lean() : null;
     if (isLicenseExpired(license)) {
-      return res.status(503).json({ message: "This shop isn't accepting orders right now.", reason: "license_expired" });
+      return res.status(503).json({ message: "This clinic isn't accepting appointments right now.", reason: "license_expired" });
     }
 
     req.shop = shop;

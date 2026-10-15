@@ -14,7 +14,7 @@ export default function IngredientStockPage() {
     <div className="space-y-6">
       <div>
         <h1 className="text-3xl font-black text-gray-900 tracking-tight flex items-center gap-3">
-          Ingredient Stock <Boxes className="text-indigo-600" size={30} />
+          Medicine Stock <Boxes className="text-indigo-600" size={30} />
         </h1>
         <p className="text-gray-500 font-bold">Add raw ingredients, group them into categories, and log incoming stock.</p>
       </div>

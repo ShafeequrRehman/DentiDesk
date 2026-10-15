@@ -72,7 +72,7 @@ export const employees = {
     emailOptional: "Email (optional)",
     roleSelectLabel: "Role (permissions)",
     selectRole: "Select a role",
-    designationLabel: "Designation (job title - Waiter/Order Taker show up in the POS waiter list)",
+    designationLabel: "Designation (job title - Waiter/Appointment Taker show up in the POS waiter list)",
     customDesignationPlaceholder: "e.g. Barista",
     chooseFromList: "Choose from list",
     selectDesignation: "Select a designation",

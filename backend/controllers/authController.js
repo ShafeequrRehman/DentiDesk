@@ -88,7 +88,7 @@ function safeUser(user) {
 // product where every account must be tied to a paying shop.
 exports.register = async (req, res) => {
   res.status(410).json({
-    message: "Self-service registration is disabled. Accounts are created by the Super Admin (shop owners) or by your Shop Owner (employees).",
+    message: "Self-service registration is disabled. Accounts are created by the Super Admin (clinic owners) or by your Clinic Owner (employees).",
     reason: "registration_disabled",
   });
 };
@@ -163,7 +163,7 @@ exports.login = async (req, res) => {
     // 3. verify user is active
     if (!user.isActive) {
       return res.status(403).json({
-        message: "This account has been deactivated. Contact your Shop Owner or the software provider.",
+        message: "This account has been deactivated. Contact your Clinic Owner or the software provider.",
         reason: "user_inactive",
       });
     }
@@ -183,13 +183,13 @@ exports.login = async (req, res) => {
     // Shop Owner / Employee: shop + license must both check out.
     const shop = await Shop.findById(user.shopId).lean();
     if (!shop) {
-      return res.status(403).json({ message: "No shop is associated with this account. Contact the software provider.", reason: "shop_not_found" });
+      return res.status(403).json({ message: "No clinic is associated with this account. Contact the software provider.", reason: "shop_not_found" });
     }
 
     // 4. verify shop is active
     if (shop.status === "suspended") {
       return res.status(402).json({
-        message: "Your shop has been suspended by the software provider. Please contact support to reactivate your account.",
+        message: "Your clinic has been suspended by the software provider. Please contact support to reactivate your account.",
         reason: "shop_suspended",
         shop: { name: shop.name, status: shop.status },
       });
@@ -254,7 +254,7 @@ exports.refresh = async (req, res) => {
     if (user.role !== "superadmin") {
       const shop = await Shop.findById(user.shopId).lean();
       if (!shop || shop.status === "suspended") {
-        return res.status(402).json({ message: "Your shop has been suspended.", reason: "shop_suspended" });
+        return res.status(402).json({ message: "Your clinic has been suspended.", reason: "shop_suspended" });
       }
       const license = await License.findOne({ shopId: shop._id }).lean();
       if (!license || isLicenseExpired(license)) {

@@ -136,7 +136,7 @@ export function ShopSessionProvider({ children }: { children: ReactNode }) {
         }
       }
     } catch (error) {
-      console.error("Failed to fetch shop session status", error);
+      console.error("Failed to fetch clinic session status", error);
       // Only meaningful inside the desktop app - a plain browser tab has
       // no offline order-taking path anyway, so falling back to a stale
       // cache there would just be confusing rather than useful.

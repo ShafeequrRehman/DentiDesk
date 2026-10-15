@@ -46,11 +46,11 @@ export function ReceiptAutoPrintSection() {
     <div className="rounded-[28px] border border-slate-200 bg-slate-50 p-6">
       <div className="mb-4 flex items-center gap-2">
         <Printer size={18} className="text-indigo-600" />
-        <h3 className="text-sm font-black text-slate-900">Auto-Print Receipt on Order Completion</h3>
+        <h3 className="text-sm font-black text-slate-900">Auto-Print Receipt on Appointment Completion</h3>
       </div>
       <p className="mb-4 text-xs font-bold text-slate-500">
-        When ON for a type, the customer receipt prints automatically the moment that order is completed and settled - no
-        need to press Print Receipt separately. Applies across every till, since this is saved to your shop, not one device.
+        When ON for a type, the patient receipt prints automatically the moment that appointment is completed and settled - no
+        need to press Print Receipt separately. Applies across every till, since this is saved to your clinic, not one device.
       </p>
 
       <div className="space-y-3">

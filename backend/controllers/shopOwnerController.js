@@ -55,7 +55,7 @@ exports.createEmployee = async (req, res) => {
 
     const role = await Role.findOne({ _id: roleId, shopId: req.user.shopId }).lean();
     if (!role) {
-      return res.status(400).json({ message: "Role not found for this shop", reason: "role_not_found" });
+      return res.status(400).json({ message: "Role not found for this clinic", reason: "role_not_found" });
     }
 
     // Enforce the plan's employee-seat limit, if the shop has a plan.
@@ -142,7 +142,7 @@ exports.updateEmployee = async (req, res) => {
 
     if (roleId) {
       const role = await Role.findOne({ _id: roleId, shopId: req.user.shopId }).lean();
-      if (!role) return res.status(400).json({ message: "Role not found for this shop", reason: "role_not_found" });
+      if (!role) return res.status(400).json({ message: "Role not found for this clinic", reason: "role_not_found" });
       employee.employeeRoleId = role._id;
     }
 
@@ -366,7 +366,7 @@ exports.createRole = async (req, res) => {
     const role = await Role.create({ shopId: req.user.shopId, name, permissions: permissions || [], hideDashboard: Boolean(hideDashboard) });
     res.status(201).json(role);
   } catch (error) {
-    if (error.code === 11000) return res.status(400).json({ message: "A role with that name already exists for your shop", reason: "duplicate_role" });
+    if (error.code === 11000) return res.status(400).json({ message: "A role with that name already exists for your clinic", reason: "duplicate_role" });
     res.status(500).json({ message: "Failed to create role", detail: error.message });
   }
 };
@@ -390,7 +390,7 @@ exports.updateRole = async (req, res) => {
     await role.save();
     res.json(role);
   } catch (error) {
-    if (error.code === 11000) return res.status(400).json({ message: "A role with that name already exists for your shop", reason: "duplicate_role" });
+    if (error.code === 11000) return res.status(400).json({ message: "A role with that name already exists for your clinic", reason: "duplicate_role" });
     res.status(500).json({ message: "Failed to update role", detail: error.message });
   }
 };
@@ -424,7 +424,7 @@ exports.listPermissionCatalog = async (req, res) => {
 exports.getOwnShop = async (req, res) => {
   try {
     const shop = await Shop.findById(req.user.shopId).populate("planId").lean();
-    if (!shop) return res.status(404).json({ message: "Shop not found" });
+    if (!shop) return res.status(404).json({ message: "Clinic not found" });
 
     // Never send the key hashes themselves to the client - only whether
     // one has been set, same convention as superAdminController's
@@ -445,7 +445,7 @@ exports.getOwnShop = async (req, res) => {
       hasPageVisibilityKey: Boolean(pageVisibilityKeyHash),
     });
   } catch (error) {
-    res.status(500).json({ message: "Failed to load shop profile", detail: error.message });
+    res.status(500).json({ message: "Failed to load clinic profile", detail: error.message });
   }
 };
 
@@ -454,7 +454,7 @@ exports.getOwnShop = async (req, res) => {
 exports.updateOwnShop = async (req, res) => {
   try {
     const shop = await Shop.findById(req.user.shopId);
-    if (!shop) return res.status(404).json({ message: "Shop not found" });
+    if (!shop) return res.status(404).json({ message: "Clinic not found" });
 
     const { name, phone, email, address, receiptAutoPrint } = req.body;
     if (name !== undefined) shop.name = name;
@@ -476,7 +476,7 @@ exports.updateOwnShop = async (req, res) => {
     await shop.save();
     res.json(shop);
   } catch (error) {
-    res.status(500).json({ message: "Failed to update shop profile", detail: error.message });
+    res.status(500).json({ message: "Failed to update clinic profile", detail: error.message });
   }
 };
 
@@ -495,14 +495,14 @@ exports.updateEnabledPages = async (req, res) => {
       return res.status(400).json({ message: "enabledPages must be an array of page keys.", reason: "validation_error" });
     }
     if (!key) {
-      return res.status(400).json({ message: "The shop's Page Visibility Key is required.", reason: "validation_error" });
+      return res.status(400).json({ message: "The clinic's Page Visibility Key is required.", reason: "validation_error" });
     }
 
     const shop = await Shop.findById(req.user.shopId);
-    if (!shop) return res.status(404).json({ message: "Shop not found" });
+    if (!shop) return res.status(404).json({ message: "Clinic not found" });
     if (!shop.pageVisibilityKeyHash) {
       return res.status(409).json({
-        message: "No Page Visibility Key has been set up for this shop yet. Ask your software provider (Super Admin) to set one.",
+        message: "No Page Visibility Key has been set up for this clinic yet. Ask your software provider (Super Admin) to set one.",
         reason: "key_not_configured",
       });
     }
@@ -529,7 +529,7 @@ exports.updateEnabledPages = async (req, res) => {
 exports.getOrderingSettings = async (req, res) => {
   try {
     const shop = await Shop.findById(req.user.shopId).select("riderPhones paymentGateway").lean();
-    if (!shop) return res.status(404).json({ message: "Shop not found" });
+    if (!shop) return res.status(404).json({ message: "Clinic not found" });
     res.json({
       riderPhones: shop.riderPhones || [],
       paymentGateway: shop.paymentGateway || { jazzCash: {}, easyPaisa: {} },
@@ -547,7 +547,7 @@ exports.getOrderingSettings = async (req, res) => {
 exports.updateOrderingSettings = async (req, res) => {
   try {
     const shop = await Shop.findById(req.user.shopId);
-    if (!shop) return res.status(404).json({ message: "Shop not found" });
+    if (!shop) return res.status(404).json({ message: "Clinic not found" });
 
     const { riderPhones, jazzCash, easyPaisa } = req.body || {};
     if (riderPhones !== undefined) {
