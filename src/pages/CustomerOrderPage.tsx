@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Plus, Minus, X, CheckCircle2, AlertCircle, MapPin, Download, UtensilsCrossed, Share, RotateCcw, Edit3, Clock, Check, Bike, Phone } from 'lucide-react';
+import { ShoppingCart, Plus, X, CheckCircle2, AlertCircle, MapPin, Download, UtensilsCrossed, Share, RotateCcw, Edit3, Clock, Check, Bike, Phone } from 'lucide-react';
 import { getProductImageUrl } from '@/lib/asset-path';
 import {
   createPublicOrder,
@@ -340,8 +340,9 @@ function ChangeRequestModal({
     setAddQuantities((previous) => {
       const next = new Map(previous);
       const key = itemKey(product.name, product.variation);
+      // Each Dr/service is booked once - no quantities.
       if (qty <= 0) next.delete(key);
-      else next.set(key, qty);
+      else next.set(key, 1);
       return next;
     });
   }
@@ -442,11 +443,9 @@ function ChangeRequestModal({
                             <p className="truncate text-xs font-black text-gray-900">{product.name}{product.variation ? ` (${product.variation})` : ''}</p>
                             <p className="text-[11px] text-gray-400">Rs {formatter.format(product.price)}</p>
                           </div>
-                          <div className="glass-pill flex shrink-0 items-center gap-2 rounded-full p-1">
-                            <button type="button" onClick={() => setAddQty(product, qty - 1)} disabled={qty === 0} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 transition hover:bg-white/70 disabled:opacity-30"><Minus size={13} /></button>
-                            <span className="w-4 text-center text-xs font-black">{qty}</span>
-                            <button type="button" onClick={() => setAddQty(product, qty + 1)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 transition hover:bg-white/70"><Plus size={13} /></button>
-                          </div>
+                          <button type="button" onClick={() => setAddQty(product, qty > 0 ? 0 : 1)} className={`glass-pill flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-black transition hover:bg-white/70 ${qty > 0 ? 'text-rose-600' : 'text-gray-700'}`}>
+                            {qty > 0 ? <><X size={13} /> Remove</> : <><Plus size={13} /> Add</>}
+                          </button>
                         </div>
                       );
                     }
@@ -496,13 +495,11 @@ function ChangeRequestModal({
                 <div key={key} className="flex items-center justify-between rounded-xl bg-white/50 p-3 shadow-inner">
                   <div className="min-w-0">
                     <p className="truncate text-xs font-black text-gray-900">{item.name}{item.variation ? ` (${item.variation})` : ''}</p>
-                    <p className="text-[11px] text-gray-400">You have {item.quantity} · Rs {formatter.format(item.price)} each</p>
+                    <p className="text-[11px] text-gray-400">Rs {formatter.format(item.price)}</p>
                   </div>
-                  <div className="glass-pill flex shrink-0 items-center gap-2 rounded-full p-1">
-                    <button type="button" onClick={() => setRemoveQty(item, qty - 1)} disabled={qty === 0} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 transition hover:bg-white/70 disabled:opacity-30"><Minus size={13} /></button>
-                    <span className="w-4 text-center text-xs font-black">{qty}</span>
-                    <button type="button" onClick={() => setRemoveQty(item, qty + 1)} disabled={qty >= item.quantity} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 transition hover:bg-white/70 disabled:opacity-30"><Plus size={13} /></button>
-                  </div>
+                  <button type="button" onClick={() => setRemoveQty(item, qty > 0 ? 0 : item.quantity)} className={`glass-pill flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-black transition hover:bg-white/70 ${qty > 0 ? 'text-rose-600' : 'text-gray-700'}`}>
+                    {qty > 0 ? <><Check size={13} /> Will remove</> : <><X size={13} /> Remove</>}
+                  </button>
                 </div>
               );
             })}
@@ -778,7 +775,7 @@ function CustomerShell({
             tab === 'menu' ? 'bg-[#E2F33C] text-black' : 'text-white/60 hover:text-white'
           }`}
         >
-          <UtensilsCrossed size={14} /> Menu
+          <UtensilsCrossed size={14} /> Drs/Services
         </button>
         <button
           type="button"
@@ -924,7 +921,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   const [customerPhone, setCustomerPhone] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [note, setNote] = useState('');
-  const [paymentMethod, setPaymentMethod] = useState<'Cash' | 'Online' | 'JazzCash' | 'EasyPaisa'>('Cash');
+  const [paymentMethod] = useState<'Cash' | 'Online' | 'JazzCash' | 'EasyPaisa'>('Cash');
   // Dr appointment slot - same picker as the staff POS screen. Booked
   // times come from the server (times only, never who booked them).
   const [appointmentDate, setAppointmentDate] = useState(() => todayISO());
@@ -1069,7 +1066,9 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
       const next = new Map(previous);
       const key = cartKey(product);
       const existing = next.get(key);
-      next.set(key, { product, quantity: (existing?.quantity || 0) + 1 });
+      // Each Dr/service is booked once - no quantities.
+      if (existing) return previous;
+      next.set(key, { product, quantity: 1 });
       return next;
     });
   }
@@ -1272,11 +1271,9 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                   {groupCartCount > 0 ? `${groupCartCount} in cart - Select` : 'Select'}
                 </button>
               ) : line ? (
-                <div className="glass-pill mt-2 flex items-center justify-between rounded-xl px-2 py-1.5">
-                  <button type="button" onClick={() => changeQuantity(single, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 transition hover:bg-white/70"><Minus size={14} /></button>
-                  <span className="text-sm font-black">{line.quantity}</span>
-                  <button type="button" onClick={() => changeQuantity(single, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 transition hover:bg-white/70"><Plus size={14} /></button>
-                </div>
+                <button type="button" onClick={() => changeQuantity(single, -line.quantity)} className="glass-pill mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black text-emerald-700 transition hover:text-rose-600">
+                  <Check size={14} /> Added · Remove
+                </button>
               ) : (
                 <button type="button" onClick={() => handleGroupTap(group)} className="mt-2 w-full rounded-xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] py-2 text-xs font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(132,144,10,0.4)] transition hover:brightness-105">Add</button>
               )}
@@ -1321,13 +1318,11 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                 <div key={cartKey(line.product)} className="flex items-center justify-between rounded-xl bg-white/50 p-3 shadow-inner">
                   <div>
                     <p className="text-sm font-black text-gray-900">{line.product.name}</p>
-                    <p className="text-xs text-gray-400">Rs {formatter.format(line.product.price)} x {line.quantity}</p>
+                    <p className="text-xs text-gray-400">Rs {formatter.format(line.product.price)}</p>
                   </div>
-                  <div className="glass-pill flex items-center gap-2 rounded-full p-1">
-                    <button type="button" onClick={() => changeQuantity(line.product, -1)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 transition hover:bg-white/70"><Minus size={14} /></button>
-                    <span className="text-sm font-black">{line.quantity}</span>
-                    <button type="button" onClick={() => changeQuantity(line.product, 1)} className="flex h-7 w-7 items-center justify-center rounded-lg text-gray-600 transition hover:bg-white/70"><Plus size={14} /></button>
-                  </div>
+                  <button type="button" onClick={() => changeQuantity(line.product, -line.quantity)} className="glass-pill flex items-center gap-1 rounded-full px-3 py-1.5 text-xs font-black text-rose-600 transition hover:bg-white/70">
+                    <X size={13} /> Remove
+                  </button>
                 </div>
               ))}
             </div>
@@ -1434,29 +1429,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
               ) : null}
 
 
-              <p className="mt-3 text-xs font-black uppercase tracking-[0.14em] text-gray-400">Payment</p>
-              <div className="flex flex-wrap gap-2">
-                <button type="button" onClick={() => setPaymentMethod('Cash')} className={`flex-1 rounded-xl border px-2.5 py-2.5 text-xs font-black transition ${paymentMethod === 'Cash' ? 'border-[#D6E332] bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(132,144,10,0.4)]' : 'border-white/50 bg-white/50 text-gray-500 shadow-inner hover:border-[#E2F33C]/70'}`}>Cash</button>
-                {/* Always offered, even with no JazzCash/EasyPaisa merchant
-                    credentials configured - the customer just tells the
-                    shop they'll pay online (bank transfer/personal
-                    EasyPaisa-JazzCash account/etc) and staff confirms it
-                    manually, same as they would with cash in hand. See
-                    publicOrderController.js's createOrder for the
-                    isOnlineIntent handling. */}
-                <button type="button" onClick={() => setPaymentMethod('Online')} className={`flex-1 rounded-xl border px-2.5 py-2.5 text-xs font-black transition ${paymentMethod === 'Online' ? 'border-[#D6E332] bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(132,144,10,0.4)]' : 'border-white/50 bg-white/50 text-gray-500 shadow-inner hover:border-[#E2F33C]/70'}`}>Online</button>
-                {menu?.paymentMethods.jazzCash ? (
-                  <button type="button" onClick={() => setPaymentMethod('JazzCash')} className={`flex-1 rounded-xl border px-2.5 py-2.5 text-xs font-black transition ${paymentMethod === 'JazzCash' ? 'border-[#D6E332] bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(132,144,10,0.4)]' : 'border-white/50 bg-white/50 text-gray-500 shadow-inner hover:border-[#E2F33C]/70'}`}>JazzCash</button>
-                ) : null}
-                {menu?.paymentMethods.easyPaisa ? (
-                  <button type="button" onClick={() => setPaymentMethod('EasyPaisa')} className={`flex-1 rounded-xl border px-2.5 py-2.5 text-xs font-black transition ${paymentMethod === 'EasyPaisa' ? 'border-[#D6E332] bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(132,144,10,0.4)]' : 'border-white/50 bg-white/50 text-gray-500 shadow-inner hover:border-[#E2F33C]/70'}`}>EasyPaisa</button>
-                ) : null}
-              </div>
-              {paymentMethod === 'Online' ? (
-                <p className="text-[11px] font-semibold text-gray-400">You'll pay the clinic directly online (bank transfer, EasyPaisa, or JazzCash) - they'll confirm your appointment once payment is received.</p>
-              ) : paymentMethod === 'JazzCash' || paymentMethod === 'EasyPaisa' ? (
-                <p className="text-[11px] font-semibold text-gray-400">You'll be taken to {paymentMethod}'s secure payment page next - your appointment is confirmed automatically once payment clears.</p>
-              ) : null}
+              <p className="text-[11px] font-semibold text-gray-500">Payment is made at the clinic.</p>
 
               <textarea value={note} onChange={(e) => setNote(e.target.value)} placeholder="Any special instructions..." className="w-full rounded-xl border border-white/60 bg-white/50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#D6E332]" rows={2} />
 

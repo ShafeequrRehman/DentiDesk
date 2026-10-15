@@ -20,8 +20,8 @@ import { getIsDashboardHidden, hasPermission } from '@/lib/auth';
 import { getFirstAccessiblePage } from '@/lib/dashboard-pages';
 import { useToast } from '@/lib/toast';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
+import DrsServicesRevenue from '@/components/DrsServicesRevenue';
 
-type EmployeeStat = { name: string; sales: number; count: number };
 type InventoryItem = { id: string | number; name: string; stock: number };
 // Extends the shared window (src/lib/shop-session.ts - the single source
 // of truth for the actual date-math, shared with Record/Sales) with the
@@ -317,27 +317,6 @@ function DashboardPageClientInner() {
     return data.map(({ start: _start, end: _end, ...bucket }) => bucket);
   }, [businessOrders, businessWindow]);
 
-  const topEmployees = useMemo<EmployeeStat[]>(() => {
-    const map = new Map<string, EmployeeStat>();
-
-    businessOrders.forEach((order) => {
-      if (order.status !== 'completed' || !order.waiter) return;
-      const employee = map.get(order.waiter) || { name: order.waiter, sales: 0, count: 0 };
-      employee.sales += order.total;
-      employee.count += 1;
-      map.set(order.waiter, employee);
-    });
-
-    const parsed = Array.from(map.values()).sort((left, right) => right.sales - left.sales).slice(0, 3);
-    return parsed.length > 0
-      ? parsed
-      : [
-          { name: 'Fariha', sales: 0, count: 0 },
-          { name: 'Ahsan Raza', sales: 0, count: 0 },
-          { name: 'Rehman', sales: 0, count: 0 },
-        ];
-  }, [businessOrders]);
-
   const lowStockProducts = useMemo<InventoryItem[]>(() => {
     const sorted = [...products].sort((left, right) => left.stock - right.stock).slice(0, 3);
     return sorted.length > 0 ? sorted : [{ id: 'loading', name: 'Loading', stock: 0 }];
@@ -432,7 +411,7 @@ function DashboardPageClientInner() {
             </div>
           </div>
 
-          <EmployeePerformance employees={topEmployees} formatter={formatter} />
+          <DrsServicesRevenue />
         </div>
 
         <div className="col-span-12 min-w-0 space-y-6 lg:col-span-5">
@@ -1738,28 +1717,6 @@ function MiniStat({ label, value, valueColor = 'text-black' }: { label: string; 
     <div className="min-w-0">
       <h4 className={`truncate text-lg font-black xl:text-2xl ${valueColor}`}>{value}</h4>
       <p className="truncate text-[10px] font-bold uppercase text-gray-400">{label}</p>
-    </div>
-  );
-}
-
-function EmployeePerformance({ employees, formatter }: { employees: EmployeeStat[]; formatter: Intl.NumberFormat }) {
-  return (
-    <div className="rounded-[32px] bg-white p-6 shadow-sm">
-      <div className="mb-6 flex items-center justify-between">
-        <h3 className="font-bold">Top Employee Performance</h3>
-        <span className="text-[10px] font-bold uppercase text-gray-400">Sales Volume</span>
-      </div>
-      <div className="space-y-4">
-        {employees.map((employee, index) => (
-          <div key={`${employee.name}-${index}`} className="flex items-center justify-between border-b border-gray-50 py-2 last:border-0">
-            <span className="text-sm font-bold text-gray-700">{employee.name}</span>
-            <div className="flex gap-4 sm:gap-12">
-              <span className="text-sm font-bold text-gray-400">Rs {formatter.format(employee.sales)}</span>
-              <span className="w-12 text-right text-sm font-bold">{employee.count} <span className="text-[10px] text-gray-300">ord</span></span>
-            </div>
-          </div>
-        ))}
-      </div>
     </div>
   );
 }

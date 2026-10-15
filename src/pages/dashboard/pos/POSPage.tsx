@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
-import { AlertCircle, CalendarDays, Clock, Banknote, Barcode, CreditCard, Grid, List, Loader2, Minus, Plus, Search, ShoppingBag, Trash2, UserPlus, Wallet } from 'lucide-react';
+import { AlertCircle, CalendarDays, Clock, Banknote, Barcode, CreditCard, Grid, List, Loader2, Search, ShoppingBag, Trash2, UserPlus, Wallet } from 'lucide-react';
 import { ApiError, checkPendingOrder, createOrder, fetchCustomerSearch, fetchIngredients, fetchOrders, fetchProducts, fetchWaiters, isAuthenticated, updateCustomer, sendWhatsappMessage, openShopSession } from '@/lib/pos-api';
 import { CartItem, Customer, OrderFormData, OrderPayload, Product, Waiter } from '@/lib/pos-types';
 import { resolveProductImage } from '@/lib/food-images';
@@ -503,8 +503,9 @@ export default function POSPage() {
       // product card here is a no-op instead of silently bumping quantity
       // to 2 (which would double the typed amount with no visible sign of
       // why).
-      if (previousCart[existingIndex].specialType) return previousCart;
-      return previousCart.map((item, index) => (index === existingIndex ? { ...item, quantity: item.quantity + 1 } : item));
+      // Each Dr/service is booked once - re-tapping its card never adds a
+      // second one (no quantities in a clinic appointment).
+      return previousCart;
     });
   }
 
@@ -683,18 +684,7 @@ export default function POSPage() {
         return;
       }
 
-      // +/-: bump the active cart item's quantity - see addToCart /
-      // handleIncreaseQty / handleDecreaseQty's own comments for how
-      // "active" is tracked and kept in sync with mouse clicks/removals.
-      if ((event.key === '+' || event.key === '=') && activeCartItemIndex !== null && cart[activeCartItemIndex]) {
-        event.preventDefault();
-        handleIncreaseQty(activeCartItemIndex);
-        return;
-      }
-      if ((event.key === '-' || event.key === '_') && activeCartItemIndex !== null && cart[activeCartItemIndex]) {
-        event.preventDefault();
-        handleDecreaseQty(activeCartItemIndex);
-      }
+      // No +/- quantity shortcuts - each Dr/service is booked once.
     }
 
     window.addEventListener('keydown', handleKeyDown);
@@ -712,22 +702,6 @@ export default function POSPage() {
     setShowSuggestions(false);
     setSelectedPaymentMethod('Cash');
     setAppointmentTime('');
-  }
-
-  function handleIncreaseQty(index: number) {
-    setCart((previousCart) => previousCart.map((item, itemIndex) => (itemIndex === index ? { ...item, quantity: item.quantity + 1 } : item)));
-    setActiveCartItemIndex(index);
-  }
-
-  function handleDecreaseQty(index: number) {
-    setCart((previousCart) =>
-      previousCart.map((item, itemIndex) => {
-        if (itemIndex !== index) return item;
-        const quantity = Math.max(1, item.quantity - 1);
-        return { ...item, quantity };
-      })
-    );
-    setActiveCartItemIndex(index);
   }
 
   // Every product's own amount is directly editable per cart line (the
@@ -749,14 +723,6 @@ export default function POSPage() {
   // quantity - see its own comment) so the cashier's in-progress typing is
   // never fought by a re-render; this handler only runs once, on blur/
   // Enter, to commit whatever was typed back into the cart.
-  function handleQuantityInputChange(index: number, value: string) {
-    const parsedQuantity = Math.max(1, Math.floor(Number(value)) || 1);
-    setCart((previousCart) =>
-      previousCart.map((item, itemIndex) => (itemIndex === index ? { ...item, quantity: parsedQuantity } : item))
-    );
-    setActiveCartItemIndex(index);
-  }
-
   function handleRemoveItem(index: number) {
     setCart((previousCart) => previousCart.filter((_, itemIndex) => itemIndex !== index));
     // The active-cart-item pointer (see its own comment above) needs to
@@ -1397,9 +1363,6 @@ export default function POSPage() {
             {!isLoadingProducts && visibleGroups.length > 0 ? visibleGroups.map((group, groupIndex) => {
               const hasVariations = group.variations.length > 1;
               const cheapestPrice = Math.min(...group.variations.map((v) => v.price));
-              const totalStock = group.variations.reduce((sum, v) => sum + (v.stock || 0), 0);
-              const matchingIngredientStock = ingredientStockByName[group.name.trim().toLowerCase()];
-              const displayStock = matchingIngredientStock !== undefined ? matchingIngredientStock : totalStock;
               // Keyboard Shortcuts - grid navigation: a visible ring around
               // whichever card the Arrow keys currently point to (see the
               // POS-local keydown effect above) - Space adds this exact
@@ -1418,9 +1381,6 @@ export default function POSPage() {
                         on the card, without opening it. Replaces the old
                         Pending-order and Product Code/"null" badges that
                         used to occupy these corners. */}
-                    <span className="absolute right-1 top-1 rounded-full bg-[#D6E332] px-1.5 py-0.5 text-[8px] font-black leading-none text-gray-900 shadow-sm" title={t('pos.stockBadgeTooltip', { count: displayStock })}>
-                      {displayStock}
-                    </span>
                   </div>
                   <div className={`flex flex-col justify-between overflow-hidden ${viewMode === 'list' ? 'flex-1 min-w-0' : 'w-full flex-1'}`}>
                     <div className="min-h-0 overflow-hidden">
@@ -1431,7 +1391,6 @@ export default function POSPage() {
                             {hasVariations ? t('pos.sizesOptions', { count: group.variations.length }) : group.variations[0].variation}
                           </p>
                         </div>
-                        <span className="shrink-0 rounded-full bg-[#EEF4C4] px-1.5 py-0.5 text-[8px] font-black uppercase text-gray-700">{totalStock}</span>
                       </div>
                       {viewMode === 'list' ? (
                         <p className="mb-2 line-clamp-1 text-[10px] text-gray-500">{group.description}</p>
@@ -1699,35 +1658,6 @@ export default function POSPage() {
                     </div>
                   )}
                 </div>
-                {/* Electricity Bill / Cash are one-off, open-amount
-                    transactions - there's no real "quantity" to bump (see
-                    addToCart's own comment on why re-tapping the card is a
-                    no-op for these), so the qty stepper is hidden entirely
-                    instead of sitting there pinned at 1. */}
-                {!item.specialType ? (
-                <div className="glass-pill flex items-center gap-1 rounded-full p-1">
-                  <button type="button" onClick={() => handleDecreaseQty(index)} className="rounded-full p-1.5 text-gray-500 transition hover:bg-white/70"><Minus size={10} /></button>
-                  {/* Uncontrolled + remounted-on-commit: keying on the
-                      committed item.quantity means the box only ever
-                      resets to the cart's real value right after a commit
-                      (this input's own blur/Enter, or the +/- buttons) -
-                      never mid-keystroke, so typing "34" isn't fought by
-                      a re-render on every character. */}
-                  <input
-                    key={`qty-${item.id}-${item.variation}-${index}-${item.quantity}`}
-                    type="number"
-                    min={1}
-                    defaultValue={item.quantity}
-                    onFocus={(event) => event.target.select()}
-                    onBlur={(event) => handleQuantityInputChange(index, event.target.value)}
-                    onKeyDown={(event) => {
-                      if (event.key === 'Enter') event.currentTarget.blur();
-                    }}
-                    className="w-9 min-w-5 rounded-md border border-transparent bg-transparent text-center text-xs font-black text-gray-900 outline-none focus:border-white/70 focus:bg-white/80 [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none"
-                  />
-                  <button type="button" onClick={() => handleIncreaseQty(index)} className="rounded-full p-1.5 text-gray-500 transition hover:bg-white/70"><Plus size={10} /></button>
-                </div>
-                ) : null}
                 <div className="min-w-[60px] text-right rtl:text-left">
                   <p className="text-sm font-black text-gray-900">PKR {item.price * item.quantity}</p>
                   <button type="button" onClick={() => handleRemoveItem(index)} className="mt-1 text-[10px] font-semibold text-rose-500 transition hover:text-rose-700">{t('pos.remove')}</button>
