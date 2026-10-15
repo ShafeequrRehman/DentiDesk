@@ -118,7 +118,7 @@ export default function AddItemsManager({
                   <div>
                     <p className="font-black text-gray-900">{product.name}</p>
                     <p className="text-xs text-gray-400">{product.variation}</p>
-                    <p className="mt-1 text-sm font-bold text-gray-700">Rs {product.price}</p>
+                    <p className="mt-1 text-sm font-bold text-gray-700">${product.price}</p>
                   </div>
                 </button>
               ))}
@@ -171,7 +171,7 @@ export default function AddItemsManager({
                   </div>
                   <div className="min-w-0 flex-1">
                     <p className="truncate font-bold text-gray-900">{product.name}</p>
-                    <p className="text-xs text-gray-400">{product.category} • Rs {product.price}</p>
+                    <p className="text-xs text-gray-400">{product.category} • ${product.price}</p>
                   </div>
                   <button
                     type="button"
@@ -215,7 +215,7 @@ export default function AddItemsManager({
                     <p className="text-xs text-gray-400">{item.variation || 'No variation'}</p>
                   </div>
                 </div>
-                <p className="shrink-0 text-sm font-black text-gray-900">Rs {item.price * item.quantity}</p>
+                <p className="shrink-0 text-sm font-black text-gray-900">${item.price * item.quantity}</p>
               </div>
               <div className="mt-3 flex items-center justify-between">
                 <div className="flex items-center gap-2 rounded-full bg-[#F6F7FB] p-1">

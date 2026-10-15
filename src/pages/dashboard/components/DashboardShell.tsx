@@ -420,7 +420,7 @@ function ShopStatusControl() {
 
       if (result.needsConfirmation) {
         const orders = result.unresolvedOrders || [];
-        const preview = orders.slice(0, 8).map((o) => `#${o.dailyOrderNumber ?? o.id.slice(-4)} - ${o.status === 'pending' ? 'pending' : `PKR ${o.remainingAmount} due`}`).join('\n');
+        const preview = orders.slice(0, 8).map((o) => `#${o.dailyOrderNumber ?? o.id.slice(-4)} - ${o.status === 'pending' ? 'pending' : `$${o.remainingAmount} due`}`).join('\n');
         const extra = orders.length > 8 ? `\n...and ${orders.length - 8} more` : '';
         setBusy(false);
         // Sequence bug fix: this used to `await confirm(...)` right here,
@@ -450,7 +450,7 @@ function ShopStatusControl() {
       await refresh();
       if (result.session) {
         const s = result.session.summary;
-        toast.success(`Clinic closed. ${s.orderCount} appointment${s.orderCount === 1 ? '' : 's'}, PKR ${s.totalSales.toLocaleString()} total sales.`);
+        toast.success(`Clinic closed. ${s.orderCount} appointment${s.orderCount === 1 ? '' : 's'}, $${s.totalSales.toLocaleString()} total sales.`);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to close clinic.');

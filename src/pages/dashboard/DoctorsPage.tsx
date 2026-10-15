@@ -30,7 +30,7 @@ interface DoctorCard {
 }
 
 function money(amount: number) {
-  return `PKR ${Math.round(amount || 0).toLocaleString()}`;
+  return `$${Math.round(amount || 0).toLocaleString()}`;
 }
 
 async function loadCatalog(): Promise<Product[]> {

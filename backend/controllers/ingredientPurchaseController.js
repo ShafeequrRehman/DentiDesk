@@ -498,7 +498,7 @@ exports.recordPayment = async (req, res) => {
   }
 
   if (amount > purchase.remainingAmount) {
-    return res.status(400).json({ error: `Cannot pay more than the remaining due (Rs ${purchase.remainingAmount}).` });
+    return res.status(400).json({ error: `Cannot pay more than the remaining due ($${purchase.remainingAmount}).` });
   }
 
   purchase.paidAmount = Number(purchase.paidAmount || 0) + amount;

@@ -1377,7 +1377,7 @@ async function applyOrderPatch(order, patch, req, options) {
           .map((item) => `${item.name} x${item.quantity}`)
           .join(", ");
         const orderLabel = order.dailyOrderNumber ?? order.shopSequenceNumber ?? String(order._id).slice(-4);
-        const saleNote = `Sale #${orderLabel}${itemsSummary ? `: ${itemsSummary}` : ""} - Rs ${totalCollectedNow}`;
+        const saleNote = `Sale #${orderLabel}${itemsSummary ? `: ${itemsSummary}` : ""} - $${totalCollectedNow}`;
         const wantsBank = order.paymentMethod === "Bank" && patch.bankId;
         let bankMoved = null;
         if (wantsBank) {

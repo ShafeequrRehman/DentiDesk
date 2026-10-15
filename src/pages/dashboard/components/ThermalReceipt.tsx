@@ -168,13 +168,13 @@ export default function ThermalReceipt({
         <p>Items:</p>
         {order.items.map((item, idx) => {
           const itemTotal = (item.price * item.quantity).toFixed(2);
-          const priceLine = type === 'cashier' ? `@ Rs ${item.price.toFixed(2)}` : '';
+          const priceLine = type === 'cashier' ? `@ $${item.price.toFixed(2)}` : '';
           
           return (
             <div key={idx} className="mb-1">
               <div className="flex justify-between items-start">
                 <span className="flex-1 pr-1">{item.quantity}x {item.name.toUpperCase()} {priceLine}</span>
-                {type === 'cashier' && <span className="text-right pr-[1mm] shrink-0">Rs {itemTotal}</span>}
+                {type === 'cashier' && <span className="text-right pr-[1mm] shrink-0">${itemTotal}</span>}
               </div>
               {item.variation && <p className="ml-4 text-[10px] text-gray-700 uppercase">- {item.variation}</p>}
             </div>
@@ -190,7 +190,7 @@ export default function ThermalReceipt({
         <div className="mb-2">
           <div className="flex justify-between">
             <span>Items Total:</span>
-            <span>Rs {itemsTotal.toFixed(2)}</span>
+            <span>${itemsTotal.toFixed(2)}</span>
           </div>
           {/* This used to print itemsTotal again here too, meaning a
               discount never showed up anywhere on this receipt - the
@@ -199,12 +199,12 @@ export default function ThermalReceipt({
           {discountAmount > 0 && (
             <div className="flex justify-between">
               <span>Discount {order.discount?.type === 'percent' ? `(${order.discount.value}% - Percentage)` : '(Fixed Value)'}:</span>
-              <span>-Rs {discountAmount.toFixed(2)}</span>
+              <span>-${discountAmount.toFixed(2)}</span>
             </div>
           )}
           <div className="flex justify-between gap-2 font-bold text-[13px] mt-1">
             <span>TOTAL:</span>
-            <span className="shrink-0 pr-[1mm]">Rs {billTotal.toFixed(2)}</span>
+            <span className="shrink-0 pr-[1mm]">${billTotal.toFixed(2)}</span>
           </div>
 
           <div className="mt-3">
@@ -221,20 +221,20 @@ export default function ThermalReceipt({
               <>
                 <div className="flex justify-between font-bold mt-1">
                   <span>TOTAL BILL:</span>
-                  <span className="pr-[1mm]">Rs {billTotal.toFixed(2)}</span>
+                  <span className="pr-[1mm]">${billTotal.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between">
                   <span>CASH TENDERED/RECEIVED:</span>
-                  <span className="pr-[1mm]">Rs {cashReceived.toFixed(2)}</span>
+                  <span className="pr-[1mm]">${cashReceived.toFixed(2)}</span>
                 </div>
                 <div className="flex justify-between font-bold">
                   <span>CHANGE RETURNED:</span>
-                  <span className="pr-[1mm]">Rs {changeReturned.toFixed(2)}</span>
+                  <span className="pr-[1mm]">${changeReturned.toFixed(2)}</span>
                 </div>
               </>
             ) : (
               amountTendered !== undefined && (
-                <p>AMOUNT TENDERED: Rs {amountTendered.toFixed(2)}</p>
+                <p>AMOUNT TENDERED: ${amountTendered.toFixed(2)}</p>
               )
             )}
           </div>

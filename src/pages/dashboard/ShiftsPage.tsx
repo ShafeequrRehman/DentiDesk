@@ -5,7 +5,7 @@ import { fetchShopSessionHistory } from '@/lib/pos-api';
 import { ShopSession } from '@/lib/pos-types';
 
 function formatMoney(amount: number) {
-  return `₨${Math.round(amount).toLocaleString()}`;
+  return `$${Math.round(amount).toLocaleString()}`;
 }
 
 function formatDateTime(value: string | null) {

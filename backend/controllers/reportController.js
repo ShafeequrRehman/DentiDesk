@@ -631,7 +631,7 @@ exports.getDashboardSummary = async (req, res) => {
 
     // Stock Value = every tracked Ingredient's own currentStock x
     // averageCost (the real purchase-rate valuation, e.g. 199pcs x
-    // Rs400 = Rs79,600 for a batch bought at Rs400/pc), PLUS the old
+    // $400 = $79,600 for a batch bought at $400/pc), PLUS the old
     // price x stock fallback for any Product that has no matching
     // Ingredient by name (same case-insensitive match
     // stockService.js's ingredientNameKey uses) - so a product that
@@ -687,8 +687,8 @@ exports.getDashboardSummary = async (req, res) => {
     //
     // Every tile here is a money total that can never truly be negative
     // (you can't have sold, purchased, spent, recovered, or be holding
-    // less than Rs 0) - so if the owner corrects one down by more than
-    // its live value (e.g. Total Purchase is Rs 9,600 and they enter a
+    // less than $0) - so if the owner corrects one down by more than
+    // its live value (e.g. Total Purchase is $9,600 and they enter a
     // -9,600 correction to zero it out, or slightly overshoot), floor the
     // result at 0 instead of showing a confusing negative number.
     const adjusted = (key, value) => Math.max(0, value + (adjustmentByKey[key] || 0));
@@ -989,7 +989,7 @@ exports.getLedgerTransactions = async (req, res) => {
         detail: [
           order.customer?.name || "Walk-in Patient",
           order.paymentMethod || "Cash",
-          isCredit ? `Rs ${order.remainingAmount} still due` : "Fully paid",
+          isCredit ? `$${order.remainingAmount} still due` : "Fully paid",
         ].filter(Boolean).join(" · "),
         refId: String(order._id),
         paidAmount: Number(order.paidAmount || 0),

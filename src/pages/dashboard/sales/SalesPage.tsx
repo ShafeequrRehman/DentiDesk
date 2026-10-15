@@ -59,7 +59,7 @@ const STATUS_BADGE: Record<string, string> = {
   cancelled: 'bg-gradient-to-b from-rose-300 to-rose-500 text-rose-950',
 };
 
-// The "TOTAL | Rs X" pill now carries the same status color as the badge
+// The "TOTAL | $X" pill now carries the same status color as the badge
 // above it (rather than always being a flat dark pill), so pending and
 // completed orders are colored consistently across the whole card.
 const STATUS_TOTAL_PILL: Record<string, string> = {
@@ -1193,7 +1193,7 @@ export default function SalesPage() {
       lines.push(t('sales.whatsappTotal', { total: order.total }));
       lines.push(`--------------------`);
       order.items.forEach((item) => {
-        lines.push(`${item.quantity}x ${item.name} @ PKR ${item.price}`);
+        lines.push(`${item.quantity}x ${item.name} @ $${item.price}`);
       });
       lines.push(`--------------------`);
       lines.push(t('sales.whatsappThankYou'));
@@ -1217,13 +1217,13 @@ export default function SalesPage() {
     <div className="space-y-3 sm:space-y-6">
       {status ? <Banner tone={status.tone} text={status.text} /> : null}
       {/* 2-up on phone widths (a 4-up row left ~85px per card, which
-          truncated every currency value down to "Rs 45,2..." - illegible),
+          truncated every currency value down to "$45,2..." - illegible),
           4-up from tablet width (sm, 640px) up where there's actually room. */}
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-4">
         <StatCard label={t('sales.stats.pendingOrders')} value={String(visibleOrders.length)} />
         <StatCard label={t('sales.stats.completed')} value={String(filteredOrders.filter((order) => order.status === 'completed').length)} />
         <StatCard label={t('sales.stats.cancelled')} value={String(filteredOrders.filter((order) => order.status === 'cancelled').length)} />
-        <StatCard label={t('sales.stats.openValue')} value={`Rs ${visibleOrders.reduce((sum, order) => sum + order.total, 0)}`} />
+        <StatCard label={t('sales.stats.openValue')} value={`$${visibleOrders.reduce((sum, order) => sum + order.total, 0)}`} />
       </div>
 
       {/* Order detail sits to the right of the order list from tablet width
@@ -1377,7 +1377,7 @@ export default function SalesPage() {
                     <div className={`mt-4 flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black ${STATUS_TOTAL_PILL[order.status] ?? 'glass-dark'}`}>
                       <span className="text-[10px] font-bold uppercase tracking-widest text-white/75">{t('common.total')}</span>
                       <span className="text-white/40">|</span>
-                      <span className="truncate">Rs {order.total}</span>
+                      <span className="truncate">${order.total}</span>
                     </div>
                   </div>
                 </button>
@@ -1501,8 +1501,8 @@ export default function SalesPage() {
                       <Box label={t('sales.boxLabels.deliveryLocation')} value={t('sales.notShared')} />
                     )
                   ) : null}
-                  <Box label={t('sales.boxLabels.previousDues')} value={`Rs ${customerDue}`} />
-                  <Box label={t('sales.boxLabels.remaining')} value={`Rs ${selectedOrder.remainingAmount ?? 0}`} />
+                  <Box label={t('sales.boxLabels.previousDues')} value={`$${customerDue}`} />
+                  <Box label={t('sales.boxLabels.remaining')} value={`$${selectedOrder.remainingAmount ?? 0}`} />
                   {selectedOrder.note ? <Box label={t('sales.boxLabels.note')} value={selectedOrder.note} /> : null}
                   {/* Electricity Bill / Cash special-product details - only
                       ever set on an order whose cart had the matching
@@ -1546,7 +1546,7 @@ export default function SalesPage() {
                           </div>
                           <div className="flex min-w-0 flex-1 items-center justify-between gap-3">
                             <div className="min-w-0"><p className="truncate font-black text-gray-900">{item.name}</p><p className="text-xs text-gray-500">{item.variation}</p></div>
-                            <div className="shrink-0 text-right"><p className="text-sm font-black text-gray-900">Rs {item.price * item.quantity}</p><p className="text-xs text-gray-500">{t('sales.qty', { quantity: item.quantity })}</p></div>
+                            <div className="shrink-0 text-right"><p className="text-sm font-black text-gray-900">${item.price * item.quantity}</p><p className="text-xs text-gray-500">{t('sales.qty', { quantity: item.quantity })}</p></div>
                           </div>
                         </div>
                       ))
@@ -1557,8 +1557,8 @@ export default function SalesPage() {
 
               <div className="shrink-0 space-y-4 rounded-b-[32px] border-t border-white/40 bg-white/30 p-6">
                 <div className="rounded-[24px] bg-white/50 p-4 shadow-inner">
-                  <Row label={t('sales.billSummary.subtotal')} value={`Rs ${orderSubtotal}`} />
-                  <Row label={t('sales.billSummary.tax')} value={`Rs ${orderTax}`} />
+                  <Row label={t('sales.billSummary.subtotal')} value={`$${orderSubtotal}`} />
+                  <Row label={t('sales.billSummary.tax')} value={`$${orderTax}`} />
                   {/* While still pending, this reflects the discount the
                       cashier has typed into the card above but hasn't
                       confirmed yet - a live preview, same figures the
@@ -1572,15 +1572,15 @@ export default function SalesPage() {
                       blank suffix for a flat-value discount. */}
                   {selectedOrder.status === 'pending' ? (
                     discountAmount > 0 ? (
-                      <Row label={discountType === 'percent' ? t('sales.billSummary.discountPercent', { value: discountRawValue }) : t('sales.billSummary.discountFixed')} value={`-Rs ${discountAmount}`} />
+                      <Row label={discountType === 'percent' ? t('sales.billSummary.discountPercent', { value: discountRawValue }) : t('sales.billSummary.discountFixed')} value={`-$${discountAmount}`} />
                     ) : null
                   ) : selectedOrder.discount && selectedOrder.discount.amount > 0 ? (
-                    <Row label={selectedOrder.discount.type === 'percent' ? t('sales.billSummary.discountPercent', { value: selectedOrder.discount.value }) : t('sales.billSummary.discountFixed')} value={`-Rs ${selectedOrder.discount.amount}`} />
+                    <Row label={selectedOrder.discount.type === 'percent' ? t('sales.billSummary.discountPercent', { value: selectedOrder.discount.value }) : t('sales.billSummary.discountFixed')} value={`-$${selectedOrder.discount.amount}`} />
                   ) : null}
-                  <Row label={t('sales.billSummary.billTotal')} value={`Rs ${selectedOrder.status === 'pending' ? adjustedTotal : selectedOrder.total}`} />
-                  <Row label={t('sales.boxLabels.previousDues')} value={`Rs ${customerDue}`} />
-                  <Row label={t('sales.billSummary.paid')} value={`Rs ${selectedOrder.paidAmount ?? 0}`} />
-                  <Row label={t('sales.billSummary.grandTotal')} value={`Rs ${(selectedOrder.status === 'pending' ? adjustedTotal : selectedOrder.total) + customerDue}`} strong />
+                  <Row label={t('sales.billSummary.billTotal')} value={`$${selectedOrder.status === 'pending' ? adjustedTotal : selectedOrder.total}`} />
+                  <Row label={t('sales.boxLabels.previousDues')} value={`$${customerDue}`} />
+                  <Row label={t('sales.billSummary.paid')} value={`$${selectedOrder.paidAmount ?? 0}`} />
+                  <Row label={t('sales.billSummary.grandTotal')} value={`$${(selectedOrder.status === 'pending' ? adjustedTotal : selectedOrder.total) + customerDue}`} strong />
                 </div>
                 {selectedOrder.status === 'pending' ? (
                   <div ref={completeButtonsRef} className="grid gap-2.5">
@@ -1638,14 +1638,14 @@ export default function SalesPage() {
                 comment) - this modal just reviews the figures it already
                 produces, read-only. */}
             <div className="rounded-[24px] bg-white/50 p-4 text-sm shadow-inner">
-              <Row label={t('sales.billSummary.subtotal')} value={`Rs ${orderSubtotal}`} />
-              <Row label={t('sales.billSummary.tax')} value={`Rs ${orderTax}`} />
+              <Row label={t('sales.billSummary.subtotal')} value={`$${orderSubtotal}`} />
+              <Row label={t('sales.billSummary.tax')} value={`$${orderTax}`} />
               {discountAmount > 0 ? (
-                <Row label={discountType === 'percent' ? t('sales.billSummary.discountPercent', { value: discountRawValue }) : t('sales.billSummary.discountFixed')} value={`-Rs ${discountAmount}`} />
+                <Row label={discountType === 'percent' ? t('sales.billSummary.discountPercent', { value: discountRawValue }) : t('sales.billSummary.discountFixed')} value={`-$${discountAmount}`} />
               ) : null}
-              <Row label={t('sales.billSummary.billTotal')} value={`Rs ${adjustedTotal}`} />
-              <Row label={t('sales.boxLabels.previousDues')} value={`Rs ${customerDue}`} />
-              <Row label={t('sales.billSummary.finalPayable')} value={`Rs ${payable}`} strong />
+              <Row label={t('sales.billSummary.billTotal')} value={`$${adjustedTotal}`} />
+              <Row label={t('sales.boxLabels.previousDues')} value={`$${customerDue}`} />
+              <Row label={t('sales.billSummary.finalPayable')} value={`$${payable}`} strong />
             </div>
             <div>
               <label className="mb-1 block text-sm font-semibold text-gray-700">{t('sales.amountPaidLabel')}</label>
@@ -1678,7 +1678,7 @@ export default function SalesPage() {
             {changeReturn > 0 ? (
               <div className="rounded-[24px] bg-emerald-50 px-4 py-4 text-center shadow-inner">
                 <p className="text-xs font-black uppercase tracking-wide text-emerald-600">{t('sales.changeReturnLabel')}</p>
-                <p className="mt-1 text-4xl font-black text-emerald-700">Rs {changeReturn}</p>
+                <p className="mt-1 text-4xl font-black text-emerald-700">${changeReturn}</p>
               </div>
             ) : null}
             {!paymentAmount ? (
@@ -1970,7 +1970,7 @@ function OnlineOrderControls({
           <p className="text-[10px] font-black uppercase tracking-[0.16em] text-amber-600">{t('sales.online.customerRequestedChange')}</p>
           <ul className="mt-1.5 space-y-0.5 text-xs font-bold text-amber-900">
             {changeRequest!.addItems.map((item, index) => (
-              <li key={`add-${index}`}>+ {item.quantity}x {item.name}{item.variation ? ` (${item.variation})` : ''} · Rs {item.price * item.quantity}</li>
+              <li key={`add-${index}`}>+ {item.quantity}x {item.name}{item.variation ? ` (${item.variation})` : ''} · ${item.price * item.quantity}</li>
             ))}
             {changeRequest!.removeItems.map((item, index) => (
               <li key={`remove-${index}`}>− {item.quantity}x {item.name}{item.variation ? ` (${item.variation})` : ''}</li>

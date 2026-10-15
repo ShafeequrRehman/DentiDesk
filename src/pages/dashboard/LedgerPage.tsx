@@ -14,7 +14,7 @@ import { CompanyLedgerEntry, LedgerCustomer } from '@/lib/pos-types';
 // "Download PDF" keeps that dependency out of the startup graph entirely.
 
 function formatMoney(amount: number) {
-  return `₨${Math.round(amount).toLocaleString()}`;
+  return `$${Math.round(amount).toLocaleString()}`;
 }
 
 function formatDate(value: string | null) {

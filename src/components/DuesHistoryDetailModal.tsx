@@ -37,8 +37,8 @@ export default function DuesHistoryDetailModal({
         <div className="space-y-5 p-6">
           <div className="grid gap-3 sm:grid-cols-2">
             <DetailBox label="Type" value={entry.type === 'add' ? 'Dues Added' : 'Dues Paid'} />
-            <DetailBox label="Amount" value={`Rs ${entry.amount}`} />
-            <DetailBox label="Balance After" value={`Rs ${entry.balanceAfter}`} />
+            <DetailBox label="Amount" value={`$${entry.amount}`} />
+            <DetailBox label="Balance After" value={`$${entry.balanceAfter}`} />
             <DetailBox label="By" value={entry.createdBy || '—'} />
             <DetailBox
               label="Payment Method"

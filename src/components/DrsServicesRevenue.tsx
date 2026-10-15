@@ -40,7 +40,7 @@ interface EarnerStat {
 }
 
 function money(amount: number) {
-  return `Rs ${Math.round(amount || 0).toLocaleString()}`;
+  return `$${Math.round(amount || 0).toLocaleString()}`;
 }
 
 function startOfDay(iso: string) {

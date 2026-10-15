@@ -10,7 +10,7 @@ import { hasPermission } from '@/lib/auth';
 import { useLanguage } from '@/i18n';
 
 function formatMoney(amount: number) {
-  return `Rs ${Math.round(amount).toLocaleString()}`;
+  return `$${Math.round(amount).toLocaleString()}`;
 }
 
 // en-CA formats as YYYY-MM-DD in the browser's LOCAL time zone (unlike

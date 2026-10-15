@@ -105,7 +105,7 @@ exports.addTransaction = async (req, res) => {
       return res.status(404).json({ message: "Bank not found" });
     }
     if (type === "withdrawal" && amount > bank.balance) {
-      return res.status(400).json({ message: `Can't withdraw more than the ₨${bank.balance} available in this bank` });
+      return res.status(400).json({ message: `Can't withdraw more than the $${bank.balance} available in this bank` });
     }
 
     bank.balance = type === "deposit" ? bank.balance + amount : bank.balance - amount;

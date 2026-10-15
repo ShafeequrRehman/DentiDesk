@@ -435,7 +435,7 @@ exports.getCustomerOutstanding = async (req, res) => {
 // recording this change - are new and optional: if the caller doesn't send
 // a note, this behaves identically to before. The delta (new total minus
 // whatever it was) is what actually gets recorded as the entry's `amount`
-// so "+Rs 500 (note)" in the History dropdown always matches what really
+// so "+$500 (note)" in the History dropdown always matches what really
 // changed, not just whatever number happened to be typed into the field.
 //
 // paymentMethod/bankId are new: this endpoint is only ever called from
@@ -542,7 +542,7 @@ exports.updateCustomerDues = async (req, res) => {
 // what they currently owe), same idea as a bank account going into
 // credit. It nets against any real unpaid-order balance in totalDue
 // (see getCustomerLedger) without ever touching those Order documents
-// directly, so a customer's `+Rs 3224` / `-Rs 688` Dues Statement balance
+// directly, so a customer's `+$3224` / `-$688` Dues Statement balance
 // always exactly matches Current Dues on the very last row - no separate
 // "applied to orders" bookkeeping to keep in sync with it.
 //
@@ -645,7 +645,7 @@ exports.settleCustomerDues = async (req, res) => {
 //  - a plain "add"/"settle" from updateCustomerDues only ever moved the
 //    manual previousDues lump sum, so undoing it is just the inverse move.
 //  - a "settle" from settleCustomerDues can have paid down real Orders
-//    too (recorded in its own note as "Applied to orders: #12 (Rs 300)") -
+//    too (recorded in its own note as "Applied to orders: #12 ($300)") -
 //    those specific orders' paidAmount/remainingAmount/status are reversed
 //    the same way a payment applied them, and only the leftover portion
 //    (if any) is put back onto previousDues. An order that was separately
@@ -677,7 +677,7 @@ exports.deleteDuesHistoryEntry = async (req, res) => {
 
     // Reverse any order payments this "settle" entry's note says it made.
     let orderPortion = 0;
-    const orderRefs = [...String(entry.note || "").matchAll(/#(\S+)\s*\(Rs\s*([\d.]+)\)/g)];
+    const orderRefs = [...String(entry.note || "").matchAll(/#(\S+)\s*\((?:Rs|\$)\s*([\d.]+)\)/g)];
     for (const match of orderRefs) {
       const dailyOrderNumber = Number(match[1]);
       const appliedAmount = Number(match[2]);

@@ -26,7 +26,7 @@ function buildRiderMessage(order, shop) {
     `Customer: ${order.customer?.name || "-"}`,
     `Phone: ${order.customer?.phone || "-"}`,
     `Address: ${order.customer?.address || order.address || "-"}`,
-    `Total: Rs ${Number(order.total || 0).toFixed(0)}`,
+    `Total: $${Number(order.total || 0).toFixed(0)}`,
   ];
   if (mapsLink) lines.push(`Location: ${mapsLink}`);
   return lines.join("\n");

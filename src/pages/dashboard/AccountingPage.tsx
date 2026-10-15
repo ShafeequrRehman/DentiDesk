@@ -35,7 +35,7 @@ function toDateKey(date: Date) {
 }
 
 function formatMoney(amount: number) {
-  return `Rs ${Math.round(amount).toLocaleString()}`;
+  return `$${Math.round(amount).toLocaleString()}`;
 }
 
 type Preset = 'daily' | 'monthly' | 'yearly' | 'custom';

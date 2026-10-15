@@ -851,7 +851,7 @@ export interface CartItem {
   // Product.specialType's own comment. "" / undefined for every ordinary item.
   specialType?: '' | 'electricity_bill' | 'cash';
   // Per-line discount (a flat Rs amount off this line's price*quantity
-  // total, e.g. Urea PKR 4600 with a 100 discount sells for 4500) - see
+  // total, e.g. Urea $4600 with a 100 discount sells for 4500) - see
   // POSPage.tsx's handleItemDiscountChange. `price` itself always stays
   // the untouched catalog price (never mutated) so every discount typed
   // across the cart can be summed and sent as one order-level Discount

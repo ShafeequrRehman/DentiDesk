@@ -99,9 +99,9 @@ export const sales = {
 
   completePaymentTitle: "ادائیگی مکمل کریں",
   amountPaidLabel: "ادا کی گئی رقم / موصولہ نقدی",
-  billPlaceholder: "بل Rs {{payable}} ہے - موصولہ نقدی درج کریں",
+  billPlaceholder: "بل ${{payable}} ہے - موصولہ نقدی درج کریں",
   changeReturnLabel: "واپسی رقم / باقی بیلنس",
-  putInPending: "زیر التواء رکھیں - ابھی کوئی ادائیگی وصول کیے بغیر تصدیق کریں (اس سے پوری ₨{{payable}} رقم واجب الادا ہو جائے گی)۔",
+  putInPending: "زیر التواء رکھیں - ابھی کوئی ادائیگی وصول کیے بغیر تصدیق کریں (اس سے پوری ${{payable}} رقم واجب الادا ہو جائے گی)۔",
   confirmPaymentButton: "ادائیگی کی تصدیق کریں",
   payFull: "مکمل ادائیگی",
 
@@ -130,10 +130,10 @@ export const sales = {
   partialPaymentCustomerRequired: "جزوی ادائیگی کی تصدیق کرنے سے پہلے مریض کا نام اور فون نمبر درج کریں - واجبات کے لیے اصل مریض ہونا ضروری ہے۔ پہلے اپائنٹمنٹ میں ترمیم کریں، یا مکمل ادائیگی کریں۔",
 
   confirmZeroPaymentTitle: "صفر ادائیگی کی تصدیق کریں",
-  confirmZeroPaymentMessage: "اپائنٹمنٹ #{{orderNumber}} کے لیے ابھی کوئی ادائیگی وصول نہیں کی جائے گی - پوری رقم ₨{{payable}} {{customerName}} کے واجبات میں درج ہو جائے گی۔ جاری رکھیں؟",
+  confirmZeroPaymentMessage: "اپائنٹمنٹ #{{orderNumber}} کے لیے ابھی کوئی ادائیگی وصول نہیں کی جائے گی - پوری رقم ${{payable}} {{customerName}} کے واجبات میں درج ہو جائے گی۔ جاری رکھیں؟",
 
-  orderCompletedChange: "اپائنٹمنٹ #{{orderNumber}} مکمل ہو گیا - Rs {{paid}} وصول ہوئے، Rs {{change}} واپس کیے گئے۔",
-  orderCompletedNoChange: "اپائنٹمنٹ #{{orderNumber}} مکمل ہو گیا - Rs {{paid}} وصول ہوئے۔",
+  orderCompletedChange: "اپائنٹمنٹ #{{orderNumber}} مکمل ہو گیا - ${{paid}} وصول ہوئے، ${{change}} واپس کیے گئے۔",
+  orderCompletedNoChange: "اپائنٹمنٹ #{{orderNumber}} مکمل ہو گیا - ${{paid}} وصول ہوئے۔",
 
   whatsappReceiptSendFailed: "اپائنٹمنٹ مکمل ہو گیا، لیکن واٹس ایپ پر PDF رسید نہیں بھیجی جا سکی۔",
   orderCancelledSuccessfully: "اپائنٹمنٹ {{orderId}} کامیابی سے منسوخ کر دیا گیا۔",
@@ -163,7 +163,7 @@ export const sales = {
   whatsappSendFailedPrefix: "واٹس ایپ بھیجنے میں ناکامی: ",
 
   whatsappOrderNo: "اپائنٹمنٹ نمبر: *{{number}}*",
-  whatsappTotal: "کل رقم: *PKR {{total}}*",
+  whatsappTotal: "کل رقم: *${{total}}*",
   whatsappThankYou: "آپ کے اپائنٹمنٹ کا شکریہ!",
 
   customer: {

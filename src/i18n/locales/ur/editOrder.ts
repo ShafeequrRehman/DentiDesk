@@ -15,7 +15,7 @@ export const editOrder = {
   customerNamePlaceholder: "مریض کا نام",
   phonePlaceholder: "فون",
   searchingCustomers: "مریضوں تلاش کیے جا رہے ہیں...",
-  duePrefix: "واجب الادا PKR {{amount}}",
+  duePrefix: "واجب الادا ${{amount}}",
   addressPlaceholder: "پتہ",
   waiterPlaceholder: "ویٹر",
   tablePlaceholder: "ٹیبل",
@@ -23,7 +23,7 @@ export const editOrder = {
 
   quickAddProduct: "فوری ڈاکٹر/سروس شامل کریں",
   searchMenuItemsPlaceholder: "مینو آئٹمز تلاش کریں",
-  priceDisplay: "Rs {{price}}",
+  priceDisplay: "${{price}}",
   addCustomItem: "کسٹم آئٹم شامل کریں",
   customItemDefaultName: "کسٹم آئٹم",
 

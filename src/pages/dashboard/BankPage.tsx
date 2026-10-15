@@ -246,9 +246,9 @@ function BankCard({ bank, onChanged, confirm, toast }: {
           // History, Recovery History) - the owner's own ask was for one
           // consistent PDF look everywhere.
           stats={[
-            { label: 'Total In', value: `Rs ${totalDeposits.toLocaleString()}` },
-            { label: 'Total Out', value: `Rs ${totalWithdrawals.toLocaleString()}` },
-            { label: 'Net', value: `Rs ${(totalDeposits - totalWithdrawals).toLocaleString()}` },
+            { label: 'Total In', value: `$${totalDeposits.toLocaleString()}` },
+            { label: 'Total Out', value: `$${totalWithdrawals.toLocaleString()}` },
+            { label: 'Net', value: `$${(totalDeposits - totalWithdrawals).toLocaleString()}` },
           ]}
           tables={[
             {
@@ -275,12 +275,12 @@ function BankCard({ bank, onChanged, confirm, toast }: {
                   isIn ? 'In' : 'Out',
                   [who, entry.note].filter(Boolean).join(' - ') || '—',
                   entry.createdBy || '—',
-                  isIn ? `Rs ${entry.amount.toLocaleString()}` : '—',
-                  isIn ? '—' : `Rs ${entry.amount.toLocaleString()}`,
-                  `Rs ${entry.balanceAfter.toLocaleString()}`,
+                  isIn ? `$${entry.amount.toLocaleString()}` : '—',
+                  isIn ? '—' : `$${entry.amount.toLocaleString()}`,
+                  `$${entry.balanceAfter.toLocaleString()}`,
                 ];
               }),
-              footer: ['', '', '', 'Total', `Rs ${totalDeposits.toLocaleString()}`, `Rs ${totalWithdrawals.toLocaleString()}`, `Rs ${bank.balance.toLocaleString()}`],
+              footer: ['', '', '', 'Total', `$${totalDeposits.toLocaleString()}`, `$${totalWithdrawals.toLocaleString()}`, `$${bank.balance.toLocaleString()}`],
               emptyMessage: 'No transactions recorded for this bank yet.',
             },
           ]}
@@ -295,7 +295,7 @@ function BankCard({ bank, onChanged, confirm, toast }: {
   const record = async (type: 'deposit' | 'withdrawal') => {
     if (amountValue <= 0) return;
     if (type === 'withdrawal') {
-      const confirmed = await confirm(`Withdraw ₨${amountValue} from ${bank.name}?`, { title: 'Withdraw', confirmText: 'Withdraw', tone: 'danger' });
+      const confirmed = await confirm(`Withdraw $${amountValue} from ${bank.name}?`, { title: 'Withdraw', confirmText: 'Withdraw', tone: 'danger' });
       if (!confirmed) return;
     }
     setSaving(true);
@@ -321,7 +321,7 @@ function BankCard({ bank, onChanged, confirm, toast }: {
       <div className="flex items-start justify-between gap-2">
         <div>
           <p className="text-lg font-black text-slate-900">{bank.name}</p>
-          <p className={`text-2xl font-black ${bank.balance < 0 ? 'text-red-600' : 'text-emerald-600'}`}>₨{bank.balance.toLocaleString()}</p>
+          <p className={`text-2xl font-black ${bank.balance < 0 ? 'text-red-600' : 'text-emerald-600'}`}>${bank.balance.toLocaleString()}</p>
           <p className="text-[11px] font-bold text-slate-400">Current balance</p>
         </div>
         <button
@@ -361,7 +361,7 @@ function BankCard({ bank, onChanged, confirm, toast }: {
           <button
             onClick={() => void record('withdrawal')}
             disabled={saving || amountValue <= 0 || amountValue > bank.balance}
-            title={amountValue > bank.balance ? `Can't exceed the ₨${bank.balance} available` : 'Withdraw from this bank'}
+            title={amountValue > bank.balance ? `Can't exceed the $${bank.balance} available` : 'Withdraw from this bank'}
             className="flex-1 flex items-center justify-center gap-1.5 bg-red-100 hover:bg-red-200 text-red-700 disabled:opacity-50 disabled:cursor-not-allowed py-2 rounded-xl font-bold text-xs transition-colors"
           >
             <ArrowUpCircle size={14} /> Withdraw
@@ -425,7 +425,7 @@ function BankCard({ bank, onChanged, confirm, toast }: {
                   <div key={`${entry.createdAt}-${index}`} className="rounded-xl bg-slate-50 border border-slate-100 p-2.5">
                     <div className="flex items-center justify-between">
                       <span className={`text-sm font-black ${isIn ? 'text-green-600' : 'text-red-600'}`}>
-                        {isIn ? '+' : '-'} ₨{entry.amount.toLocaleString()}
+                        {isIn ? '+' : '-'} ${entry.amount.toLocaleString()}
                       </span>
                       <span className="text-[10px] font-bold text-slate-400">
                         {new Date(entry.createdAt).toLocaleDateString('en-PK', { day: '2-digit', month: 'short' })}
@@ -433,7 +433,7 @@ function BankCard({ bank, onChanged, confirm, toast }: {
                     </div>
                     <p className="text-xs font-bold text-slate-600">{who}</p>
                     {entry.note ? <p className="text-[11px] text-slate-400">{entry.note}</p> : null}
-                    <p className="text-[10px] font-bold text-slate-300">Balance after: ₨{entry.balanceAfter.toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-slate-300">Balance after: ${entry.balanceAfter.toLocaleString()}</p>
                   </div>
                 );
               })}

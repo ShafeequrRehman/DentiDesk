@@ -102,9 +102,9 @@ export const sales = {
 
   completePaymentTitle: "Complete Payment",
   amountPaidLabel: "Amount Paid / Cash Received",
-  billPlaceholder: "Bill is Rs {{payable}} - enter cash received",
+  billPlaceholder: "Bill is ${{payable}} - enter cash received",
   changeReturnLabel: "Change Return / Balance Due Back",
-  putInPending: "Put in Pending - confirm with no payment collected right now (this leaves the full ₨{{payable}} as a due).",
+  putInPending: "Put in Pending - confirm with no payment collected right now (this leaves the full ${{payable}} as a due).",
   confirmPaymentButton: "Confirm Payment",
   payFull: "Pay Full",
 
@@ -133,10 +133,10 @@ export const sales = {
   partialPaymentCustomerRequired: "Add the patient's name and phone number before confirming a partial payment - dues need a real patient to track them against. Edit the appointment first, or pay in full instead.",
 
   confirmZeroPaymentTitle: "Confirm Zero Payment",
-  confirmZeroPaymentMessage: "No payment will be collected right now for Appointment #{{orderNumber}} - the full ₨{{payable}} will be recorded as a due against {{customerName}}. Continue?",
+  confirmZeroPaymentMessage: "No payment will be collected right now for Appointment #{{orderNumber}} - the full ${{payable}} will be recorded as a due against {{customerName}}. Continue?",
 
-  orderCompletedChange: "Appointment #{{orderNumber}} completed - Rs {{paid}} collected, Rs {{change}} change returned.",
-  orderCompletedNoChange: "Appointment #{{orderNumber}} completed - Rs {{paid}} collected.",
+  orderCompletedChange: "Appointment #{{orderNumber}} completed - ${{paid}} collected, ${{change}} change returned.",
+  orderCompletedNoChange: "Appointment #{{orderNumber}} completed - ${{paid}} collected.",
 
   whatsappReceiptSendFailed: "Appointment completed, but WhatsApp PDF receipt could not be sent.",
   orderCancelledSuccessfully: "Appointment {{orderId}} cancelled successfully.",
@@ -166,7 +166,7 @@ export const sales = {
   whatsappSendFailedPrefix: "WhatsApp send failed: ",
 
   whatsappOrderNo: "Appointment No: *{{number}}*",
-  whatsappTotal: "Total: *PKR {{total}}*",
+  whatsappTotal: "Total: *${{total}}*",
   whatsappThankYou: "Thank you for your appointment!",
 
   customer: {

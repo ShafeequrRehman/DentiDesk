@@ -45,7 +45,7 @@ export type StoreSettings = {
 
 export const defaultSettings: StoreSettings = {
   businessEmail: "admin@vanguard.io",
-  currency: "PKR (₨)",
+  currency: "USD ($)",
   timezone: "Asia/Karachi",
   // No tax is added by default - the backend always computes tax as 0
   // unless a shop explicitly wants otherwise (see orderController.js's

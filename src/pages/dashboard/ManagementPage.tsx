@@ -116,7 +116,7 @@ function CustomerView() {
                       {c.tier}
                     </span>
                   </td>
-                  <td className="px-8 py-6 text-sm font-black text-slate-900">PKR {c.spent.toFixed(2)}</td>
+                  <td className="px-8 py-6 text-sm font-black text-slate-900">${c.spent.toFixed(2)}</td>
                   <td className="px-8 py-6 text-teal-600 font-black text-sm flex items-center gap-1">
                     <Star size={14} fill="currentColor"/> {c.points}
                   </td>

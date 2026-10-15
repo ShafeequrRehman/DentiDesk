@@ -361,10 +361,10 @@ function DashboardPageClientInner() {
             <h3 className="mb-6 font-bold text-gray-800">Sales Overview</h3>
             {/* Stacked on phone - a half-width card here (icon + truncated
                 text) had no room left for a real revenue figure like
-                "Rs 1,245,690", so it just showed "Rs 1,245..." with no way
+                "$1,245,690", so it just showed "$1,245..." with no way
                 to see the rest. Side-by-side again from tablet width up. */}
             <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <StatCard title={`Rs ${formatter.format(stats.totalRevenue)}`} subtitle="Total Revenue" trend="Live" color="bg-orange-50 text-orange-400" icon={<Target size={20} />} />
+              <StatCard title={`$${formatter.format(stats.totalRevenue)}`} subtitle="Total Revenue" trend="Live" color="bg-orange-50 text-orange-400" icon={<Target size={20} />} />
               <StatCard title={formatter.format(stats.totalOrders)} subtitle="Total Appointments" trend="Live" color="bg-purple-50 text-purple-400" icon={<Users size={20} />} />
             </div>
 
@@ -380,7 +380,7 @@ function DashboardPageClientInner() {
                   <p className="text-[10px] font-bold uppercase text-gray-400">Stored Database Patients</p>
                 </div>
                 <div className="text-right">
-                  <span className="text-xl font-bold">Rs {formatter.format(stats.businessSales)}</span>
+                  <span className="text-xl font-bold">${formatter.format(stats.businessSales)}</span>
                   <p className="text-[10px] font-bold uppercase text-gray-400">Active Business Day</p>
                 </div>
               </div>
@@ -405,9 +405,9 @@ function DashboardPageClientInner() {
             {/* Same reasoning as the StatCard row above - 3-across left
                 almost no width per figure on a phone. */}
             <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-              <MiniStat label="Business Day Sales" value={`Rs ${formatter.format(stats.businessSales)}`} />
+              <MiniStat label="Business Day Sales" value={`$${formatter.format(stats.businessSales)}`} />
               <MiniStat label="Transactions" value={formatter.format(stats.totalOrders)} />
-              <MiniStat label="Avg. Appointment" value={`Rs ${formatter.format(stats.avgValue)}`} valueColor="text-green-500" />
+              <MiniStat label="Avg. Appointment" value={`$${formatter.format(stats.avgValue)}`} valueColor="text-green-500" />
             </div>
           </div>
 
@@ -466,7 +466,7 @@ function DashboardPageClientInner() {
               if (updated) {
                 setSummary((prev: DashboardSummary | null) => (prev ? { ...prev, cashInHand: updated.balance } : prev));
                 setShowAdjustCash(false);
-                popup({ tone: 'success', title: 'Cash in Hand updated', message: `New balance: Rs ${updated.balance.toLocaleString()}` });
+                popup({ tone: 'success', title: 'Cash in Hand updated', message: `New balance: $${updated.balance.toLocaleString()}` });
               }
             } catch (error) {
               popup({ tone: 'error', title: "Couldn't update Cash in Hand", message: error instanceof Error ? error.message : 'Failed to save.' });
@@ -487,7 +487,7 @@ function DashboardPageClientInner() {
               if (result) {
                 setSummary((prev: DashboardSummary | null) => (prev ? { ...prev, [adjustTileKey]: result.total } : prev));
                 setAdjustTileKey(null);
-                popup({ tone: 'success', title: 'Updated', message: `New value: Rs ${result.total.toLocaleString()}` });
+                popup({ tone: 'success', title: 'Updated', message: `New value: $${result.total.toLocaleString()}` });
               }
             } catch (error) {
               popup({ tone: 'error', title: "Couldn't save correction", message: error instanceof Error ? error.message : 'Failed to save.' });
@@ -566,7 +566,7 @@ function AccountingOverview({
   onOpenVendorBalanceDetail: () => void;
   onOpenSaleOnCashDetail: () => void;
 }) {
-  const money = (value: number | undefined) => `Rs ${formatter.format(value ?? 0)}`;
+  const money = (value: number | undefined) => `$${formatter.format(value ?? 0)}`;
   // Every "(Today)"-suffixed tile's label follows whichever range is
   // currently picked, so switching to This Month/Custom doesn't leave a
   // stale "(Today)" next to a figure that's no longer today's.
@@ -919,9 +919,9 @@ function HistoryModalShell({
           title={pdfTitle || title}
           subtitle={rangeLabel}
           stats={[
-            { label: 'Total In', value: `Rs ${totalIn.toLocaleString()}` },
-            { label: 'Total Out', value: `Rs ${totalOut.toLocaleString()}` },
-            { label: 'Net', value: `Rs ${(totalIn - totalOut).toLocaleString()}` },
+            { label: 'Total In', value: `$${totalIn.toLocaleString()}` },
+            { label: 'Total Out', value: `$${totalOut.toLocaleString()}` },
+            { label: 'Net', value: `$${(totalIn - totalOut).toLocaleString()}` },
           ]}
           tables={[
             {
@@ -948,11 +948,11 @@ function HistoryModalShell({
                 row.direction === 'in' ? 'In' : 'Out',
                 row.note || '—',
                 row.createdBy || '—',
-                row.direction === 'in' ? `Rs ${row.amount.toLocaleString()}` : '—',
-                row.direction === 'out' ? `Rs ${row.amount.toLocaleString()}` : '—',
-                row.balanceAfter === undefined ? '—' : `Rs ${row.balanceAfter.toLocaleString()}`,
+                row.direction === 'in' ? `$${row.amount.toLocaleString()}` : '—',
+                row.direction === 'out' ? `$${row.amount.toLocaleString()}` : '—',
+                row.balanceAfter === undefined ? '—' : `$${row.balanceAfter.toLocaleString()}`,
               ]),
-              footer: ['', '', '', 'Total', `Rs ${totalIn.toLocaleString()}`, `Rs ${totalOut.toLocaleString()}`, ''],
+              footer: ['', '', '', 'Total', `$${totalIn.toLocaleString()}`, `$${totalOut.toLocaleString()}`, ''],
               emptyMessage: 'No transactions in this range.',
             },
           ]}
@@ -1018,7 +1018,7 @@ function HistoryModalShell({
               <div key={index} className="flex items-center justify-between rounded-2xl bg-[#F8F9FB] p-3">
                 <div className="min-w-0">
                   <p className={`text-sm font-black ${row.direction === 'in' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {row.direction === 'in' ? '+' : '-'}Rs {row.amount.toLocaleString()}
+                    {row.direction === 'in' ? '+' : '-'}${row.amount.toLocaleString()}
                   </p>
                   {row.note ? <p className="truncate text-[11px] text-gray-500">{row.note}</p> : null}
                   <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
@@ -1026,7 +1026,7 @@ function HistoryModalShell({
                     {row.createdBy ? ` · ${row.createdBy}` : ''}
                   </p>
                   {row.balanceAfter !== undefined ? (
-                    <p className="text-[10px] font-bold text-gray-300">Balance after: Rs {row.balanceAfter.toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-gray-300">Balance after: ${row.balanceAfter.toLocaleString()}</p>
                   ) : null}
                 </div>
               </div>
@@ -1232,7 +1232,7 @@ function CustomerAdvancesModal({
           title="Patient Advances"
           subtitle={`As of ${asOfDate}`}
           stats={[
-            { label: 'Total Advance', value: `Rs ${total.toLocaleString()}` },
+            { label: 'Total Advance', value: `$${total.toLocaleString()}` },
             { label: 'Patients', value: String(advances.length) },
           ]}
           tables={[
@@ -1244,8 +1244,8 @@ function CustomerAdvancesModal({
                 { label: 'Phone', width: 1.4 },
                 { label: 'Advance', width: 1, align: 'right' },
               ],
-              rows: advances.map((c) => [asOfDate, c.name, c.phone || '\u2014', `Rs ${c.amount.toLocaleString()}`]),
-              footer: ['', '', 'Total', `Rs ${total.toLocaleString()}`],
+              rows: advances.map((c) => [asOfDate, c.name, c.phone || '\u2014', `$${c.amount.toLocaleString()}`]),
+              footer: ['', '', 'Total', `$${total.toLocaleString()}`],
               emptyMessage: 'No patient currently has an advance.',
             },
           ]}
@@ -1271,7 +1271,7 @@ function CustomerAdvancesModal({
         </div>
 
         <div className="mt-3 flex items-center justify-between">
-          <p className="text-sm font-black text-emerald-600">Total: Rs {total.toLocaleString()}</p>
+          <p className="text-sm font-black text-emerald-600">Total: ${total.toLocaleString()}</p>
           <button
             type="button"
             onClick={() => void handleDownloadPdf()}
@@ -1293,7 +1293,7 @@ function CustomerAdvancesModal({
                   {customer.phone ? <p className="text-[10px] font-bold text-gray-500">{customer.phone}</p> : null}
                   <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">As of {asOfDate}</p>
                 </div>
-                <p className="text-sm font-black text-emerald-600">Rs {customer.amount.toLocaleString()}</p>
+                <p className="text-sm font-black text-emerald-600">${customer.amount.toLocaleString()}</p>
               </div>
             ))
           )}
@@ -1350,7 +1350,7 @@ function StockValueDetailModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <p className="mt-3 text-sm font-black text-violet-600">Total: Rs {total.toLocaleString()}</p>
+        <p className="mt-3 text-sm font-black text-violet-600">Total: ${total.toLocaleString()}</p>
 
         <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
           {isLoading ? (
@@ -1365,10 +1365,10 @@ function StockValueDetailModal({ onClose }: { onClose: () => void }) {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-gray-800">{item.name}</p>
                   <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                    {item.quantity.toLocaleString()} {item.unit} × Rs {item.rate.toLocaleString()}
+                    {item.quantity.toLocaleString()} {item.unit} × ${item.rate.toLocaleString()}
                   </p>
                 </div>
-                <p className="text-sm font-black text-violet-600">Rs {item.value.toLocaleString()}</p>
+                <p className="text-sm font-black text-violet-600">${item.value.toLocaleString()}</p>
               </div>
             ))
           )}
@@ -1424,7 +1424,7 @@ function VendorBalanceDetailModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <p className="mt-3 text-sm font-black text-amber-700">Total: Rs {total.toLocaleString()}</p>
+        <p className="mt-3 text-sm font-black text-amber-700">Total: ${total.toLocaleString()}</p>
 
         <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
           {isLoading ? (
@@ -1437,7 +1437,7 @@ function VendorBalanceDetailModal({ onClose }: { onClose: () => void }) {
             rows.map((vendor, index) => (
               <div key={`${vendor.name}-${index}`} className="flex items-center justify-between rounded-2xl bg-[#F8F9FB] p-3">
                 <p className="truncate text-sm font-bold text-gray-800">{vendor.name}</p>
-                <p className="text-sm font-black text-amber-700">Rs {vendor.balance.toLocaleString()}</p>
+                <p className="text-sm font-black text-amber-700">${vendor.balance.toLocaleString()}</p>
               </div>
             ))
           )}
@@ -1503,7 +1503,7 @@ function SaleOnCashDetailModal({
           </button>
         </div>
 
-        <p className="mt-3 text-sm font-black text-blue-600">Total: Rs {total.toLocaleString()}</p>
+        <p className="mt-3 text-sm font-black text-blue-600">Total: ${total.toLocaleString()}</p>
 
         <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
           {isLoading ? (
@@ -1523,7 +1523,7 @@ function SaleOnCashDetailModal({
                     {order.paymentMethod} · {new Date(order.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-                <p className="text-sm font-black text-blue-600">Rs {order.amount.toLocaleString()}</p>
+                <p className="text-sm font-black text-blue-600">${order.amount.toLocaleString()}</p>
               </div>
             ))
           )}
@@ -1601,7 +1601,7 @@ function RecoveryHistoryModal({ onClose }: { onClose: () => void }) {
         <ReportPdfDocument
           title="Recovery History"
           subtitle={rangeLabel}
-          stats={[{ label: 'Total Recovery', value: `Rs ${total.toLocaleString()}` }]}
+          stats={[{ label: 'Total Recovery', value: `$${total.toLocaleString()}` }]}
           tables={[
             {
               title: 'History',
@@ -1617,9 +1617,9 @@ function RecoveryHistoryModal({ onClose }: { onClose: () => void }) {
                 row.paymentMethod === 'bank' ? row.bankName || 'Bank' : 'Cash',
                 `${row.customerName}${row.note ? ` - ${row.note}` : ''}`,
                 row.createdBy || '\u2014',
-                `Rs ${row.amount.toLocaleString()}`,
+                `$${row.amount.toLocaleString()}`,
               ]),
-              footer: ['', '', '', 'Total', `Rs ${total.toLocaleString()}`],
+              footer: ['', '', '', 'Total', `$${total.toLocaleString()}`],
               emptyMessage: 'No recovery in this range.',
             },
           ]}
@@ -1673,7 +1673,7 @@ function RecoveryHistoryModal({ onClose }: { onClose: () => void }) {
           </div>
         ) : null}
 
-        <p className="mt-3 text-sm font-black text-emerald-600">Total: Rs {total.toLocaleString()}</p>
+        <p className="mt-3 text-sm font-black text-emerald-600">Total: ${total.toLocaleString()}</p>
 
         <div className="mt-2 flex-1 space-y-2 overflow-y-auto pr-1">
           {loading ? (
@@ -1689,7 +1689,7 @@ function RecoveryHistoryModal({ onClose }: { onClose: () => void }) {
                     {new Date(row.createdAt).toLocaleString()} · {row.paymentMethod === 'bank' ? row.bankName || 'Bank' : 'Cash'}
                   </p>
                 </div>
-                <p className="text-sm font-black text-emerald-600">Rs {row.amount.toLocaleString()}</p>
+                <p className="text-sm font-black text-emerald-600">${row.amount.toLocaleString()}</p>
               </div>
             ))
           )}

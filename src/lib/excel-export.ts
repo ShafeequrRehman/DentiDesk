@@ -7,7 +7,7 @@
 // understood an XML workbook format ("SpreadsheetML", the Excel 2003 XML
 // format) for 20+ years: a plain XML string that Excel opens directly, with
 // real multiple named sheets, cell background colors, bold fonts, borders,
-// and number formats (e.g. "Rs " currency). That covers everything a
+// and number formats (e.g. "$" currency). That covers everything a
 // "beautifully designed" export needs without pulling in a library at all.
 //
 // Saved with a .xls extension (the traditional extension for this format).
@@ -19,7 +19,7 @@ export interface ExcelCellStyle {
   bold?: boolean;
   bg?: string; // fill color, hex WITHOUT '#', e.g. '1F2937'
   color?: string; // font color, hex WITHOUT '#'
-  format?: string; // Excel number format string, e.g. '"Rs "#,##0'
+  format?: string; // Excel number format string, e.g. '"$"#,##0'
   align?: 'Left' | 'Center' | 'Right';
   fontSize?: number;
   borderBottom?: boolean;

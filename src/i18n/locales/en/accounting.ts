@@ -9,7 +9,7 @@ export const accounting = {
   },
   cards: {
     totalBalance: "Total Balance",
-    balanceChange: "+Rs {{amount}} this week",
+    balanceChange: "+${{amount}} this week",
     totalRevenue: "Total Revenue",
     opExpenses: "Op. Expenses",
     expensePercent: "{{percent}}% of gross",

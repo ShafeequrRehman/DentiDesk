@@ -367,7 +367,7 @@ function StaffDetailsModal({
     ["Address", employee.address || "—"],
     ...(employee.vehicleNumber ? ([["Vehicle / Bike Number", employee.vehicleNumber]] as Array<[string, string]>) : []),
     ["Reference", employee.reference || "—"],
-    ["Monthly Salary", employee.monthlySalary ? `PKR ${employee.monthlySalary.toLocaleString()}` : "—"],
+    ["Monthly Salary", employee.monthlySalary ? `$${employee.monthlySalary.toLocaleString()}` : "—"],
     ["Comment", employee.comment || "—"],
   ];
 

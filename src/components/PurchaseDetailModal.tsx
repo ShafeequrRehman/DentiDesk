@@ -48,8 +48,8 @@ export default function PurchaseDetailModal({ purchase, onClose }: { purchase: L
           <div className="grid gap-3 sm:grid-cols-2">
             <DetailBox label="Ingredient" value={purchase.ingredientName} />
             <DetailBox label="Quantity" value={`${purchase.quantity} ${purchase.unit}`} />
-            <DetailBox label="Paid" value={`Rs ${purchase.paidAmount ?? 0}`} />
-            <DetailBox label="Remaining" value={`Rs ${purchase.remainingAmount ?? 0}`} />
+            <DetailBox label="Paid" value={`$${purchase.paidAmount ?? 0}`} />
+            <DetailBox label="Remaining" value={`$${purchase.remainingAmount ?? 0}`} />
           </div>
 
           {purchase.status === 'cancelled' ? (
@@ -64,7 +64,7 @@ export default function PurchaseDetailModal({ purchase, onClose }: { purchase: L
           ) : null}
 
           <div className="rounded-[20px] bg-white/50 p-4 text-sm shadow-inner">
-            <DetailRow label="Total Amount" value={`Rs ${purchase.totalAmount}`} strong />
+            <DetailRow label="Total Amount" value={`$${purchase.totalAmount}`} strong />
           </div>
         </div>
       </div>

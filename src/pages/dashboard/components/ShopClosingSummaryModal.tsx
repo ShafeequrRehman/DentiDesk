@@ -7,7 +7,7 @@ import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { ReportPdfDocument, downloadPdfDocument, pdfDocumentToBase64, type PdfStat, type PdfTable } from '@/lib/pdf-export';
 
 function formatMoney(amount: number) {
-  return `Rs ${Math.round(amount).toLocaleString()}`;
+  return `$${Math.round(amount).toLocaleString()}`;
 }
 
 // Day-End Shop Closing Summary Sheet - opened by ShopStatusControl's

@@ -98,19 +98,19 @@ export default function PayrollPage() {
       <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
         <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Total Monthly Payroll</p>
-          <h2 className="text-3xl font-black text-slate-900">Rs {(data?.summary.totalMonthlySalary || 0).toLocaleString()}</h2>
+          <h2 className="text-3xl font-black text-slate-900">${(data?.summary.totalMonthlySalary || 0).toLocaleString()}</h2>
           <p className="text-slate-400 text-xs font-bold mt-2 italic">Sum of every staff member's monthly salary</p>
         </div>
 
         <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Paid So Far This Month</p>
-          <h2 className="text-3xl font-black text-slate-900">Rs {(data?.summary.totalPaidThisMonth || 0).toLocaleString()}</h2>
+          <h2 className="text-3xl font-black text-slate-900">${(data?.summary.totalPaidThisMonth || 0).toLocaleString()}</h2>
           <p className="text-slate-400 text-xs font-bold mt-2 italic">Salary + advances, minus deductions</p>
         </div>
 
         <div className="bg-purple-900 p-8 rounded-[32px] text-white shadow-xl shadow-purple-100">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300 mb-2">Remaining To Pay</p>
-          <h2 className="text-3xl font-black">Rs {(data?.summary.totalRemaining || 0).toLocaleString()}</h2>
+          <h2 className="text-3xl font-black">${(data?.summary.totalRemaining || 0).toLocaleString()}</h2>
           <p className="text-purple-400 text-xs font-bold mt-2 flex items-center gap-1">
             <AlertCircle size={14} /> Across {rows.length} staff member{rows.length === 1 ? '' : 's'}
           </p>
@@ -151,18 +151,18 @@ export default function PayrollPage() {
                       <span className="text-sm font-bold text-slate-600">{row.designation || '—'}</span>
                     </td>
                     <td className="px-8 py-6">
-                      <span className="text-sm font-black text-slate-900">Rs {row.monthlySalary.toLocaleString()}</span>
+                      <span className="text-sm font-black text-slate-900">${row.monthlySalary.toLocaleString()}</span>
                     </td>
                     <td className="px-8 py-6">
-                      <span className="text-sm font-bold text-slate-600">Rs {row.paidThisMonth.toLocaleString()}</span>
+                      <span className="text-sm font-bold text-slate-600">${row.paidThisMonth.toLocaleString()}</span>
                       {row.bonusThisMonth ? (
-                        <div className="text-[10px] text-emerald-600 font-bold uppercase">+Rs {row.bonusThisMonth.toLocaleString()} bonus</div>
+                        <div className="text-[10px] text-emerald-600 font-bold uppercase">+${row.bonusThisMonth.toLocaleString()} bonus</div>
                       ) : null}
                     </td>
                     <td className="px-8 py-6">
                       <span className={`flex items-center gap-1.5 text-[10px] font-black uppercase px-3 py-1.5 rounded-lg w-fit ${row.remaining <= 0 ? 'bg-emerald-50 text-emerald-600' : 'bg-amber-50 text-amber-600'}`}>
                         {row.remaining <= 0 ? <CheckCircle2 size={12} /> : <AlertCircle size={12} />}
-                        Rs {Math.abs(row.remaining).toLocaleString()} {row.remaining <= 0 ? (row.remaining < 0 ? 'overpaid' : 'settled') : 'left'}
+                        ${Math.abs(row.remaining).toLocaleString()} {row.remaining <= 0 ? (row.remaining < 0 ? 'overpaid' : 'settled') : 'left'}
                       </span>
                     </td>
                     <td className="px-8 py-6 text-right">
@@ -227,7 +227,7 @@ export default function PayrollPage() {
                       <td className="px-8 py-4">
                         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase text-slate-600">{p.type}</span>
                       </td>
-                      <td className="px-8 py-4 text-sm font-black text-slate-900">Rs {p.amount.toLocaleString()}</td>
+                      <td className="px-8 py-4 text-sm font-black text-slate-900">${p.amount.toLocaleString()}</td>
                       <td className="px-8 py-4 text-sm text-slate-500">{p.note || '—'}</td>
                       <td className="px-8 py-4 text-xs font-bold text-slate-400">{new Date(p.date).toLocaleDateString()}</td>
                     </tr>
@@ -301,7 +301,7 @@ function RecordPaymentModal({ row, onClose, onSaved }: { row: PayrollRow; onClos
         <div className="mb-4 flex items-center justify-between">
           <div>
             <h2 className="text-lg font-black text-slate-900">Record Payment</h2>
-            <p className="text-xs font-bold text-slate-400">{row.name} · Rs {row.remaining.toLocaleString()} remaining this month</p>
+            <p className="text-xs font-bold text-slate-400">{row.name} · ${row.remaining.toLocaleString()} remaining this month</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full p-2 text-slate-400 hover:bg-slate-100"><X size={18} /></button>
         </div>
@@ -452,19 +452,19 @@ function EmployeeHistoryModal({
         <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-2xl bg-slate-50 px-4 py-3">
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Monthly Salary</p>
-            <p className="text-sm font-black text-slate-900">Rs {row.monthlySalary.toLocaleString()}</p>
+            <p className="text-sm font-black text-slate-900">${row.monthlySalary.toLocaleString()}</p>
           </div>
           <div className="rounded-2xl bg-slate-50 px-4 py-3">
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Paid This Month</p>
-            <p className="text-sm font-black text-slate-900">Rs {row.paidThisMonth.toLocaleString()}</p>
+            <p className="text-sm font-black text-slate-900">${row.paidThisMonth.toLocaleString()}</p>
           </div>
           <div className="rounded-2xl bg-slate-50 px-4 py-3">
             <p className="text-[9px] font-black uppercase tracking-widest text-slate-400">Bonus</p>
-            <p className="text-sm font-black text-slate-900">Rs {row.bonusThisMonth.toLocaleString()}</p>
+            <p className="text-sm font-black text-slate-900">${row.bonusThisMonth.toLocaleString()}</p>
           </div>
           <div className="rounded-2xl bg-purple-900 px-4 py-3">
             <p className="text-[9px] font-black uppercase tracking-widest text-purple-300">Remaining</p>
-            <p className="text-sm font-black text-white">Rs {Math.abs(row.remaining).toLocaleString()}{row.remaining < 0 ? ' (overpaid)' : ''}</p>
+            <p className="text-sm font-black text-white">${Math.abs(row.remaining).toLocaleString()}{row.remaining < 0 ? ' (overpaid)' : ''}</p>
           </div>
         </div>
 
@@ -481,7 +481,7 @@ function EmployeeHistoryModal({
                   <tr key={p._id}>
                     <td className="px-4 py-2.5 font-bold text-slate-500">{new Date(p.date).toLocaleDateString()}</td>
                     <td className="px-4 py-2.5"><span className="rounded-full bg-slate-100 px-2 py-1 font-black uppercase text-slate-600">{p.type}</span></td>
-                    <td className="px-4 py-2.5 font-black text-slate-900">Rs {p.amount.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 font-black text-slate-900">${p.amount.toLocaleString()}</td>
                     <td className="px-4 py-2.5 text-slate-500">{p.note || '—'}</td>
                   </tr>
                 ))}
@@ -498,7 +498,7 @@ function EmployeeHistoryModal({
             <h3 className="flex items-center gap-2 text-xs font-black uppercase tracking-widest text-amber-700">
               <UtensilsCrossed size={14} /> Employee Meals This Month
             </h3>
-            <span className="text-sm font-black text-amber-800">Rs {mealsTotal.toLocaleString()}</span>
+            <span className="text-sm font-black text-amber-800">${mealsTotal.toLocaleString()}</span>
           </div>
           <p className="mt-1 text-[10px] font-bold text-amber-700/70">Shown for reference only - not deducted from this employee's salary.</p>
 
@@ -507,7 +507,7 @@ function EmployeeHistoryModal({
               {meals.map((m) => (
                 <div key={m.id} className="flex items-center justify-between text-xs">
                   <span className="font-bold text-amber-900">{new Date(m.date).toLocaleDateString()}{m.note ? ` · ${m.note}` : ''}</span>
-                  <span className="font-black text-amber-900">Rs {m.amount.toLocaleString()}</span>
+                  <span className="font-black text-amber-900">${m.amount.toLocaleString()}</span>
                 </div>
               ))}
             </div>

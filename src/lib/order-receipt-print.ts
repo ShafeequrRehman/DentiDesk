@@ -101,7 +101,7 @@ function buildOrderReceiptBodyHtml(order: SavedOrder) {
   const itemRows = order.items.map((item) => {
     const itemTotal = (item.price * item.quantity).toFixed(2);
     return `
-      <div class="row"><span>${item.quantity}x ${item.name.toUpperCase()} @ Rs ${item.price.toFixed(2)}</span><span>Rs ${itemTotal}</span></div>
+      <div class="row"><span>${item.quantity}x ${item.name.toUpperCase()} @ $${item.price.toFixed(2)}</span><span>$${itemTotal}</span></div>
       ${item.variation ? `<p style="margin-left:12px;font-size:10px;color:#444">- ${item.variation}</p>` : ''}
     `;
   }).join('');
@@ -123,15 +123,15 @@ function buildOrderReceiptBodyHtml(order: SavedOrder) {
     <p>Items:</p>
     ${itemRows}
     <div class="dashed"></div>
-    <div class="row"><span>Items Total:</span><span>Rs ${itemsTotal.toFixed(2)}</span></div>
-    ${discountAmount > 0 ? `<div class="row"><span>Discount:</span><span>-Rs ${discountAmount.toFixed(2)}</span></div>` : ''}
-    <div class="row bold"><span>TOTAL:</span><span>Rs ${billTotal.toFixed(2)}</span></div>
+    <div class="row"><span>Items Total:</span><span>$${itemsTotal.toFixed(2)}</span></div>
+    ${discountAmount > 0 ? `<div class="row"><span>Discount:</span><span>-$${discountAmount.toFixed(2)}</span></div>` : ''}
+    <div class="row bold"><span>TOTAL:</span><span>$${billTotal.toFixed(2)}</span></div>
     <p style="margin-top:8px">PAID: ${(order.paymentMethod || 'CASH').toUpperCase()}</p>
     ${cashReceived > 0 ? `
-      <div class="row bold"><span>TOTAL BILL:</span><span>Rs ${billTotal.toFixed(2)}</span></div>
-      <div class="row"><span>CASH TENDERED/RECEIVED:</span><span>Rs ${cashReceived.toFixed(2)}</span></div>
-      <div class="row bold"><span>CHANGE RETURNED:</span><span>Rs ${changeReturned.toFixed(2)}</span></div>
-    ` : amountTendered !== undefined ? `<p>AMOUNT TENDERED: Rs ${amountTendered.toFixed(2)}</p>` : ''}
+      <div class="row bold"><span>TOTAL BILL:</span><span>$${billTotal.toFixed(2)}</span></div>
+      <div class="row"><span>CASH TENDERED/RECEIVED:</span><span>$${cashReceived.toFixed(2)}</span></div>
+      <div class="row bold"><span>CHANGE RETURNED:</span><span>$${changeReturned.toFixed(2)}</span></div>
+    ` : amountTendered !== undefined ? `<p>AMOUNT TENDERED: $${amountTendered.toFixed(2)}</p>` : ''}
   `;
 }
 
@@ -153,7 +153,7 @@ function buildOrderReceiptBodyHtml(order: SavedOrder) {
 // again.
 export function writeDuesEntryReceiptToWindow(printWindow: Window, customerName: string, entry: DuesHistoryEntry) {
   const date = new Date(entry.createdAt).toLocaleString('en-PK', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
-  // Same "+ Rs X paid"/"- Rs X received" wording DuesPage.tsx's own
+  // Same "+ $X paid"/"- $X received" wording DuesPage.tsx's own
   // History row uses for this exact entry.type.
   const actionLabel = entry.type === 'add' ? 'PAID' : 'RECEIVED';
   const paymentMethodLabel = entry.paymentMethod === 'bank' && entry.bankName
@@ -163,7 +163,7 @@ export function writeDuesEntryReceiptToWindow(printWindow: Window, customerName:
     <p>DATE: ${date}</p>
     <p>PATIENT: ${customerName.toUpperCase()}</p>
     <div class="dashed"></div>
-    <div class="row bold"><span>${actionLabel}:</span><span>Rs ${entry.amount}</span></div>
+    <div class="row bold"><span>${actionLabel}:</span><span>$${entry.amount}</span></div>
     <p>VIA: ${paymentMethodLabel}</p>
     <div class="dashed"></div>
     <p>NOTE: ${entry.note || 'No note'}</p>
@@ -203,9 +203,9 @@ export function writePurchaseReceiptToWindow(printWindow: Window, purchase: Purc
     <div class="dashed"></div>
     <div class="row"><span>INGREDIENT:</span><span>${purchase.ingredientName}</span></div>
     <div class="row"><span>QUANTITY:</span><span>${purchase.quantity} ${purchase.unit}</span></div>
-    <div class="row"><span>PAID:</span><span>Rs ${purchase.paidAmount ?? 0}</span></div>
+    <div class="row"><span>PAID:</span><span>$${purchase.paidAmount ?? 0}</span></div>
     <div class="dashed"></div>
-    <div class="row bold"><span>TOTAL:</span><span>Rs ${purchase.totalAmount}</span></div>
+    <div class="row bold"><span>TOTAL:</span><span>$${purchase.totalAmount}</span></div>
   `;
   printWindow.document.open();
   printWindow.document.write(buildReceiptShellHtml('Purchase Receipt', bodyHtml));

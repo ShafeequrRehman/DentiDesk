@@ -18,7 +18,7 @@ export const editOrder = {
   customerNamePlaceholder: "Patient name",
   phonePlaceholder: "Phone",
   searchingCustomers: "Searching patients...",
-  duePrefix: "Due PKR {{amount}}",
+  duePrefix: "Due ${{amount}}",
   addressPlaceholder: "Address",
   waiterPlaceholder: "Waiter",
   tablePlaceholder: "Table",
@@ -26,7 +26,7 @@ export const editOrder = {
 
   quickAddProduct: "Quick Add Drs/Service",
   searchMenuItemsPlaceholder: "Search menu items",
-  priceDisplay: "Rs {{price}}",
+  priceDisplay: "${{price}}",
   addCustomItem: "Add Custom Item",
   customItemDefaultName: "Custom Item",
 

@@ -230,10 +230,10 @@ export default function CompleteOrderModal({
         ) : null}
 
         <div className="mt-4 rounded-[20px] bg-[#F8F9FB] p-4 text-sm">
-          <DetailRow label={t('record.completeOrder.orderTotal')} value={`Rs ${order.total}`} />
-          <DetailRow label={t('record.completeOrder.alreadyPaid')} value={`Rs ${order.paidAmount ?? 0}`} />
-          {customerDue > 0 ? <DetailRow label={t('record.completeOrder.otherOutstandingDues')} value={`Rs ${customerDue}`} /> : null}
-          <DetailRow label={t('record.completeOrder.payableNow')} value={`Rs ${payable}`} strong />
+          <DetailRow label={t('record.completeOrder.orderTotal')} value={`$${order.total}`} />
+          <DetailRow label={t('record.completeOrder.alreadyPaid')} value={`$${order.paidAmount ?? 0}`} />
+          {customerDue > 0 ? <DetailRow label={t('record.completeOrder.otherOutstandingDues')} value={`$${customerDue}`} /> : null}
+          <DetailRow label={t('record.completeOrder.payableNow')} value={`$${payable}`} strong />
         </div>
 
         {/* Cash vs Bank - decides whether this payment lands in the

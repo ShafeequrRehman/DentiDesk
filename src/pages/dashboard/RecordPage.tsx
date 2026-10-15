@@ -479,7 +479,7 @@ export default function RecordPage() {
   // this doesn't just use a library like exceljs).
   function exportExcel() {
     const rangeLabel = isCustomRange ? t('record.export.dateRangeValue', { from: rangeFrom, to: rangeTo }) : t('record.export.currentShift');
-    const MONEY_FORMAT = '"Rs "#,##0';
+    const MONEY_FORMAT = '"$"#,##0';
 
     const titleStyle: ExcelCellStyle = { bold: true, fontSize: 14 };
     const subtitleStyle: ExcelCellStyle = { color: '6B7280' };
@@ -690,7 +690,7 @@ export default function RecordPage() {
   async function exportPdf() {
     const { ReportPdfDocument, downloadPdfDocument } = await import('@/lib/pdf-export');
     const rangeLabel = isCustomRange ? t('record.export.dateRangeValue', { from: rangeFrom, to: rangeTo }) : t('record.export.currentShift');
-    const formatMoney = (value: number) => `Rs ${Math.round(value).toLocaleString()}`;
+    const formatMoney = (value: number) => `$${Math.round(value).toLocaleString()}`;
 
     const totalCategoryQty = categorySales.reduce((sum, c) => sum + c.qty, 0);
     const totalCategoryRevenue = categorySales.reduce((sum, c) => sum + c.revenue, 0);
@@ -1041,11 +1041,11 @@ export default function RecordPage() {
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-6">
         <StatCard label={t('record.stats.totalOrders')} value={String(orderStats.totalOrders)} />
-        <StatCard label={t('record.stats.totalAmount')} value={`Rs ${orderStats.totalAmount}`} tone="text-sky-600" />
-        <StatCard label={t('record.stats.paidAmount')} value={`Rs ${orderStats.paidAmount}`} tone="text-emerald-600" />
-        <StatCard label={t('record.stats.cashAmount')} value={`Rs ${orderStats.cashAmount}`} tone="text-teal-600" />
-        <StatCard label={t('record.stats.bankAmount')} value={`Rs ${orderStats.bankAmount}`} tone="text-indigo-600" />
-        <StatCard label={t('record.stats.remainingAmount')} value={`Rs ${orderStats.remainingAmount}`} tone="text-rose-600" />
+        <StatCard label={t('record.stats.totalAmount')} value={`$${orderStats.totalAmount}`} tone="text-sky-600" />
+        <StatCard label={t('record.stats.paidAmount')} value={`$${orderStats.paidAmount}`} tone="text-emerald-600" />
+        <StatCard label={t('record.stats.cashAmount')} value={`$${orderStats.cashAmount}`} tone="text-teal-600" />
+        <StatCard label={t('record.stats.bankAmount')} value={`$${orderStats.bankAmount}`} tone="text-indigo-600" />
+        <StatCard label={t('record.stats.remainingAmount')} value={`$${orderStats.remainingAmount}`} tone="text-rose-600" />
       </div>
 
       <div className="grid grid-cols-2 gap-2 sm:grid-cols-3 lg:grid-cols-5">
@@ -1065,7 +1065,7 @@ export default function RecordPage() {
       <div className="rounded-[16px] bg-rose-50/60 p-3 shadow-inner backdrop-blur-xl sm:flex sm:items-center sm:justify-between">
         <div>
           <p className="text-[9px] font-black uppercase tracking-[0.14em] text-rose-500">{t('record.discount.totalToday')}</p>
-          <p className="text-lg font-black text-rose-700">Rs {totalDiscountToday}</p>
+          <p className="text-lg font-black text-rose-700">${totalDiscountToday}</p>
         </div>
         <p className="mt-1 text-xs font-semibold text-rose-500 sm:mt-0">
           {discountedOrderCount === 1
@@ -1161,10 +1161,10 @@ export default function RecordPage() {
                 >
                   <span className="font-bold text-gray-800">{entry.category}</span>
                   <span className="font-semibold text-gray-700">{entry.qty}</span>
-                  <span className="font-black text-emerald-600">Rs {Math.round(entry.revenue)}</span>
-                  <span className="font-black text-sky-600">Rs {Math.round(entry.cashAmount)}</span>
-                  <span className="font-black text-indigo-600">Rs {Math.round(entry.bankAmount)}</span>
-                  <span className="font-black text-rose-600">Rs {Math.round(entry.dueAmount)}</span>
+                  <span className="font-black text-emerald-600">${Math.round(entry.revenue)}</span>
+                  <span className="font-black text-sky-600">${Math.round(entry.cashAmount)}</span>
+                  <span className="font-black text-indigo-600">${Math.round(entry.bankAmount)}</span>
+                  <span className="font-black text-rose-600">${Math.round(entry.dueAmount)}</span>
                 </div>
               ))}
             </div>
@@ -1210,10 +1210,10 @@ export default function RecordPage() {
                   <span className="font-bold text-gray-800">{item.name}</span>
                   <span className="text-xs text-gray-400">{item.variation || '—'}</span>
                   <span className="font-semibold text-gray-700">{item.qty}</span>
-                  <span className="font-black text-emerald-600">Rs {Math.round(item.revenue)}</span>
-                  <span className="font-black text-sky-600">Rs {Math.round(item.cashAmount)}</span>
-                  <span className="font-black text-indigo-600">Rs {Math.round(item.bankAmount)}</span>
-                  <span className="font-black text-rose-600">Rs {Math.round(item.dueAmount)}</span>
+                  <span className="font-black text-emerald-600">${Math.round(item.revenue)}</span>
+                  <span className="font-black text-sky-600">${Math.round(item.cashAmount)}</span>
+                  <span className="font-black text-indigo-600">${Math.round(item.bankAmount)}</span>
+                  <span className="font-black text-rose-600">${Math.round(item.dueAmount)}</span>
                 </div>
               ))}
             </div>
@@ -1347,13 +1347,13 @@ function RecordRow({
         <p className="truncate text-[11px] text-gray-400">{order.customer?.phone || '—'}</p>
       </div>
       <div>
-        <span className="font-black text-gray-900">Rs {order.total}</span>
+        <span className="font-black text-gray-900">${order.total}</span>
         {order.discount && order.discount.amount > 0 ? (
           <p className="text-[10px] font-bold text-rose-500">{t('record.discount.off', { amount: order.discount.amount })}</p>
         ) : null}
       </div>
-      <span className="font-semibold text-emerald-600">Rs {order.paidAmount ?? 0}</span>
-      <span className="font-semibold text-rose-500">Rs {order.remainingAmount ?? 0}</span>
+      <span className="font-semibold text-emerald-600">${order.paidAmount ?? 0}</span>
+      <span className="font-semibold text-rose-500">${order.remainingAmount ?? 0}</span>
       <div>
         <StatusBadge status={order.status} />
       </div>

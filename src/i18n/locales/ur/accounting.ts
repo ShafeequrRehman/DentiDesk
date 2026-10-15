@@ -7,7 +7,7 @@ export const accounting = {
   },
   cards: {
     totalBalance: "کل بیلنس",
-    balanceChange: "+Rs {{amount}} اس ہفتے",
+    balanceChange: "+${{amount}} اس ہفتے",
     totalRevenue: "کل آمدنی",
     opExpenses: "آپریشنل اخراجات",
     expensePercent: "کل آمدنی کا {{percent}}%",

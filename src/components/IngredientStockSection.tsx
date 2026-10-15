@@ -30,7 +30,7 @@ import { useBackspaceToClose } from "@/lib/keyboard-shortcuts";
 import { writePurchaseReceiptToWindow } from "@/lib/order-receipt-print";
 
 function formatMoney(amount: number) {
-  return `Rs ${Math.round(amount).toLocaleString()}`;
+  return `$${Math.round(amount).toLocaleString()}`;
 }
 
 // Display-layer defensive rounding for currentStock. The backend now
@@ -860,7 +860,7 @@ export function IngredientStockSection({
           { value: i.name },
           { value: i.unit },
           { value: formatStockQty(i.currentStock), style: { align: 'Right' as const } },
-          { value: i.averageCost, style: { align: 'Right' as const, format: '"Rs "#,##0.00' } },
+          { value: i.averageCost, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
         ]),
       ],
     };
@@ -888,10 +888,10 @@ export function IngredientStockSection({
           { value: formatPurchaseDateTime(purchaseDisplayDate(p)) },
           { value: `${p.ingredientName}${p.productDetails ? ` · ${p.productDetails}` : ''}` },
           { value: `${p.quantity}${p.unit}`, style: { align: 'Right' as const } },
-          { value: p.rate, style: { align: 'Right' as const, format: '"Rs "#,##0.00' } },
-          { value: p.totalAmount, style: { align: 'Right' as const, format: '"Rs "#,##0.00' } },
-          { value: p.paidAmount, style: { align: 'Right' as const, format: '"Rs "#,##0.00' } },
-          { value: p.remainingAmount, style: { align: 'Right' as const, format: '"Rs "#,##0.00' } },
+          { value: p.rate, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
+          { value: p.totalAmount, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
+          { value: p.paidAmount, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
+          { value: p.remainingAmount, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
         ]),
         // Financial Aggregations: the same prominent bolded totals row as
         // the PDF export's table footer - Total Purchased Amount (this
@@ -904,9 +904,9 @@ export function IngredientStockSection({
           { value: '' },
           { value: '' },
           { value: t('ingredientStock.export.totals'), style: { bold: true } },
-          { value: activeCompanySheetTotals.purchased, style: { bold: true, align: 'Right', format: '"Rs "#,##0.00' } },
-          { value: activeCompanySheetTotals.paid, style: { bold: true, align: 'Right', format: '"Rs "#,##0.00' } },
-          { value: activeCompanySheetTotals.due, style: { bold: true, align: 'Right', format: '"Rs "#,##0.00' } },
+          { value: activeCompanySheetTotals.purchased, style: { bold: true, align: 'Right', format: '"$"#,##0.00' } },
+          { value: activeCompanySheetTotals.paid, style: { bold: true, align: 'Right', format: '"$"#,##0.00' } },
+          { value: activeCompanySheetTotals.due, style: { bold: true, align: 'Right', format: '"$"#,##0.00' } },
         ],
       ],
     };

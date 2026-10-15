@@ -911,7 +911,7 @@ export default function POSPage() {
 
     // Electricity Bill / Cash: these are "open amount" products (see
     // handleItemPriceChange) - a cashier who forgets to type the real
-    // figure would otherwise save a PKR 0 bill/cash order.
+    // figure would otherwise save a $0 bill/cash order.
     if (cart.some((item) => item.specialType && item.price <= 0)) {
       return showValidationError(t('pos.specialItemAmountRequired'));
     }
@@ -1418,7 +1418,7 @@ export default function POSPage() {
                         were fighting for width and the price (the important
                         part) was the one getting truncated ("From PKR ..."). */}
                     <div className={`${viewMode === 'list' ? '' : 'mt-3 pt-2 border-t border-gray-50'}`}>
-                      <p className="truncate text-[12px] font-black text-gray-900">{hasVariations ? t('pos.fromPrice', { price: cheapestPrice }) : `PKR ${group.variations[0].price}`}</p>
+                      <p className="truncate text-[12px] font-black text-gray-900">{hasVariations ? t('pos.fromPrice', { price: cheapestPrice }) : `$${group.variations[0].price}`}</p>
                       <span className="mt-1.5 inline-flex w-fit shrink-0 items-center justify-center rounded-[8px] bg-black h-[22px] px-2.5 text-[9px] font-bold text-white transition group-hover:bg-[#E2F33C] group-hover:text-black">{hasVariations ? t('pos.select') : t('common.add')}</span>
                     </div>
                   </div>
@@ -1621,7 +1621,7 @@ export default function POSPage() {
                     // comment) instead of the fixed catalog price every
                     // other product shows below.
                     <div className="mt-1 flex items-center gap-1">
-                      <span className="text-[10px] font-semibold text-gray-500">PKR</span>
+                      <span className="text-[10px] font-semibold text-gray-500">USD</span>
                       <input
                         type="number"
                         min={0}
@@ -1640,7 +1640,7 @@ export default function POSPage() {
                     // price), same handleItemPriceChange used above for
                     // Electricity Bill/Cash's own open amount.
                     <div className="mt-1 flex items-center gap-1">
-                      <span className="text-[10px] font-semibold text-gray-500">PKR</span>
+                      <span className="text-[10px] font-semibold text-gray-500">USD</span>
                       <input
                         type="number"
                         min={0}
@@ -1652,7 +1652,7 @@ export default function POSPage() {
                   )}
                 </div>
                 <div className="min-w-[60px] text-right rtl:text-left">
-                  <p className="text-sm font-black text-gray-900">PKR {item.price * item.quantity}</p>
+                  <p className="text-sm font-black text-gray-900">${item.price * item.quantity}</p>
                   <button type="button" onClick={() => handleRemoveItem(index)} className="mt-1 text-[10px] font-semibold text-rose-500 transition hover:text-rose-700">{t('pos.remove')}</button>
                 </div>
               </div>
@@ -1666,12 +1666,12 @@ export default function POSPage() {
               <PaymentButton icon={<Wallet size={16} />} label={t('pos.paymentEWallet')} active={selectedPaymentMethod === 'E-Wallet'} onClick={() => setSelectedPaymentMethod('E-Wallet')} />
             </div>
             <div className="space-y-1.5 rounded-[20px] bg-white/50 p-3 shadow-inner">
-              <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500"><span>{t('pos.itemsTotal')}</span><span>PKR {subtotal}</span></div>
-              <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500"><span>{t('pos.taxLabel', { rate: taxRate })}</span><span>PKR {Math.round(tax)}</span></div>
+              <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500"><span>{t('pos.itemsTotal')}</span><span>${subtotal}</span></div>
+              <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500"><span>{t('pos.taxLabel', { rate: taxRate })}</span><span>${Math.round(tax)}</span></div>
               {orderFormData.orderType === 'Delivery' ? (
-                <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500"><span>{t('pos.deliveryFeeLabel')}</span><span>{effectiveDeliveryFee > 0 ? `PKR ${effectiveDeliveryFee}` : t('pos.free')}</span></div>
+                <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500"><span>{t('pos.deliveryFeeLabel')}</span><span>{effectiveDeliveryFee > 0 ? `$${effectiveDeliveryFee}` : t('pos.free')}</span></div>
               ) : null}
-              <div className="flex items-center justify-between pt-1.5 text-base font-black text-gray-900"><span>{t('pos.totalPayable')}</span><span className="text-emerald-600">PKR {Math.round(total)}</span></div>
+              <div className="flex items-center justify-between pt-1.5 text-base font-black text-gray-900"><span>{t('pos.totalPayable')}</span><span className="text-emerald-600">${Math.round(total)}</span></div>
             </div>
             <button type="button" onClick={() => void handleSaveOrder()} disabled={isSavingOrder || cart.length === 0 || getMissingDeliveryField() !== null} className="w-full flex items-center justify-center gap-2 rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-b from-[#eef7a0] to-[#d8e94a] px-5 py-3 text-base font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(132,144,10,0.4)] transition hover:brightness-105 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50">
               {isSavingOrder ? <Loader2 size={18} className="animate-spin" /> : null} {isSavingOrder ? t('pos.savingOrder') : t('pos.saveOrder')}
@@ -1771,7 +1771,7 @@ function VariationPickerModal({ group, onSelect, onClose }: { group: ProductGrou
                 <p className="truncate text-sm font-black text-gray-900">{variation.variation || t('pos.standardVariation')}</p>
                 <p className="text-[10px] font-bold text-gray-400">{variation.stock > 0 ? t('pos.inStock', { count: variation.stock }) : t('pos.unlimitedStock')}</p>
               </div>
-              <span className="shrink-0 text-sm font-black text-gray-900">PKR {variation.price}</span>
+              <span className="shrink-0 text-sm font-black text-gray-900">${variation.price}</span>
             </button>
           ))}
         </div>
@@ -1823,7 +1823,7 @@ async function sendOrderPlacedMessage(order: SavedOrder, settings?: ReturnType<t
     `Dear ${order.customer.name || 'Patient'}, your appointment has been placed.`,
     `Appointment No: *${orderNumber(order)}*`,
     `Appointment Type: ${orderType}`,
-    `Total: *PKR ${Math.round(order.total)}*`,
+    `Total: *$${Math.round(order.total)}*`,
     '',
     'We will share your receipt when the appointment is completed.',
     `Thank you for ordering from ${header}.`,
