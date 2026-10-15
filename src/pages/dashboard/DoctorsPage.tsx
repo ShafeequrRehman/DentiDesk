@@ -9,7 +9,7 @@
 //
 // Services tab: every other Drs/Services item, with its price.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, CheckCircle2, ClipboardList, Clock, Phone, Printer, RefreshCcw, RotateCcw, Search, Stethoscope, Undo2, UserRound, X } from 'lucide-react';
+import { Building2, CalendarDays, CheckCircle2, Globe, Wallet, ClipboardList, Clock, Phone, Printer, RefreshCcw, RotateCcw, Search, Stethoscope, Undo2, UserRound, X } from 'lucide-react';
 import { fetchProducts, saveCheckup } from '@/lib/pos-api';
 import type { Product, SavedOrder } from '@/lib/pos-types';
 import { getReferenceData } from '@/lib/local-hub-api';
@@ -157,6 +157,8 @@ export default function DoctorsPage() {
 
   const waitingCount = appointments.filter((a) => a.checkupStatus !== 'done').length;
   const doneCount = appointments.length - waitingCount;
+  const onlineCount = appointments.filter((a) => a.source === 'customer-qr').length;
+  const unpaidCount = appointments.filter((a) => paymentState(a).label !== 'Paid').length;
 
   function handleSaved(updated: SavedOrder) {
     setAppointments((previous) => previous.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)));
@@ -265,7 +267,7 @@ export default function DoctorsPage() {
                     <div>
                       <h2 className="text-2xl font-black text-gray-900">{selectedDoctor}</h2>
                       <p className="text-xs font-bold text-gray-500">
-                        {waitingCount} waiting · {doneCount} checked
+                        {waitingCount} waiting · {doneCount} checked · {onlineCount} online · {unpaidCount} unpaid
                         {showUpcoming ? ' · today and later' : ` · ${formatAppointmentDate(date)}`}
                       </p>
                     </div>
@@ -350,6 +352,39 @@ export default function DoctorsPage() {
   );
 }
 
+// Online = booked by the patient from the QR / online page; Clinic = booked
+// by staff at the POS.
+function SourceTag({ order }: { order: SavedOrder }) {
+  const online = order.source === 'customer-qr';
+  return (
+    <span className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${online ? 'bg-sky-100 text-sky-700' : 'bg-violet-100 text-violet-700'}`}>
+      {online ? <Globe size={11} /> : <Building2 size={11} />}
+      {online ? 'Online' : 'Clinic'}
+    </span>
+  );
+}
+
+function paymentState(order: SavedOrder): { label: string; tone: string } {
+  const total = Number(order.total || 0);
+  const paid = Number(order.paidAmount || 0);
+  const remaining = typeof order.remainingAmount === 'number' ? order.remainingAmount : Math.max(total - paid, 0);
+  if (order.status !== 'pending' && remaining <= 0) return { label: 'Paid', tone: 'bg-emerald-100 text-emerald-700' };
+  if (total > 0 && remaining <= 0) return { label: 'Paid', tone: 'bg-emerald-100 text-emerald-700' };
+  if (order.paymentStatus === 'awaiting_confirmation') return { label: 'Payment pending', tone: 'bg-amber-100 text-amber-700' };
+  if (paid > 0) return { label: `Partly paid · ${money(remaining)} due`, tone: 'bg-orange-100 text-orange-700' };
+  return { label: `Unpaid · ${money(remaining || total)}`, tone: 'bg-rose-100 text-rose-700' };
+}
+
+function PaymentTag({ order }: { order: SavedOrder }) {
+  const state = paymentState(order);
+  return (
+    <span className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${state.tone}`}>
+      <Wallet size={11} />
+      {state.label}
+    </span>
+  );
+}
+
 function AppointmentRow({ order, showDate, offline, onCheckup, onReopen }: { order: SavedOrder; showDate: boolean; offline: boolean; onCheckup: () => void; onReopen: () => void }) {
   const done = order.checkupStatus === 'done';
   const phone = order.customer?.phone && order.customer.phone !== '03000000000' ? order.customer.phone : '';
@@ -362,7 +397,11 @@ function AppointmentRow({ order, showDate, offline, onCheckup, onReopen }: { ord
         <p className="text-[10px] font-bold uppercase text-gray-400">#{String(order.dailyOrderNumber ?? order.id.slice(-3)).padStart(3, '0')}</p>
       </div>
       <div className="min-w-0 flex-1 space-y-0.5">
-        <p className="truncate text-base font-black text-gray-900">{order.customer?.name || 'Patient'}</p>
+        <div className="flex flex-wrap items-center gap-1.5">
+          <p className="truncate text-base font-black text-gray-900">{order.customer?.name || 'Patient'}</p>
+          <SourceTag order={order} />
+          <PaymentTag order={order} />
+        </div>
         {phone ? <p className="flex items-center gap-1 text-xs font-bold text-gray-500"><Phone size={12} />{phone}</p> : null}
         {services.length > 0 ? <p className="truncate text-xs font-semibold text-gray-500">Services: {services.map((s) => s.name).join(', ')}</p> : null}
         {order.note ? <p className="truncate text-xs font-semibold text-indigo-600">Note: {order.note}</p> : null}
@@ -438,6 +477,11 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
             </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full bg-gray-100 p-2 text-gray-500 hover:bg-gray-200"><X size={16} /></button>
+        </div>
+
+        <div className="mb-3 flex flex-wrap gap-1.5">
+          <SourceTag order={order} />
+          <PaymentTag order={order} />
         </div>
 
         {order.note ? <p className="mb-3 rounded-xl bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700">Appointment note: {order.note}</p> : null}
