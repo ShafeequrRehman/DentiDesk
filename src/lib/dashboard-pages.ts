@@ -48,7 +48,7 @@ export const DASHBOARD_PAGES: DashboardPageDef[] = [
   // view.dashboard entry for why both independently gate this same item.
   { key: 'dashboard', label: 'Dashboard', href: '/dashboard', permission: 'view.dashboard' },
   { key: 'pos', label: 'POS', href: '/dashboard/pos', permission: 'sales.create', hotkey: 'F1' },
-  { key: 'sales', label: 'Sales', href: '/dashboard/sales', permission: 'sales.create', hotkey: 'F2' },
+  { key: 'sales', label: 'Appointments', href: '/dashboard/sales', permission: 'sales.create', hotkey: 'F2' },
   // Drs & Services: each Dr's appointments, checkups and prescriptions.
   { key: 'doctors', label: 'Drs & Services', href: '/dashboard/doctors', permission: ['sales.create', 'orders.record.view'] },
   { key: 'accounting', label: 'Accounting', href: '/dashboard/accounting', permission: 'expenses.manage', hotkey: 'F3' },

@@ -1,11 +1,11 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
-  LayoutDashboard, ShoppingCart, BarChart3, Calculator,
+  LayoutDashboard, Calculator,
   Package, DollarSign, FileText, Settings, HelpCircle,
   Search, Cloud, MessageCircle, Bell, LogOut, UserCog, BookText,
   Store, Lock, ClipboardList, Wifi, WifiOff, Download, RefreshCcw,
-  Menu, X, Smartphone, Boxes, Landmark, Stethoscope, FlaskConical
+  Menu, X, Smartphone, Boxes, Landmark, Stethoscope, FlaskConical, CalendarPlus, CalendarCheck
 } from 'lucide-react';
 import { clearAuthSession, getAuthRole, getAuthShop, hasPermission, hasAnyPermission, isPageEnabled, getIsDashboardHidden } from '@/lib/auth';
 import { DASHBOARD_PAGES } from '@/lib/dashboard-pages';
@@ -25,8 +25,8 @@ import { LanguageSwitcher } from '@/components/LanguageSwitcher';
 // list since it lives in lib/ and can't hold JSX.
 const PAGE_ICONS: Record<string, React.ReactNode> = {
   dashboard: <LayoutDashboard size={18} />,
-  pos: <ShoppingCart size={18} />,
-  sales: <BarChart3 size={18} />,
+  pos: <CalendarPlus size={18} />,
+  sales: <CalendarCheck size={18} />,
   doctors: <Stethoscope size={18} />,
   accounting: <Calculator size={18} />,
   purchase: <Package size={18} />,

@@ -7,7 +7,7 @@
 export const sidebar = {
   dashboard: "Dashboard",
   pos: "POS",
-  sales: "Sales",
+  sales: "Appointments",
   doctors: "Drs & Services",
   accounting: "Accounting",
   purchase: "Purchase",

@@ -589,10 +589,13 @@ function OrderStatusPanel({
   shopId,
   orderId,
   onFinished,
+  onStartNew,
 }: {
   shopId: string;
   orderId: string;
   onFinished?: () => void;
+  // Takes the patient back to the Drs/Services list to book again.
+  onStartNew?: () => void;
 }) {
   const navigate = useNavigate();
   const [status, setStatus] = useState<PublicOrderStatus | null>(null);
@@ -725,7 +728,11 @@ function OrderStatusPanel({
         {isFinished ? (
           <button
             type="button"
-            onClick={() => navigate(`/order/${shopId}`)}
+            onClick={() => {
+              clearSavedOrderId(shopId);
+              if (onStartNew) onStartNew();
+              else navigate(`/order/${shopId}`, { replace: true });
+            }}
             className="glass-dark mt-3 flex w-full items-center justify-center gap-2 rounded-2xl py-3.5 text-sm font-black transition hover:brightness-110"
           >
             <RotateCcw size={15} /> Start a New Appointment
@@ -759,10 +766,12 @@ function CustomerShell({
   shopId,
   activeOrderId,
   onOrderFinished,
+  onStartNew,
 }: {
   shopId: string;
   activeOrderId: string;
   onOrderFinished: () => void;
+  onStartNew: () => void;
 }) {
   const [tab, setTab] = useState<'track' | 'menu'>('track');
   return (
@@ -788,7 +797,7 @@ function CustomerShell({
         </button>
       </div>
       {tab === 'track' ? (
-        <OrderStatusPanel shopId={shopId} orderId={activeOrderId} onFinished={onOrderFinished} />
+        <OrderStatusPanel shopId={shopId} orderId={activeOrderId} onFinished={onOrderFinished} onStartNew={onStartNew} />
       ) : (
         <CustomerOrderingFlow shopId={shopId} />
       )}
@@ -798,6 +807,7 @@ function CustomerShell({
 
 export default function CustomerOrderPage() {
   const params = useParams<{ shopId: string; orderId?: string }>();
+  const navigate = useNavigate();
   const shopId = params.shopId || '';
 
   // Swap the page's <link rel="manifest"> to this shop's own per-shop
@@ -867,7 +877,10 @@ export default function CustomerOrderPage() {
     (async () => {
       const savedId = readSavedOrderId(shopId);
       if (!savedId) {
-        if (!cancelled) setResolving(false);
+        if (!cancelled) {
+          setResolvedOrderId(null);
+          setResolving(false);
+        }
         return;
       }
       try {
@@ -901,7 +914,18 @@ export default function CustomerOrderPage() {
     return <div className="glass-app-bg flex min-h-screen items-center justify-center text-sm font-bold text-gray-500">Loading...</div>;
   }
   if (resolvedOrderId) {
-    return <CustomerShell shopId={shopId} activeOrderId={resolvedOrderId} onOrderFinished={() => clearSavedOrderId(shopId)} />;
+    return (
+      <CustomerShell
+        shopId={shopId}
+        activeOrderId={resolvedOrderId}
+        onOrderFinished={() => clearSavedOrderId(shopId)}
+        onStartNew={() => {
+          clearSavedOrderId(shopId);
+          setResolvedOrderId(null);
+          if (params.orderId) navigate(`/order/${shopId}`, { replace: true });
+        }}
+      />
+    );
   }
   return <CustomerOrderingFlow shopId={shopId} />;
 }
@@ -1174,7 +1198,20 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
     );
   }
   if (placedOrder) {
-    return <OrderStatusPanel shopId={shopId} orderId={placedOrder.id} onFinished={() => clearSavedOrderId(shopId)} />;
+    return (
+      <OrderStatusPanel
+        shopId={shopId}
+        orderId={placedOrder.id}
+        onFinished={() => clearSavedOrderId(shopId)}
+        onStartNew={() => {
+          setPlacedOrder(null);
+          setCart(new Map());
+          setAppointmentTime('');
+          setSlotsRefreshKey((key) => key + 1);
+          window.scrollTo({ top: 0 });
+        }}
+      />
+    );
   }
 
   return (

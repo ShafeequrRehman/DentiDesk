@@ -1,7 +1,7 @@
 export const sidebar = {
   dashboard: "ڈیش بورڈ",
   pos: "پی او ایس",
-  sales: "فروخت",
+  sales: "اپائنٹمنٹس",
   doctors: "ڈاکٹرز اور سروسز",
   accounting: "اکاؤنٹنگ",
   purchase: "خریداری",
