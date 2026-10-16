@@ -125,6 +125,8 @@ export const record = {
     payableNow: "Payable Now",
     paymentMethod: "Payment Method",
     cash: "Cash",
+    card: "Card",
+    eWallet: "E-Wallet",
     bank: "Bank",
     selectBank: "Select bank...",
     pickBank: "Pick which bank this payment landed in",

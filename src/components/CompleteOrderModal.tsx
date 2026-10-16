@@ -24,6 +24,21 @@ import { triggerBackgroundSync } from '@/lib/offline-sync';
 import { ToastLike } from '@/lib/print-notify';
 import { writeOrderReceiptToWindow } from '@/lib/order-receipt-print';
 
+type PaymentModeKey = 'cash' | 'card' | 'ewallet' | 'bank';
+
+// Payment modes the cashier can pick when completing an appointment -
+// saved on the order as paymentMethod and printed on the slip.
+const PAYMENT_MODES: Array<{ key: PaymentModeKey; value: 'Cash' | 'Card' | 'E-Wallet' | 'Bank'; labelKey: string }> = [
+  { key: 'cash', value: 'Cash', labelKey: 'record.completeOrder.cash' },
+  { key: 'card', value: 'Card', labelKey: 'record.completeOrder.card' },
+  { key: 'ewallet', value: 'E-Wallet', labelKey: 'record.completeOrder.eWallet' },
+  { key: 'bank', value: 'Bank', labelKey: 'record.completeOrder.bank' },
+];
+
+function modeFromOrder(method?: string): PaymentModeKey {
+  return PAYMENT_MODES.find((mode) => mode.value === method)?.key || 'cash';
+}
+
 export default function CompleteOrderModal({
   order,
   isOnline,
@@ -55,7 +70,9 @@ export default function CompleteOrderModal({
   // WHICH bank the payment actually landed in (see orderController.js's
   // applyOrderPatch completeAndSettle branch, which records the movement
   // into whichever this resolves to).
-  const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank'>('cash');
+  // Starts on whatever was picked at POS checkout (Cash / Card / E-Wallet),
+  // so the slip shows the same payment mode the cashier chose.
+  const [paymentMethod, setPaymentMethod] = useState<PaymentModeKey>(() => modeFromOrder(order.paymentMethod));
   const [banks, setBanks] = useState<Bank[]>([]);
   const [bankId, setBankId] = useState('');
   // Same reasoning as SalesPage.tsx's Complete Payment panel - required
@@ -166,7 +183,9 @@ export default function CompleteOrderModal({
       status: 'completed',
       action: 'completeAndSettle',
       paidAmount: paid,
-      ...(paid > 0 ? { paymentMethod: paymentMethod === 'bank' ? 'Bank' : 'Cash', ...(paymentMethod === 'bank' ? { bankId } : {}) } : {}),
+      ...(paid > 0
+        ? { paymentMethod: PAYMENT_MODES.find((mode) => mode.key === paymentMethod)?.value || 'Cash', ...(paymentMethod === 'bank' ? { bankId } : {}) }
+        : {}),
     };
 
     try {
@@ -241,25 +260,19 @@ export default function CompleteOrderModal({
             orderController.js's applyOrderPatch completeAndSettle branch). */}
         <div className="mt-4">
           <label className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">{t('record.completeOrder.paymentMethod')}</label>
-          <div className="mt-1.5 grid grid-cols-2 gap-2">
-            <button
-              type="button"
-              onClick={() => setPaymentMethod('cash')}
-              className={`rounded-[14px] py-2.5 text-xs font-black uppercase tracking-wide transition ${
-                paymentMethod === 'cash' ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-            >
-              {t('record.completeOrder.cash')}
-            </button>
-            <button
-              type="button"
-              onClick={() => setPaymentMethod('bank')}
-              className={`rounded-[14px] py-2.5 text-xs font-black uppercase tracking-wide transition ${
-                paymentMethod === 'bank' ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
-              }`}
-            >
-              {t('record.completeOrder.bank')}
-            </button>
+          <div className="mt-1.5 grid grid-cols-4 gap-2">
+            {PAYMENT_MODES.map((mode) => (
+              <button
+                key={mode.key}
+                type="button"
+                onClick={() => setPaymentMethod(mode.key)}
+                className={`rounded-[14px] py-2.5 text-xs font-black uppercase tracking-wide transition ${
+                  paymentMethod === mode.key ? 'bg-black text-white' : 'bg-gray-100 text-gray-500 hover:bg-gray-200'
+                }`}
+              >
+                {t(mode.labelKey)}
+              </button>
+            ))}
           </div>
           {paymentMethod === 'bank' ? (
             <select

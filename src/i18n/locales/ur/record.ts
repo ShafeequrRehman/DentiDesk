@@ -123,6 +123,8 @@ export const record = {
     payableNow: "ابھی قابلِ ادائیگی",
     paymentMethod: "ادائیگی کا طریقہ",
     cash: "نقد",
+    card: "کارڈ",
+    eWallet: "ای والٹ",
     bank: "بینک",
     selectBank: "بینک منتخب کریں...",
     pickBank: "بتائیں یہ ادائیگی کس بینک میں گئی",
