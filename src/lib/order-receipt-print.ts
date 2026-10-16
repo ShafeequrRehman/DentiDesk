@@ -87,6 +87,26 @@ export function buildReceiptShellHtml(title: string, bodyHtml: string, titleSub?
 // (AMOUNT TENDERED / CASH TENDERED-RECEIVED / CHANGE RETURNED below),
 // never a running total. See ThermalReceipt.tsx's matching comment - the
 // live checkout receipt got the identical change for the same reason.
+// "2026-10-16" + "15:30" -> "16 OCT 2026 · 3:30 PM" for the slip.
+function appointmentSlotLabel(date?: string, time?: string) {
+  if (!time || !/^\d{2}:\d{2}$/.test(time)) return '';
+  const [h, m] = time.split(':').map(Number);
+  const timeText = `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, '0')} ${h >= 12 ? 'PM' : 'AM'}`;
+  let dateText = '';
+  if (date && /^\d{4}-\d{2}-\d{2}$/.test(date)) {
+    const [y, mo, d] = date.split('-').map(Number);
+    dateText = new Date(y, mo - 1, d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase();
+  }
+  return dateText ? `${dateText} · ${timeText}` : timeText;
+}
+
+// The payment mode picked at checkout (Cash / Card / E-Wallet / Bank).
+function paymentModeLabel(order: SavedOrder) {
+  const method = order.paymentMethod || 'Cash';
+  if (method === 'Bank' && order.bankName) return `BANK (${order.bankName.toUpperCase()})`;
+  return method.toUpperCase();
+}
+
 function buildOrderReceiptBodyHtml(order: SavedOrder) {
   const itemsTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const billTotal = order.total ?? itemsTotal;
@@ -112,7 +132,8 @@ function buildOrderReceiptBodyHtml(order: SavedOrder) {
   return `
     <p>DATE: ${dateString}</p>
     <p>TIME: ${timeString}</p>
-    <p>TYPE: ${order.orderType.toUpperCase()}</p>
+    ${order.appointmentTime ? `<p>APPOINTMENT: ${appointmentSlotLabel(order.appointmentDate, order.appointmentTime)}</p>` : ''}
+    ${order.doctorName ? `<p>DR: ${order.doctorName.toUpperCase()}</p>` : ''}
     ${hasRealCustomer ? `<p>PATIENT: ${order.customer.name.toUpperCase()}</p>` : ''}
     ${hasRealPhone ? `<p>PHONE: ${order.customer.phone}</p>` : ''}
     ${order.customer?.address ? `<p>ADDRESS: ${order.customer.address}</p>` : ''}
@@ -126,7 +147,7 @@ function buildOrderReceiptBodyHtml(order: SavedOrder) {
     <div class="row"><span>Items Total:</span><span>$${itemsTotal.toFixed(2)}</span></div>
     ${discountAmount > 0 ? `<div class="row"><span>Discount:</span><span>-$${discountAmount.toFixed(2)}</span></div>` : ''}
     <div class="row bold"><span>TOTAL:</span><span>$${billTotal.toFixed(2)}</span></div>
-    <p style="margin-top:8px">PAID: ${(order.paymentMethod || 'CASH').toUpperCase()}</p>
+    <p style="margin-top:8px">PAYMENT MODE: ${paymentModeLabel(order)}</p>
     ${cashReceived > 0 ? `
       <div class="row bold"><span>TOTAL BILL:</span><span>$${billTotal.toFixed(2)}</span></div>
       <div class="row"><span>CASH TENDERED/RECEIVED:</span><span>$${cashReceived.toFixed(2)}</span></div>

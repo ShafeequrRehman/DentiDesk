@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { SavedOrder } from '@/lib/pos-types';
 import { getStoreSettings, defaultSettings } from '@/lib/pos-settings';
+import { formatAppointmentDate, formatSlot } from '@/lib/appointments';
 
 export default function ThermalReceipt({
   order,
@@ -131,7 +132,10 @@ export default function ThermalReceipt({
       <div className="mb-2">
         <p>DATE: {dateString}</p>
         <p>TIME: {timeString}</p>
-        <p>TYPE: {order.orderType.toUpperCase()}</p>
+        {order.appointmentTime ? (
+          <p>APPOINTMENT: {formatAppointmentDate(order.appointmentDate).toUpperCase()}{order.appointmentDate ? ' · ' : ''}{formatSlot(order.appointmentTime)}</p>
+        ) : null}
+        {order.doctorName ? <p>DR: {order.doctorName.toUpperCase()}</p> : null}
         {order.customer && order.customer.name && !['Walk-in Customer', 'Walk-in Patient'].includes(order.customer.name) && (
           <p>PATIENT: {order.customer.name.toUpperCase()}</p>
         )}
@@ -208,7 +212,7 @@ export default function ThermalReceipt({
           </div>
 
           <div className="mt-3">
-            <p>PAID: {order.paymentMethod?.toUpperCase() || 'CASH'}</p>
+            <p>PAYMENT MODE: {order.paymentMethod === 'Bank' && order.bankName ? `BANK (${order.bankName.toUpperCase()})` : (order.paymentMethod || 'Cash').toUpperCase()}</p>
             {/* Change-Return Calculation: these three exact rows (Total
                 Bill / Cash Tendered/Received / Change Returned), same as a
                 standard supermarket or fast-food till receipt - only for a
