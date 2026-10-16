@@ -49,7 +49,7 @@ export const sales = {
   editLocked: "Edit Locked",
 
   boxLabels: {
-    doctor: "Dr",
+    doctor: "Dr / Service",
     appointmentDate: "Appointment Date",
     timeSlot: "Time Slot",
     checkup: "Checkup",

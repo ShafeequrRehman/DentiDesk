@@ -98,10 +98,24 @@ export default function DoctorsPage() {
 
   const services = useMemo(() => products.filter((p) => !isDoctorProduct(p)).sort((a, b) => a.name.localeCompare(b.name)), [products]);
 
+  // Services are booked exactly like Drs (own date + time slot), so the
+  // Services tab works the same way: pick a Service, see its appointments.
+  const serviceCards = useMemo<DoctorCard[]>(() => {
+    const byName = new Map<string, DoctorCard>();
+    services.forEach((p) => {
+      if (!byName.has(p.name)) {
+        byName.set(p.name, { name: p.name, image: resolveProductImage(p), category: p.category, price: p.price });
+      }
+    });
+    return [...byName.values()];
+  }, [services]);
+
   const visibleDoctors = useMemo(() => {
+    const source = tab === 'drs' ? doctors : serviceCards;
     const q = doctorSearch.trim().toLowerCase();
-    return q ? doctors.filter((d) => d.name.toLowerCase().includes(q)) : doctors;
-  }, [doctors, doctorSearch]);
+    return q ? source.filter((d) => d.name.toLowerCase().includes(q)) : source;
+  }, [tab, doctors, serviceCards, doctorSearch]);
+  const kindLabel = tab === 'drs' ? 'Dr' : 'Service';
 
   // Today's waiting count per Dr, shown on each Dr card.
   const loadTodayCounts = useCallback(async () => {
@@ -178,7 +192,7 @@ export default function DoctorsPage() {
     }
   }
 
-  const selectedDoctorCard = doctors.find((d) => d.name === selectedDoctor) || null;
+  const selectedDoctorCard = [...doctors, ...serviceCards].find((d) => d.name === selectedDoctor) || null;
 
   return (
     <div className="space-y-6">
@@ -190,10 +204,10 @@ export default function DoctorsPage() {
           <p className="font-bold text-gray-500">Each Dr&apos;s appointments, checkups and prescriptions - and every service the clinic offers.</p>
         </div>
         <div className="flex gap-2 rounded-full bg-white p-1.5 shadow-sm">
-          <button type="button" onClick={() => setTab('drs')} className={`rounded-full px-5 py-2 text-sm font-black ${tab === 'drs' ? 'bg-black text-white' : 'text-gray-500'}`}>
+          <button type="button" onClick={() => { setTab('drs'); setSelectedDoctor(null); setDoctorSearch(''); }} className={`rounded-full px-5 py-2 text-sm font-black ${tab === 'drs' ? 'bg-black text-white' : 'text-gray-500'}`}>
             Drs ({doctors.length})
           </button>
-          <button type="button" onClick={() => setTab('services')} className={`rounded-full px-5 py-2 text-sm font-black ${tab === 'services' ? 'bg-black text-white' : 'text-gray-500'}`}>
+          <button type="button" onClick={() => { setTab('services'); setSelectedDoctor(null); setDoctorSearch(''); }} className={`rounded-full px-5 py-2 text-sm font-black ${tab === 'services' ? 'bg-black text-white' : 'text-gray-500'}`}>
             Services ({services.length})
           </button>
         </div>
@@ -201,9 +215,7 @@ export default function DoctorsPage() {
 
       {catalogError ? <div className="rounded-2xl border border-rose-200 bg-rose-50 p-4 text-sm font-bold text-rose-700">{catalogError}</div> : null}
 
-      {tab === 'services' ? (
-        <ServicesList services={services} loading={catalogLoading} />
-      ) : (
+      {(
         <div className="grid gap-6 xl:grid-cols-[320px_minmax(0,1fr)]">
           {/* Drs list */}
           <aside className="space-y-3 rounded-[32px] bg-white p-5 shadow-sm">
@@ -212,15 +224,17 @@ export default function DoctorsPage() {
               <input
                 value={doctorSearch}
                 onChange={(event) => setDoctorSearch(event.target.value)}
-                placeholder="Search Drs..."
+                placeholder={tab === 'drs' ? 'Search Drs...' : 'Search Services...'}
                 className="w-full rounded-2xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-3 text-sm font-semibold outline-none focus:border-indigo-400"
               />
             </div>
             {catalogLoading ? (
-              <p className="py-6 text-center text-sm font-bold text-gray-400">Loading Drs...</p>
+              <p className="py-6 text-center text-sm font-bold text-gray-400">Loading...</p>
             ) : visibleDoctors.length === 0 ? (
               <p className="rounded-2xl bg-gray-50 p-4 text-sm font-semibold text-gray-500">
-                No Drs found. Add a Dr from Settings &gt; Manage Appointments with the category <b>Drs</b>.
+                {tab === 'drs'
+                  ? <>No Drs found. Add a Dr from Settings &gt; Manage Appointments with the category <b>Drs</b>.</>
+                  : <>No Services found. Add a Service from Settings &gt; Manage Appointments with the category <b>Services</b>.</>}
               </p>
             ) : (
               <div className="space-y-2">
@@ -257,7 +271,7 @@ export default function DoctorsPage() {
             {!selectedDoctor ? (
               <div className="flex min-h-[320px] flex-col items-center justify-center gap-3 text-center text-gray-400">
                 <UserRound size={42} />
-                <p className="text-sm font-bold">Click a Dr to see their appointments and patients.</p>
+                <p className="text-sm font-bold">Click a {kindLabel} to see its appointments and patients.</p>
               </div>
             ) : (
               <div className="space-y-5">

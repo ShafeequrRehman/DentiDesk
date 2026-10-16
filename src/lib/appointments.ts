@@ -168,7 +168,7 @@ export function printPrescription(order: SavedOrder) {
   const prescription = escapeHtml(order.prescription || '').replace(/\n/g, '<br/>');
   const checkedDate = order.checkedAt ? new Date(order.checkedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
   const bodyHtml = `
-    <p><b>DR:</b> ${escapeHtml(order.doctorName || '')}</p>
+    <p><b>${/^dr\.?\s/i.test(order.doctorName || '') ? 'DR' : 'SERVICE'}:</b> ${escapeHtml(order.doctorName || '')}</p>
     <p><b>PATIENT:</b> ${escapeHtml(patientName.toUpperCase())}</p>
     ${phone ? `<p><b>PHONE:</b> ${escapeHtml(phone)}</p>` : ''}
     <p><b>DATE:</b> ${formatAppointmentDate(order.appointmentDate)} ${formatSlot(order.appointmentTime)}</p>

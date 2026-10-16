@@ -390,7 +390,11 @@ exports.createOrder = async (req, res) => {
     // unambiguous too - there's only ever one order worth remembering.
     // A Dr appointment needs a free date + time slot for that Dr.
     let slotFields = {};
-    const doctorItem = items.find((item) => isDoctorProduct(byKey.get(`${item.name}::${item.variation}`) || byKey.get(item.name)));
+    // The Dr in the cart - or, for a Service booked on its own, that Service
+    // (Services have their own date + time slots, same as Drs).
+    const productFor = (item) => byKey.get(`${item.name}::${item.variation}`) || byKey.get(item.name);
+    const doctorItem = items.find((item) => isDoctorProduct(productFor(item)))
+      || items.find((item) => !productFor(item)?.specialType);
     if (doctorItem) {
       const appointmentDate = String(payload.appointmentDate || "").trim();
       const appointmentTime = String(payload.appointmentTime || "").trim();

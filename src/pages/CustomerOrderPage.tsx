@@ -1054,7 +1054,8 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   const cartLines = Array.from(cart.values());
   const cartCount = cartLines.reduce((sum, line) => sum + line.quantity, 0);
   const cartTotal = cartLines.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
-  const doctorName = cartLines.find((line) => isDoctorProduct(line.product))?.product.name || '';
+  // The Dr in the cart, or - a Service booked on its own - that Service.
+  const doctorName = cartLines.find((line) => isDoctorProduct(line.product))?.product.name || cartLines[0]?.product.name || '';
 
   useEffect(() => {
     if (!doctorName || !appointmentDate) {

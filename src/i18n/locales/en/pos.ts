@@ -100,7 +100,7 @@ export const pos = {
   appointmentDateLabel: "Appointment Date",
   appointmentTimeLabel: "Time Slot",
   appointmentTimeLabelFor: "Time Slot - {{doctor}}",
-  appointmentPickDoctorFirst: "Add a Dr to the appointment to pick a time slot.",
+  appointmentPickDoctorFirst: "Add a Dr or Service to the appointment to pick a time slot.",
   appointmentSlotBookedBy: "Booked - {{name}}",
   appointmentSlotsLoading: "Checking free slots...",
   appointmentSlotSelected: "Selected: {{time}}",

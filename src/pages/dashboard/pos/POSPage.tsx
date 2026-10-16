@@ -368,12 +368,14 @@ export default function POSPage() {
     }
   }, []);
 
+  // Who the time slot is booked with: the Dr in the cart, or - for a
+  // Service booked on its own - that Service (it has its own slots too).
   const doctorName = useMemo(() => {
     for (const item of cart) {
       const product = products.find((p) => p.id === item.id);
       if (isDoctorProduct(product || { name: item.name })) return item.name;
     }
-    return '';
+    return cart.find((item) => !item.specialType)?.name || '';
   }, [cart, products]);
 
   const timeSlots = useMemo(() => buildTimeSlots(), []);

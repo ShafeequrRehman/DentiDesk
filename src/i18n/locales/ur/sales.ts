@@ -46,7 +46,7 @@ export const sales = {
   editLocked: "ترمیم بند ہے",
 
   boxLabels: {
-    doctor: "ڈاکٹر",
+    doctor: "ڈاکٹر / سروس",
     appointmentDate: "اپائنٹمنٹ کی تاریخ",
     timeSlot: "وقت",
     checkup: "چیک اپ",
