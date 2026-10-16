@@ -21,6 +21,7 @@ export const pos = {
   sizesOptions: "{{count}} sizes/options",
   fromPrice: "From ${{price}}",
   select: "Select",
+  bookAppointment: "Book Appointment",
   loadMore: "Load More ({{count}} more)",
   currentOrder: "Current Appointment",
   posCheckout: "POS Checkout",

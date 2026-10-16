@@ -191,6 +191,7 @@ exports.getMenu = async (req, res) => {
         // look.
         color: product.color || "bg-slate-50",
         description: product.description || "",
+        workAs: product.workAs || "",
         isDeal: Boolean(product.isDeal),
       })),
     });

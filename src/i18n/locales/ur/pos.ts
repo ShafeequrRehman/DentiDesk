@@ -17,6 +17,7 @@ export const pos = {
   sizesOptions: "{{count}} سائز/آپشنز",
   fromPrice: "شروع ${{price}} سے",
   select: "منتخب کریں",
+  bookAppointment: "اپائنٹمنٹ بک کریں",
   loadMore: "مزید دکھائیں ({{count}} مزید)",
   currentOrder: "موجودہ اپائنٹمنٹ",
   posCheckout: "POS چیک آؤٹ",

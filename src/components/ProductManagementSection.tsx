@@ -112,6 +112,7 @@ export function ProductManagementSection({
   // screen to instantly add this exact product/deal to the cart - see
   // POSPage.tsx's product-code entry box.
   const [productCode, setProductCode] = useState("");
+  const [workAs, setWorkAs] = useState("");
   // How this product is counted/measured - reused from Ingredient's own
   // unit list (see backend/models/Product.js's own comment) so a newly
   // added product's auto-created Stock entry is tracked in the same unit.
@@ -173,6 +174,7 @@ export function ProductManagementSection({
     setImage("");
     setVariation("Standard");
     setProductCode("");
+    setWorkAs("");
     setUnit("pcs");
     setPreservedDealFields({ isDeal: false, dealItems: [], description: "" });
   }
@@ -184,6 +186,7 @@ export function ProductManagementSection({
       company: company.trim(),
       image: image,
       color: "bg-indigo-500",
+      workAs: workAs.trim(),
       unit,
       // Preserved as-is from whatever was already on the product being
       // edited (or the "not a deal" defaults for a brand new product) -
@@ -256,6 +259,7 @@ export function ProductManagementSection({
     setQty(product.stock > 0 ? product.stock.toString() : "");
     setImage(product.image || "");
     setProductCode(product.productCode || "");
+    setWorkAs(product.workAs || "");
     setCategory(product.category);
     setCompany(product.company || "");
     setUnit(product.unit || "pcs");
@@ -417,6 +421,20 @@ export function ProductManagementSection({
               className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
             />
             <p className="text-[10px] font-bold text-slate-400 ml-1">{t("productManagement.fields.productNameHint", { category: category || t("common.category") })}</p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">
+              {t("productManagement.fields.workAs")}
+            </label>
+            <input
+              type="text"
+              value={workAs}
+              maxLength={120}
+              onChange={(e) => setWorkAs(e.target.value)}
+              placeholder={t("productManagement.fields.workAsPlaceholder")}
+              className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+            />
+            <p className="text-[10px] font-bold text-slate-400 ml-1">{t("productManagement.fields.workAsHint")}</p>
           </div>
         </div>
 

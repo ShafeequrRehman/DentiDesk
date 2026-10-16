@@ -1419,7 +1419,7 @@ export default function POSPage() {
                         part) was the one getting truncated ("From PKR ..."). */}
                     <div className={`${viewMode === 'list' ? '' : 'mt-1 pt-1 border-t border-gray-50'}`}>
                       <p className="truncate text-[12px] font-black text-gray-900">{hasVariations ? t('pos.fromPrice', { price: cheapestPrice }) : `$${group.variations[0].price}`}</p>
-                      <span className="mt-1 inline-flex w-fit shrink-0 items-center justify-center rounded-[8px] bg-black h-[22px] px-2.5 text-[9px] font-bold text-white transition group-hover:bg-[#00B0C7] group-hover:text-black">{hasVariations ? t('pos.select') : t('common.add')}</span>
+                      <span className="mt-1 inline-flex w-fit shrink-0 items-center justify-center rounded-[8px] bg-black h-[22px] px-2.5 text-[9px] font-bold text-white transition group-hover:bg-[#00B0C7] group-hover:text-black">{hasVariations ? t('pos.select') : t('pos.bookAppointment')}</span>
                     </div>
                   </div>
                 </button>

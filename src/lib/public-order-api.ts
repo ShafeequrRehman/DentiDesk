@@ -21,6 +21,8 @@ export interface PublicMenuProduct {
   // synchronized with the exact catalog set up on desktop.
   color: string;
   description: string;
+  // What the Dr works as (e.g. "Senior Dentist") - shown to patients.
+  workAs?: string;
   isDeal: boolean;
 }
 

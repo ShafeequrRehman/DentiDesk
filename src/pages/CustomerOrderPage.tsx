@@ -1183,7 +1183,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
         <div className="flex items-center justify-between">
           <div>
             <h1 className="text-xl font-black">{menu?.shopName || 'Menu'}</h1>
-            <p className="text-xs font-semibold text-white/60">Appointment Takeaway or Delivery</p>
+            <p className="text-xs font-semibold text-white/60">Book your appointment online</p>
           </div>
           {installPromptEvent ? (
             <button
@@ -1264,6 +1264,11 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                 )}
               </div>
               <p className="text-sm font-black text-gray-900">{group.name}</p>
+              {group.variations.find((v) => v.workAs)?.workAs ? (
+                <p className="mt-0.5 inline-flex max-w-full items-center rounded-full bg-[#EBFAFC] px-2.5 py-0.5 text-[11px] font-bold text-[#007F90]">
+                  <span className="truncate">{group.variations.find((v) => v.workAs)?.workAs}</span>
+                </p>
+              ) : null}
               <p className="text-[11px] text-gray-400">{hasVariations ? `${group.variations.length} sizes/options` : single.variation}</p>
               <p className="mt-1 text-sm font-black text-gray-900">{hasVariations ? `From $${formatter.format(cheapest)}` : `$${formatter.format(single.price)}`}</p>
               {hasVariations ? (
@@ -1272,10 +1277,10 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                 </button>
               ) : line ? (
                 <button type="button" onClick={() => changeQuantity(single, -line.quantity)} className="glass-pill mt-2 flex w-full items-center justify-center gap-1.5 rounded-xl py-2 text-xs font-black text-emerald-700 transition hover:text-rose-600">
-                  <Check size={14} /> Added · Remove
+                  <Check size={14} /> Booked · Remove
                 </button>
               ) : (
-                <button type="button" onClick={() => handleGroupTap(group)} className="mt-2 w-full rounded-xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] py-2 text-xs font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(0,110,125,0.4)] transition hover:brightness-105">Add</button>
+                <button type="button" onClick={() => handleGroupTap(group)} className="mt-2 w-full rounded-xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] py-2 text-xs font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(0,110,125,0.4)] transition hover:brightness-105">Book Appointment</button>
               )}
             </div>
           );
