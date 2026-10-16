@@ -80,7 +80,11 @@ async function autoLinkIngredientForNewProduct(product) {
 exports.createProduct = async (req, res) => {
   try {
     const product = await Product.create({ ...req.body, shopId: req.user.shopId });
-    await autoLinkIngredientForNewProduct(product);
+    // Clinic: a Dr or Service is not a stock item, so it no longer gets its
+    // own Medicine Stock entry. Its medicines are set on the Set Medicine
+    // page instead (Recipe). autoLinkIngredientForNewProduct is kept for
+    // reference only.
+    void autoLinkIngredientForNewProduct;
     res.status(201).json(product);
   } catch (error) {
     // Duplicate Product Code within this shop (see Product.js's partial

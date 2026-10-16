@@ -27,7 +27,7 @@ import { useLanguage } from '@/i18n';
 // order (or one placed before this was removed) still shows fine under
 // "All"; the byFilter checks below simply have no dedicated pill for it
 // anymore.
-const BASE_FILTERS = ['All', 'Take Away', 'Delivery'];
+const BASE_FILTERS = ['All'];
 
 // Order card styling, keyed by status - a thin all-around border + a
 // matching soft background tint + badge tone, so the card's state reads at
@@ -1371,7 +1371,6 @@ export default function SalesPage() {
                         ) : null}
                       </div>
                       <Line icon={<Phone size={15} />} text={phoneLabel(order, t)} />
-                      <Line icon={<ShoppingBag size={15} />} text={t('sales.orderTypeItemsCount', { type: prettyType(order, t), count: order.itemCount ?? order.items.length })} />
                       {order.appointmentTime ? <Line icon={<CalendarClock size={15} />} text={`${formatAppointmentDate(order.appointmentDate)} · ${formatSlot(order.appointmentTime)}${order.doctorName ? ` · ${order.doctorName}` : ''}`} /> : null}
                     </div>
                     <div className={`mt-4 flex items-center justify-center gap-2 rounded-full px-4 py-2.5 text-sm font-black ${STATUS_TOTAL_PILL[order.status] ?? 'glass-dark'}`}>
@@ -1473,7 +1472,6 @@ export default function SalesPage() {
                       <Box label={t('sales.boxLabels.table')} value={t('sales.notApplicable')} />
                     )
                   ) : null}
-                  <Box label={t('sales.boxLabels.orderType')} value={prettyType(selectedOrder, t)} />
                   {selectedOrder.appointmentTime ? (
                     <>
                       <Box label={t('sales.boxLabels.doctor')} value={selectedOrder.doctorName || t('sales.notApplicable')} />
@@ -1523,6 +1521,7 @@ export default function SalesPage() {
                     onAssignRider={handleAssignRider}
                     respondingToChangeRequest={respondingToChangeRequest}
                     onRespondToChangeRequest={handleRespondToChangeRequest}
+                    onComplete={selectedOrder.status === 'pending' && isSelectedOrderHydrated ? () => { setDiscountAmountInput(''); setDiscountPercentInput(''); setShowPayment(true); } : undefined}
                   />
                 ) : null}
 
@@ -1841,8 +1840,8 @@ function trackingStepLabel(status: string, t: Translate) {
   const map: Record<string, string> = {
     awaiting_confirmation: t('sales.tracking.awaitingConfirmation'),
     confirmed: t('sales.tracking.confirmed'),
-    preparing: t('sales.tracking.preparing'),
-    ready: t('sales.tracking.ready'),
+    preparing: t('sales.tracking.confirmed'),
+    ready: t('sales.tracking.confirmed'),
     cancelled: t('sales.tracking.cancelled'),
   };
   return map[status] ?? status;
@@ -1864,6 +1863,7 @@ function OnlineOrderControls({
   onAssignRider,
   respondingToChangeRequest,
   onRespondToChangeRequest,
+  onComplete,
 }: {
   order: SavedOrder;
   updating: boolean;
@@ -1873,6 +1873,7 @@ function OnlineOrderControls({
   onAssignRider: (order: SavedOrder, rider: Rider) => void;
   respondingToChangeRequest: boolean;
   onRespondToChangeRequest: (order: SavedOrder, action: 'approve' | 'reject') => void;
+  onComplete?: () => void;
 }) {
   const { t } = useLanguage();
   const current = order.trackingStatus || 'awaiting_confirmation';
@@ -1882,14 +1883,14 @@ function OnlineOrderControls({
 
   if (current === 'cancelled') return null;
 
-  const nextSteps: TrackingStatus[] =
-    current === 'awaiting_confirmation' ? ['confirmed'] : current === 'confirmed' ? ['preparing'] : current === 'preparing' ? ['ready'] : [];
+  // Clinic flow: Confirm, then Complete (no preparing/ready steps).
+  const nextSteps: TrackingStatus[] = current === 'awaiting_confirmation' ? ['confirmed'] : [];
 
   // Rider assignment only makes sense for Delivery orders, and only once
   // staff has actually accepted the order (past awaiting_confirmation) -
   // per the user's own request: "after accepting the order add option to
   // assign rider to send him the location and order details of customer".
-  const showRiderPicker = order.orderType === 'Delivery' && current !== 'awaiting_confirmation';
+  const showRiderPicker = false;
 
   return (
     <div className="rounded-[20px] border border-indigo-100 bg-indigo-50/60 p-4">
@@ -1913,6 +1914,16 @@ function OnlineOrderControls({
               {t('sales.online.markStatus', { status: trackingStepLabel(step, t) })}
             </button>
           ))}
+          {current !== 'awaiting_confirmation' && onComplete ? (
+            <button
+              type="button"
+              disabled={updating}
+              onClick={onComplete}
+              className="rounded-2xl bg-emerald-600 px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-50"
+            >
+              {t('sales.online.markStatus', { status: t('sales.tracking.completed') })}
+            </button>
+          ) : null}
           <button
             type="button"
             disabled={updating}

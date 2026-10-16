@@ -453,7 +453,8 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
       }
       toast.success(alreadyDone
         ? 'Medicine details updated.'
-        : `Checkup complete - the ${formatSlot(order.appointmentTime)} slot is free again.`);
+        : `Checkup complete - the ${formatSlot(order.appointmentTime)} slot is free again. Its set medicines were taken off Medicine Stock.`);
+      if (updated.stockWarning) toast.error(updated.stockWarning);
       onSaved(merged);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save this checkup.');

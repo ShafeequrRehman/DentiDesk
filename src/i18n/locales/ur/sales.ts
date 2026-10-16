@@ -187,6 +187,7 @@ export const sales = {
     confirmed: "تصدیق شدہ",
     preparing: "تیار ہو رہا ہے",
     ready: "تیار",
+    completed: "مکمل",
     cancelled: "منسوخ",
   },
 

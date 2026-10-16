@@ -304,6 +304,10 @@ const orderSchema = new mongoose.Schema(
     // every order with no matching recipe, and for every order placed
     // before this field existed.
     stockDeductions: { type: [stockDeductionSchema], default: [] },
+    // Clinic: medicines/disposables come off Medicine Stock when the
+    // appointment is finished (checkup done or appointment completed), not
+    // when it is booked. True once that has happened, so it only runs once.
+    stockDeducted: { type: Boolean, default: false },
     // Task 2 (Purchasing/Financial Logic): the real-time ingredient cost of
     // this order's items, computed once at creation by
     // services/stockService.js's deductStockForItems using each

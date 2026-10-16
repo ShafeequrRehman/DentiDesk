@@ -190,6 +190,7 @@ export const sales = {
     confirmed: "Confirmed",
     preparing: "Preparing",
     ready: "Ready",
+    completed: "Completed",
     cancelled: "Cancelled",
   },
 

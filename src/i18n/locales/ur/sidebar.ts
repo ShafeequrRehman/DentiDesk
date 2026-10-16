@@ -6,6 +6,7 @@ export const sidebar = {
   accounting: "اکاؤنٹنگ",
   purchase: "خریداری",
   "ingredient-stock": "میڈیسن اسٹاک",
+  "medicine-setup": "میڈیسن سیٹ کریں",
   dues: "مریض واجبات",
   ledger: "لیجر",
   bank: "بینک",

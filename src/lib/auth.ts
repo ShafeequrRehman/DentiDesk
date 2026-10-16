@@ -173,6 +173,8 @@ export function hasAnyPermission(keys: string[]): boolean {
 export function isPageEnabled(pageKey: string): boolean {
   const enabledPages = getAuthShop()?.enabledPages;
   if (!enabledPages) return true;
+  // Set Medicine is part of Medicine Stock - shown wherever that page is on.
+  if (pageKey === 'medicine-setup') return enabledPages.includes(pageKey) || enabledPages.includes('ingredient-stock');
   return enabledPages.includes(pageKey);
 }
 

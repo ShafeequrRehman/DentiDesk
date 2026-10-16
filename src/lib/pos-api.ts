@@ -603,6 +603,20 @@ export async function fetchRecipes() {
   }
 }
 
+// Set Medicine page: saves the full medicine/disposable list for one
+// Dr/Service (an empty list removes it). See backend recipeController.js.
+export async function saveRecipeForProduct(
+  productId: string,
+  ingredients: Array<{ ingredientId: string; quantity: number; unit: IngredientUnit }>,
+) {
+  try {
+    const response = await api.put<Recipe & { _id?: string; deleted?: boolean }>(`/recipes/product/${productId}`, { ingredients });
+    return normalizeRecipe(response.data);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 // --- Ingredient Purchases (Purchasing/Financial Logic Task 1) ---
 
 function normalizeIngredientPurchase(purchase: IngredientPurchase & { _id?: string }) {
@@ -1041,8 +1055,10 @@ export async function fetchAppointments(query: AppointmentQuery) {
 // medicine details; done:false re-opens it.
 export async function saveCheckup(id: string, prescription: string, done = true) {
   try {
-    const response = await api.patch<SavedOrder & { _id?: string }>(`/orders/${id}/checkup`, { prescription, done });
-    return normalizeOrder(response.data);
+    const response = await api.patch<SavedOrder & { _id?: string; stockWarning?: string | null }>(`/orders/${id}/checkup`, { prescription, done });
+    // stockWarning: set when a medicine ran short while taking this
+    // appointment's medicines off Medicine Stock.
+    return Object.assign(normalizeOrder(response.data), { stockWarning: response.data.stockWarning ?? null });
   } catch (error) {
     handleApiError(error);
   }

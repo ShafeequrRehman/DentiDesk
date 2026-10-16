@@ -21,6 +21,7 @@ import BankPage from '@/pages/dashboard/BankPage';
 import RecordPage from '@/pages/dashboard/RecordPage';
 import ShiftsPage from '@/pages/dashboard/ShiftsPage';
 import DoctorsPage from '@/pages/dashboard/DoctorsPage';
+import MedicineSetupPage from '@/pages/dashboard/MedicineSetupPage';
 import PayrollPage from '@/pages/dashboard/PayrollPage';
 import OfflineSyncPage from '@/pages/dashboard/OfflineSyncPage';
 import ReportsPage from '@/pages/dashboard/ReportsPage';
@@ -109,6 +110,7 @@ export default function App() {
             </Route>
             <Route element={<RequirePermission permission={['inventory.manage', 'stock.manage']} />}>
               <Route path="ingredient-stock" element={<IngredientStockPage />} />
+              <Route path="medicine-setup" element={<MedicineSetupPage />} />
             </Route>
             <Route element={<RequirePermission permission="dues.manage" />}>
               <Route path="dues" element={<DuesPage />} />

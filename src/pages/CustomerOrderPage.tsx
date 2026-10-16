@@ -133,9 +133,10 @@ function clearSavedOrderId(shopId: string) {
 
 const TRACKING_LABELS: Record<string, { label: string; tone: string }> = {
   awaiting_confirmation: { label: 'Waiting for the clinic to accept your appointment', tone: 'bg-amber-50 text-amber-800' },
-  confirmed: { label: 'Appointment confirmed - getting started', tone: 'bg-blue-50 text-blue-800' },
-  preparing: { label: 'Preparing your appointment', tone: 'bg-indigo-50 text-indigo-800' },
-  ready: { label: 'Ready', tone: 'bg-emerald-50 text-emerald-800' },
+  confirmed: { label: 'Your appointment is confirmed', tone: 'bg-blue-50 text-blue-800' },
+  // Older appointments may still carry these - they read as confirmed.
+  preparing: { label: 'Your appointment is confirmed', tone: 'bg-blue-50 text-blue-800' },
+  ready: { label: 'Your appointment is confirmed', tone: 'bg-blue-50 text-blue-800' },
   cancelled: { label: 'This appointment was cancelled', tone: 'bg-rose-50 text-rose-800' },
 };
 
@@ -547,8 +548,6 @@ function ChangeRequestModal({
 const PROGRESS_STEPS: Array<{ key: string; label: string }> = [
   { key: 'awaiting_confirmation', label: 'Placed' },
   { key: 'confirmed', label: 'Confirmed' },
-  { key: 'preparing', label: 'Preparing' },
-  { key: 'ready', label: 'Ready' },
   { key: 'completed', label: 'Completed' },
 ];
 
@@ -557,7 +556,9 @@ function OrderProgressStepper({ status }: { status: PublicOrderStatus }) {
   const currentIndex =
     status.status === 'completed'
       ? PROGRESS_STEPS.length - 1
-      : Math.max(PROGRESS_STEPS.findIndex((step) => step.key === status.trackingStatus), 0);
+      : ['confirmed', 'preparing', 'ready'].includes(status.trackingStatus)
+        ? 1
+        : 0;
 
   return (
     <div className="mt-5 flex items-start">
@@ -665,7 +666,6 @@ function OrderStatusPanel({
         </div>
 
         <div className="mt-3 space-y-2 rounded-[20px] bg-white/50 p-4 text-left text-sm shadow-inner">
-          <div className="flex justify-between"><span className="text-gray-500">Type</span><span className="font-black">{status.orderType === 'DineIn' ? 'Dine-In' : status.orderType}</span></div>
           {status.table ? <div className="flex justify-between"><span className="text-gray-500">Table</span><span className="font-black">{formatTableLabel(status.table)}</span></div> : null}
           {status.address ? <div className="flex justify-between gap-3"><span className="shrink-0 text-gray-500">Address</span><span className="text-right font-black">{status.address}</span></div> : null}
           <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="font-black">${formatter.format(status.subtotal)}</span></div>

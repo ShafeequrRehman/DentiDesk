@@ -12,6 +12,7 @@ export const sidebar = {
   accounting: "Accounting",
   purchase: "Purchase",
   "ingredient-stock": "Medicine Stock",
+  "medicine-setup": "Set Medicine",
   dues: "Patient Dues",
   ledger: "Ledger",
   bank: "Bank",

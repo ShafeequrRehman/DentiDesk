@@ -16,8 +16,14 @@ function recipeKey(name, variation) {
 
 async function buildRecipeLookup(shopId) {
   const recipes = await Recipe.find({ shopId }).lean();
+  // Key each recipe by its Drs/Service's CURRENT name, so renaming a Dr or
+  // Service on the Drs/Services page doesn't break its Set Medicine list.
+  const products = await Product.find({ _id: { $in: recipes.map((recipe) => recipe.productId) } }).select("name variation").lean();
+  const productById = new Map(products.map((product) => [String(product._id), product]));
   const map = new Map();
   for (const recipe of recipes) {
+    const product = productById.get(String(recipe.productId));
+    if (product) map.set(recipeKey(product.name, product.variation), recipe);
     map.set(recipeKey(recipe.productName, recipe.variation), recipe);
   }
   return map;
@@ -92,7 +98,11 @@ async function resolveIngredientQuantities(items, shopId) {
   // the name-matched fallback below (ingredientNameMap) can still produce
   // real deductions with zero Recipes configured at all, which is now the
   // normal/expected case for a shop that never sets any up.
-  const ingredientNameMap = await buildIngredientNameLookup(shopId);
+  // Clinic: no same-name fallback - a Dr/Service only takes medicines off
+  // stock through its Set Medicine list (Recipe). Otherwise a Dr named
+  // "Dr. Avery Ruben" would try to take "1 Dr. Avery Ruben" off stock.
+  void buildIngredientNameLookup;
+  const ingredientNameMap = new Map();
 
   // Deal/Combo bug fix: split this order's lines into ones that are
   // themselves a Deal product (matched against buildDealProductLookup

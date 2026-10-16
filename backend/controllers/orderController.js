@@ -249,6 +249,30 @@ function buildShopScope(req) {
   return shopScope(req);
 }
 
+// --- Clinic medicine stock ----------------------------------------------
+// The medicines/disposables set on each Dr or Service (Set Medicine page)
+// come off Medicine Stock when the appointment is FINISHED - the Dr marks
+// the checkup done, or the appointment is completed (paid), whichever
+// happens first - never when it is only booked. Runs once per appointment;
+// a later cancellation hands it all back (cancelOrderCore ->
+// restoreStockForOrder). Older orders that were already deducted at
+// booking time have stockDeductions filled in, so they count as done.
+function isStockApplied(order) {
+  return !!order.stockDeducted || (Array.isArray(order.stockDeductions) && order.stockDeductions.length > 0);
+}
+
+async function applyStockOnFinish(order) {
+  if (!order || order.status === "cancelled" || isStockApplied(order)) return null;
+  const result = await deductStockForItems(order.items || [], order.shopId);
+  order.stockDeductions = mergeStockDeductionsAdd(order.stockDeductions, result.deductions);
+  order.costPrice = Math.round((Number(order.costPrice || 0) + result.costPrice) * 100) / 100;
+  order.grossProfit = Math.round((Number(order.total || 0) - order.costPrice) * 100) / 100;
+  order.stockDeducted = true;
+  return result.warning || null;
+}
+
+const NO_STOCK_RESULT = { deductions: [], warning: null, costPrice: 0 };
+
 // --- Clinic appointment slots -------------------------------------------
 // A slot (doctorName + appointmentDate + appointmentTime) is "taken" while
 // an appointment holds it that isn't cancelled and whose checkup isn't
@@ -664,14 +688,11 @@ exports.createOrder = async (req, res) => {
 
     const totals = recalculateTotals(payload.items || [], payload.discount, payload.deliveryFee);
 
-    // Task 3 (Recipe/Stock Management): deduct raw-ingredient stock the
-    // moment this order is placed - that's when the kitchen actually starts
-    // cooking it, same moment the kitchen ticket itself fires. Computed
-    // BEFORE Order.create so the exact amounts taken off the shelf can be
-    // saved directly onto the new order's own stockDeductions field -
-    // that's what a later cancellation reverses (see cancelOrderCore).
-    // Never blocks the sale - see deductStockForItems' own comment.
-    const stockResult = await deductStockForItems(payload.items || [], req.user.shopId);
+    // Medicine stock only comes off when the appointment is finished (see
+    // applyStockOnFinish) - so only an appointment saved as already
+    // completed is deducted here. Never blocks the save.
+    const finishedNow = payload.status === "completed";
+    const stockResult = finishedNow ? await deductStockForItems(payload.items || [], req.user.shopId) : NO_STOCK_RESULT;
 
     const order = await Order.create({
       ...payload,
@@ -688,6 +709,7 @@ exports.createOrder = async (req, res) => {
       paidAmount: payload.paidAmount || 0,
       remainingAmount: typeof payload.remainingAmount === "number" ? payload.remainingAmount : totals.total,
       stockDeductions: stockResult.deductions,
+      stockDeducted: finishedNow,
       costPrice: stockResult.costPrice,
       grossProfit: Math.round((totals.total - stockResult.costPrice) * 100) / 100,
     });
@@ -968,11 +990,10 @@ exports.importOfflineOrders = async (req, res) => {
 
         const totals = recalculateTotals(payload.items || [], payload.discount, payload.deliveryFee);
 
-        // Same real-time deduction as the online createOrder path above -
-        // an offline order was already cooked/served on the till in the
-        // moment, so its ingredients must come off the shelf now, at import
-        // time, exactly as if it had been placed online to begin with.
-        const stockResult = await deductStockForItems(payload.items || [], req.user.shopId);
+        // Same rule as createOrder above: only an appointment that was
+        // already completed on the till takes medicine stock off now.
+        const finishedOffline = payload.status === "completed";
+        const stockResult = finishedOffline ? await deductStockForItems(payload.items || [], req.user.shopId) : NO_STOCK_RESULT;
         if (stockResult.warning) {
           console.warn(`Stock shortage importing offline appointment ${entry.localOrderId}:`, stockResult.warning);
         }
@@ -992,6 +1013,7 @@ exports.importOfflineOrders = async (req, res) => {
           paidAmount: payload.paidAmount || 0,
           remainingAmount: typeof payload.remainingAmount === "number" ? payload.remainingAmount : totals.total,
           stockDeductions: stockResult.deductions,
+          stockDeducted: finishedOffline,
           costPrice: stockResult.costPrice,
           grossProfit: Math.round((totals.total - stockResult.costPrice) * 100) / 100,
           createdOffline: true,
@@ -1193,7 +1215,7 @@ async function applyOrderPatch(order, patch, req, options) {
       // order.stockDeductions/costPrice (not overwritten) so a later full
       // cancellation still restores everything this order has ever really
       // taken off the shelf, across every edit, not just its original items.
-      if (delta.length > 0) {
+      if (delta.length > 0 && isStockApplied(order)) {
         const stockResult = await deductStockForItems(delta, order.shopId);
         order.stockDeductions = mergeStockDeductionsAdd(order.stockDeductions, stockResult.deductions);
         order.costPrice = Math.max(Number(order.costPrice || 0) + stockResult.costPrice, 0);
@@ -1217,7 +1239,10 @@ async function applyOrderPatch(order, patch, req, options) {
       // the stock ledger can never disagree about what went up); the
       // decrease half mirrors it via computeQuantityDecreaseDelta.
       const decreaseDelta = computeQuantityDecreaseDelta(order.items, patch.items);
-      if (decreaseDelta.length > 0) {
+      // Not finished yet -> nothing was taken off stock, nothing to sync;
+      // the full (edited) item list is deducted when it finishes.
+      const stockApplied = isStockApplied(order);
+      if (decreaseDelta.length > 0 && stockApplied) {
         // Give ingredients back FIRST, then take the increases off - order
         // doesn't actually matter for correctness (they touch the same
         // Ingredient docs additively/subtractively either way), but doing
@@ -1228,7 +1253,7 @@ async function applyOrderPatch(order, patch, req, options) {
         order.stockDeductions = mergeStockDeductionsSubtract(order.stockDeductions, restoreResult.restorations);
         order.costPrice = Math.max(Number(order.costPrice || 0) - restoreResult.creditValue, 0);
       }
-      if (delta.length > 0) {
+      if (delta.length > 0 && stockApplied) {
         const stockResult = await deductStockForItems(delta, order.shopId);
         order.stockDeductions = mergeStockDeductionsAdd(order.stockDeductions, stockResult.deductions);
         order.costPrice = Math.max(Number(order.costPrice || 0) + stockResult.costPrice, 0);
@@ -1312,6 +1337,7 @@ async function applyOrderPatch(order, patch, req, options) {
       order.paidAmount = Number(order.paidAmount || 0) + appliedToThis;
       order.remainingAmount = Math.max(thisOrderDue - appliedToThis, 0);
       order.status = "completed";
+      await applyStockOnFinish(order);
       paidTotal -= appliedToThis;
 
       if (customerPhone && customerPhone !== "03000000000") {
@@ -1342,7 +1368,10 @@ async function applyOrderPatch(order, patch, req, options) {
             const applied = Math.min(due, paidTotal);
             other.paidAmount = Number(other.paidAmount || 0) + applied;
             other.remainingAmount = Math.max(due - applied, 0);
-            if (other.remainingAmount === 0) other.status = "completed";
+            if (other.remainingAmount === 0) {
+              other.status = "completed";
+              await applyStockOnFinish(other);
+            }
             other.version = Number(other.version || 0) + 1;
             await other.save();
             paidTotal -= applied;
@@ -2005,10 +2034,12 @@ exports.completeCheckup = async (req, res) => {
     if (typeof req.body?.prescription === "string") {
       order.prescription = req.body.prescription.slice(0, 5000);
     }
+    let stockWarning = null;
     if (done) {
       order.checkupStatus = "done";
       order.checkedAt = new Date();
       order.checkedBy = await currentUserDisplayName(req);
+      stockWarning = await applyStockOnFinish(order);
     } else {
       const slot = cleanSlotFields(order);
       if (slot) {
@@ -2022,7 +2053,7 @@ exports.completeCheckup = async (req, res) => {
       order.checkedBy = "";
     }
     await order.save();
-    res.json({ ...order.toObject(), id: String(order._id) });
+    res.json({ ...order.toObject(), id: String(order._id), stockWarning });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
