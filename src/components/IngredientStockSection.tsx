@@ -304,7 +304,11 @@ export function IngredientStockSection({
         fetchIngredientPurchases(),
         fetchProducts(),
       ]);
-      setIngredients(ings || []);
+      // Medicine Stock only lists the medicines/materials the clinic adds
+      // here - older Drs/Services got an entry with their own name when
+      // they were created, those are hidden.
+      const productNames = new Set((productsResult?.products || []).map((p) => p.name.trim().toLowerCase()));
+      setIngredients((ings || []).filter((i) => !productNames.has(i.name.trim().toLowerCase())));
       setSuppliers(sups || []);
       setPurchases(purs || []);
       setProducts(productsResult?.products || []);
@@ -1169,22 +1173,6 @@ export function IngredientStockSection({
                 placeholder={t('ingredientStock.form.namePlaceholder')}
                 className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white pl-10 pr-4 rtl:pl-4 rtl:pr-10 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
               />
-              {isProductDropdownOpen && productSuggestions.length > 0 ? (
-                <div className="absolute z-10 mt-1.5 max-h-60 w-full overflow-y-auto rounded-2xl border border-slate-200 bg-white shadow-lg">
-                  {productSuggestions.map((p) => (
-                    <button
-                      key={p.id}
-                      type="button"
-                      onMouseDown={(e) => e.preventDefault()}
-                      onClick={() => { setName(p.name); setIsProductDropdownOpen(false); }}
-                      className="flex w-full items-center justify-between gap-3 px-4 py-2.5 text-left rtl:text-right text-sm font-bold text-slate-700 hover:bg-emerald-50 transition-colors"
-                    >
-                      <span className="truncate">{p.name}</span>
-                      {p.company ? <span className="shrink-0 text-xs font-bold text-slate-400">{p.company}</span> : null}
-                    </button>
-                  ))}
-                </div>
-              ) : null}
             </div>
           </div>
         </div>

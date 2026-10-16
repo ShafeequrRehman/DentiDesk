@@ -10,7 +10,7 @@ import {
   RotateCcw, XCircle, Wallet, Landmark, Package, Truck,
   ShoppingBag, Receipt, HandCoins, PiggyBank, Pencil, History as HistoryIcon, List,
 } from 'lucide-react';
-import { adjustCash, adjustDashboardTile, fetchCashSummary, fetchDashboardAdjustmentHistory, fetchDashboardSummary, fetchOrdersSummary, fetchProducts, fetchRecoveryHistory, fetchShopSessionHistory, fetchStockValueDetail, fetchVendorBalanceDetail, fetchSaleOnCashDetail, type OrderSummary } from '@/lib/pos-api';
+import { adjustCash, adjustDashboardTile, fetchCashSummary, fetchDashboardAdjustmentHistory, fetchDashboardSummary, fetchIngredients, fetchOrdersSummary, fetchProducts, fetchRecoveryHistory, fetchShopSessionHistory, fetchStockValueDetail, fetchVendorBalanceDetail, fetchSaleOnCashDetail, type OrderSummary } from '@/lib/pos-api';
 import { CashTransaction, DashboardAdjustmentHistoryEntry, DashboardAdjustmentKey, DashboardSummary, Product, RecoveryHistoryRow, SaleOnCashDetailRow, SavedOrder, ShopSession, StockValueDetailRow, VendorBalanceDetailRow } from '@/lib/pos-types';
 import { getBusinessWindow, filterOrdersInBusinessWindow, useShopSession, type BusinessWindow as SessionBusinessWindow } from '@/lib/shop-session';
 import { isDesktopApp } from '@/lib/api';
@@ -22,7 +22,7 @@ import { useToast } from '@/lib/toast';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import DrsServicesRevenue from '@/components/DrsServicesRevenue';
 
-type InventoryItem = { id: string | number; name: string; stock: number };
+type InventoryItem = { id: string | number; name: string; stock: number; unit?: string };
 // Extends the shared window (src/lib/shop-session.ts - the single source
 // of truth for the actual date-math, shared with Record/Sales) with the
 // display label this page renders in the header, which is presentation
@@ -69,6 +69,7 @@ function DashboardPageClientInner() {
   // (status/total/createdAt/customer.phone/waiter), so either is fine here.
   const [orders, setOrders] = useState<(SavedOrder | OrderSummary)[]>([]);
   const [products, setProducts] = useState<Product[]>([]);
+  const [medicines, setMedicines] = useState<InventoryItem[] | null>(null);
   const [chartsReady, setChartsReady] = useState(false);
   const [currentTime, setCurrentTime] = useState(new Date());
   const [shopSession, setShopSession] = useState<ShopSession | null>(null);
@@ -142,6 +143,17 @@ function DashboardPageClientInner() {
         if (productsRes?.products) setProducts(productsRes.products);
       })
       .catch((error) => console.error('Dashboard Drs/Services fetch error', error));
+  }, []);
+
+  // Low Inventory Alert reads Medicine Stock (not Drs/Services).
+  useEffect(() => {
+    if (!hasPermission('inventory.manage') && !hasPermission('stock.manage')) {
+      setMedicines([]);
+      return;
+    }
+    fetchIngredients()
+      .then((list) => setMedicines((list || []).filter((i) => i.isActive !== false).map((i) => ({ id: i.id, name: i.name, stock: Number(i.currentStock) || 0, unit: i.unit }))))
+      .catch(() => setMedicines([]));
   }, []);
 
   // Accounting Overview widgets (Total Sale, Customer Udhar/Advance, Cash
@@ -317,10 +329,15 @@ function DashboardPageClientInner() {
     return data.map(({ start: _start, end: _end, ...bucket }) => bucket);
   }, [businessOrders, businessWindow]);
 
-  const lowStockProducts = useMemo<InventoryItem[]>(() => {
-    const sorted = [...products].sort((left, right) => left.stock - right.stock).slice(0, 3);
-    return sorted.length > 0 ? sorted : [{ id: 'loading', name: 'Loading', stock: 0 }];
-  }, [products]);
+  const lowStockProducts = useMemo<InventoryItem[] | null>(() => {
+    if (medicines === null) return null;
+    // Drs/Services names are left out (older ones had a stock entry of their own).
+    const productNames = new Set(products.map((p) => p.name.trim().toLowerCase()));
+    return medicines
+      .filter((m) => !productNames.has(m.name.trim().toLowerCase()))
+      .sort((left, right) => left.stock - right.stock)
+      .slice(0, 3);
+  }, [medicines, products]);
 
   const formatter = new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 });
 
@@ -1748,7 +1765,7 @@ function StatusRing({ stats }: { stats: ServiceStats }) {
   );
 }
 
-function InventoryCard({ products }: { products: InventoryItem[] }) {
+function InventoryCard({ products }: { products: InventoryItem[] | null }) {
   const colors = ['bg-red-400', 'bg-orange-400', 'bg-blue-400'];
   return (
     <div className="rounded-[32px] bg-white p-6 shadow-sm">
@@ -1757,21 +1774,27 @@ function InventoryCard({ products }: { products: InventoryItem[] }) {
         <span className="text-[10px] font-bold uppercase text-gray-400">Stock</span>
       </div>
       <div className="space-y-5">
-        {products.map((product, index) => (
-          <InventoryBar key={String(product.id)} label={product.name} color={colors[index % 3]} value={Math.max(5, product.stock || 0)} total={product.stock || 0} />
-        ))}
+        {products === null ? (
+          <p className="text-xs font-bold text-gray-400">Loading...</p>
+        ) : products.length === 0 ? (
+          <p className="text-xs font-bold text-gray-400">No medicines or materials in Medicine Stock yet.</p>
+        ) : (
+          products.map((product, index) => (
+            <InventoryBar key={String(product.id)} label={product.name} color={colors[index % 3]} value={Math.max(5, product.stock || 0)} total={product.stock || 0} unit={product.unit} />
+          ))
+        )}
       </div>
     </div>
   );
 }
 
-function InventoryBar({ color, value, total, label }: { color: string; value: number; total: number; label: string }) {
+function InventoryBar({ color, value, total, label, unit }: { color: string; value: number; total: number; label: string; unit?: string }) {
   const widthVal = Math.min(100, Math.max(5, value));
   return (
     <div>
       <div className="mb-1.5 flex justify-between truncate px-1 text-[10px] font-bold text-gray-400">
         <span className="truncate">{label}</span>
-        <span>{total} Left</span>
+        <span>{Math.round(total * 1000) / 1000}{unit ? ` ${unit}` : ''} Left</span>
       </div>
       <div className="flex items-center gap-4">
         <div className="flex h-3 flex-1 overflow-hidden rounded-lg bg-gray-100">

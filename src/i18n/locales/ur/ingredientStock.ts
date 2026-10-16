@@ -1,6 +1,6 @@
 export const ingredientStock = {
   title: "میڈیسن اسٹاک",
-  description: "اپنی ڈاکٹر/سروس فہرست سے ڈاکٹرز/سروسز منتخب کریں تاکہ خام اسٹاک کے طور پر ٹریک ہوں، اور آنے والی خریداریوں کا ریکارڈ رکھیں۔",
+  description: "کلینک میں استعمال ہونے والی ادویات اور میٹیریلز شامل کریں، ان کا اسٹاک دیکھیں، اور آنے والی خریداریوں کا ریکارڈ رکھیں۔",
   noProductsForCompany: "اس کمپنی کے لیے ابھی تک کوئی ڈاکٹر/سروس موجود نہیں۔",
 
   toasts: {
@@ -13,7 +13,7 @@ export const ingredientStock = {
     saveCompanyFailedMessage: "کمپنی محفوظ کرنے میں ناکامی۔",
     removeCompanyFailedTitle: "کمپنی ہٹائی نہیں جا سکی",
     removeCompanyFailedMessage: "کمپنی ہٹانے میں ناکامی۔",
-    ingredientNameRequired: "ڈاکٹر اور سروس درکار ہے۔",
+    ingredientNameRequired: "دوا / میٹیریل کا نام درکار ہے۔",
     saveIngredientFailedTitle: "محفوظ نہیں ہو سکا",
     saveIngredientFailedMessage: "خام مال محفوظ کرنے میں ناکامی۔",
     deleteIngredientFailedTitle: "حذف نہیں ہو سکا",
@@ -66,22 +66,22 @@ export const ingredientStock = {
   },
 
   form: {
-    editHeading: "خام مال میں ترمیم کریں",
-    nameLabel: "ڈاکٹر اور سروس",
-    namePlaceholder: "مثلاً یوریا، ڈی اے پی، اینٹراکول، پوما",
+    editHeading: "دوا / میٹیریل میں ترمیم کریں",
+    nameLabel: "ادویات اور میٹیریلز",
+    namePlaceholder: "مثلاً دستانے، فیس ماسک، لیڈوکین کارٹرج",
     unitLabel: "یونٹ",
     currentStockLabel: "موجودہ اسٹاک",
     startingStockLabel: "ابتدائی اسٹاک",
     lowStockLabel: "کم اسٹاک الرٹ کی حد",
     optionalPlaceholder: "اختیاری",
-    updateIngredient: "خام مال اپ ڈیٹ کریں",
-    addIngredient: "خام مال شامل کریں",
+    updateIngredient: "دوا/میٹیریل اپ ڈیٹ کریں",
+    addIngredient: "دوا/میٹیریل شامل کریں",
   },
 
   directory: {
     heading: "میڈیسن کی فہرست ({{count}})",
     loadMore: "مزید دکھائیں ({{count}} مزید)",
-    searchPlaceholder: "خام مال تلاش کریں...",
+    searchPlaceholder: "ادویات اور میٹیریلز تلاش کریں...",
     downloadPdf: "پی ڈی ایف ڈاؤن لوڈ کریں",
     downloadExcel: "ایکسل ڈاؤن لوڈ کریں",
     noWhatsappOnFile: "واٹس ایپ نمبر موجود نہیں",
