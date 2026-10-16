@@ -248,8 +248,7 @@ export default function ThermalReceipt({
       {/* Footer */}
       <div className="text-center mt-5 mb-2">
         {settings.receiptFooterMessage && <p className="font-bold">{settings.receiptFooterMessage}</p>}
-        <p>Shafeeq Developer&apos;s Creation</p>
-        <p>03400-586000</p>
+        <p>Powered by www.sunrisereach.com</p>
         
         {/* QR Code - Only for Cashier Receipt */}
         {/* {type !== 'kitchen' && (

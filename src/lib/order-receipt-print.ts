@@ -69,8 +69,7 @@ export function buildReceiptShellHtml(title: string, bodyHtml: string, titleSub?
       ${bodyHtml}
       <div class="center" style="margin-top:16px">
         ${settings.receiptFooterMessage ? `<p style="font-weight:800">${settings.receiptFooterMessage}</p>` : ''}
-        <p>Shafeeq Developer&apos;s Creation</p>
-        <p>03400-586000</p>
+        <p>Powered by www.sunrisereach.com</p>
       </div>
     </div>
     </body></html>`;
