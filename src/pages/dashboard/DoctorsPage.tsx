@@ -449,7 +449,8 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
     try {
       const updated = await saveCheckup(order.id, prescription.trim(), true, diagnosis.trim());
       if (!updated) throw new Error('Could not save this checkup.');
-      const merged = { ...order, ...updated };
+      // Keep what the Dr just typed on the slip even if the server copy lags behind.
+      const merged = { ...order, ...updated, diagnosis: updated.diagnosis ?? diagnosis.trim(), prescription: updated.prescription ?? prescription.trim() };
       if (print && !printPrescription(merged)) {
         toast.error('The print window was blocked - allow pop-ups for this app, then use Print.');
       }
