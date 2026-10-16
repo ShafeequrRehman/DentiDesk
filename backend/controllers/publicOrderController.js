@@ -283,6 +283,11 @@ function slotTakenQuery(shopId, doctorName, appointmentDate, appointmentTime) {
 
 // GET /public/:shopId/booked-slots?doctor=&date=YYYY-MM-DD
 // Only the booked times - never who booked them.
+// Today's date in the clinic's time zone (Pakistan, UTC+5), as YYYY-MM-DD.
+function todayKarachiISO() {
+  return new Date(Date.now() + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
 exports.getBookedSlots = async (req, res) => {
   try {
     const doctor = String(req.query.doctor || "").trim();
@@ -293,14 +298,14 @@ exports.getBookedSlots = async (req, res) => {
     const [orders, leave, fullDays] = await Promise.all([
       Order.find(slotTakenQuery(req.shop._id, doctor, date)).select("appointmentTime").lean(),
       findLeaveFor(req.shop._id, doctor, date),
-      Leave.find({ shopId: req.shop._id, name: doctor, fullDay: true, date: { $gte: date } }).sort({ date: 1 }).limit(60).select("date").lean(),
+      Leave.find({ shopId: req.shop._id, name: doctor, date: { $gte: todayKarachiISO() } }).sort({ date: 1 }).limit(60).select("date fullDay times").lean(),
     ]);
     res.json({
       booked: [...new Set(orders.map((order) => order.appointmentTime).filter(Boolean))],
       // Dr/Service leave for this date - fullDay, or just these times.
       leave: leave ? { fullDay: !!leave.fullDay, times: leave.times || [] } : null,
-      // Upcoming full-day leave dates, so the patient can see them up front.
-      leaveDays: fullDays.map((entry) => entry.date),
+      // Upcoming leave (from today), so the patient can see it up front.
+      leaveDays: fullDays.map((entry) => ({ date: entry.date, fullDay: !!entry.fullDay, times: entry.times || [] })),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

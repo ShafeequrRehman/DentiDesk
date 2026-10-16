@@ -954,7 +954,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   // Dr/Service leave for the picked date (Availability page).
   const [leaveDay, setLeaveDay] = useState(false);
   const [leaveSlots, setLeaveSlots] = useState<Set<string>>(new Set());
-  const [leaveDays, setLeaveDays] = useState<string[]>([]);
+  const [leaveDays, setLeaveDays] = useState<Array<{ date: string; fullDay: boolean; times: string[] }>>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
   const timeSlots = useMemo(() => buildTimeSlots(), []);
@@ -1406,7 +1406,12 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                 />
                 {leaveDays.length > 0 ? (
                   <p className="text-[11px] font-semibold text-amber-700">
-                    {doctorName} is on leave: {leaveDays.slice(0, 5).map((d) => formatAppointmentDate(d).replace(/ \d{4}$/, '')).join(', ')}
+                    {doctorName} is not available: {leaveDays.slice(0, 5).map((d) => {
+                      const day = formatAppointmentDate(d.date).replace(/ \d{4}$/, '');
+                      if (d.fullDay) return `${day} (full day)`;
+                      const sorted = [...d.times].sort();
+                      return `${day} (${formatSlot(sorted[0])} - ${formatSlot(sorted[sorted.length - 1])})`;
+                    }).join(' · ')}
                   </p>
                 ) : null}
                 <p className="pt-1 text-xs font-black uppercase tracking-[0.14em] text-gray-400">Time Slot - {doctorName}</p>

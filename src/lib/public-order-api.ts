@@ -161,13 +161,15 @@ export interface PublicSlotInfo {
   booked: string[];
   // Dr/Service leave on this date: whole day, or just these times.
   leave: { fullDay: boolean; times: string[] } | null;
-  // Upcoming full-day leave dates (from this date on).
-  leaveDays: string[];
+  // Upcoming leave days (from today): whole day, or some times.
+  leaveDays: Array<{ date: string; fullDay: boolean; times: string[] }>;
 }
 
 export async function fetchPublicBookedSlots(shopId: string, doctor: string, date: string): Promise<PublicSlotInfo> {
   const response = await api.get<Partial<PublicSlotInfo>>(`/public/${shopId}/booked-slots`, { params: { doctor, date } });
-  return { booked: response.data.booked || [], leave: response.data.leave || null, leaveDays: response.data.leaveDays || [] };
+  return { booked: response.data.booked || [], leave: response.data.leave || null, leaveDays: (response.data.leaveDays || []).map((entry) =>
+    typeof entry === 'string' ? { date: entry, fullDay: true, times: [] } : entry,
+  ) };
 }
 
 export async function createPublicOrder(shopId: string, payload: PublicOrderPayload): Promise<PublicOrderResult> {
