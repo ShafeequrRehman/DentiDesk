@@ -3,6 +3,7 @@ export const sidebar = {
   pos: "پی او ایس",
   sales: "اپائنٹمنٹس",
   doctors: "ڈاکٹرز اور سروسز",
+  availability: "ڈاکٹر کی دستیابی",
   accounting: "اکاؤنٹنگ",
   purchase: "خریداری",
   "ingredient-stock": "میڈیسن اسٹاک",

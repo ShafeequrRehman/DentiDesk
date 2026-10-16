@@ -7,7 +7,7 @@
 // backend enforces the same rule on save (see orderController.js's
 // findSlotConflict), so two tills can't book the same slot.
 import { isDesktopApp } from '@/lib/api';
-import { fetchAppointments, type AppointmentQuery } from '@/lib/pos-api';
+import { fetchAppointments, fetchLeaves, type AppointmentQuery } from '@/lib/pos-api';
 import { loadOrdersFromLocalHub } from '@/lib/offline-order-helpers';
 import { buildReceiptShellHtml } from '@/lib/order-receipt-print';
 import type { SavedOrder } from '@/lib/pos-types';
@@ -131,6 +131,42 @@ export async function loadAppointments(query: AppointmentQuery): Promise<{ list:
     if (!byId.has(order.id) && order.id.startsWith('local-')) byId.set(order.id, order);
   });
   return { list: sortAppointments([...byId.values()]), fromCache: false };
+}
+
+// Dr/Service leave from today on (Availability page). Empty when offline.
+export interface LeaveInfo {
+  fullDays: Set<string>;
+  // date -> times off that date (part-day leave)
+  partTimes: Map<string, Set<string>>;
+}
+
+export const NO_LEAVE: LeaveInfo = { fullDays: new Set(), partTimes: new Map() };
+
+export async function loadLeaveInfo(name: string): Promise<LeaveInfo> {
+  try {
+    const list = (await fetchLeaves({ name, from: todayISO() })) || [];
+    const info: LeaveInfo = { fullDays: new Set(), partTimes: new Map() };
+    list.forEach((leave) => {
+      if (leave.fullDay) info.fullDays.add(leave.date);
+      else if (leave.times?.length) info.partTimes.set(leave.date, new Set(leave.times));
+    });
+    return info;
+  } catch {
+    return NO_LEAVE;
+  }
+}
+
+// "18 Oct, 20 Oct (2:00 PM, 2:30 PM)" - next few leave days for a short note.
+export function describeUpcomingLeave(info: LeaveInfo, limit = 4) {
+  const dates = [...new Set([...info.fullDays, ...info.partTimes.keys()])].sort().slice(0, limit);
+  return dates
+    .map((date) => {
+      const short = formatAppointmentDate(date).replace(/ \d{4}$/, '');
+      if (info.fullDays.has(date)) return `${short} (full day)`;
+      const times = [...(info.partTimes.get(date) || [])].sort().map(formatSlot);
+      return `${short} (${times.length > 2 ? `${times.length} slots` : times.join(', ')})`;
+    })
+    .join(' · ');
 }
 
 // Booked time -> patient name, for one Dr on one date.

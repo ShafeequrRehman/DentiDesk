@@ -51,6 +51,8 @@ export const DASHBOARD_PAGES: DashboardPageDef[] = [
   { key: 'sales', label: 'Appointments', href: '/dashboard/sales', permission: 'sales.create', hotkey: 'F2' },
   // Drs & Services: each Dr's appointments, checkups and prescriptions.
   { key: 'doctors', label: 'Drs & Services', href: '/dashboard/doctors', permission: ['sales.create', 'orders.record.view'] },
+  // Dr/Service leave - those dates/times can't be booked on POS or online.
+  { key: 'availability', label: 'Dr Availability', href: '/dashboard/availability', permission: ['sales.create', 'orders.record.view'] },
   { key: 'accounting', label: 'Accounting', href: '/dashboard/accounting', permission: 'expenses.manage', hotkey: 'F3' },
   { key: 'purchase', label: 'Purchase', href: '/dashboard/purchase', permission: 'purchases.manage', hotkey: 'F4' },
   // Moved out of Settings so they're directly reachable from the sidebar

@@ -603,6 +603,43 @@ export async function fetchRecipes() {
   }
 }
 
+// --- Dr / Service leave (Availability page) ---
+export interface LeaveEntry {
+  id: string;
+  name: string;
+  date: string;
+  fullDay: boolean;
+  times: string[];
+  note?: string;
+  createdBy?: string;
+}
+
+export async function fetchLeaves(params: { name?: string; date?: string; from?: string; to?: string }) {
+  try {
+    const response = await api.get<Array<LeaveEntry & { _id?: string }>>('/leaves', { params });
+    return response.data.map((leave) => ({ ...leave, id: leave.id ?? leave._id ?? '' }));
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function saveLeave(payload: { name: string; date: string; fullDay: boolean; times: string[]; note?: string }) {
+  try {
+    const response = await api.put<LeaveEntry & { _id?: string; deleted?: boolean }>('/leaves', payload);
+    return { ...response.data, id: response.data.id ?? response.data._id ?? '' };
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function deleteLeave(id: string) {
+  try {
+    await api.delete(`/leaves/${id}`);
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 // Set Medicine page: saves the full medicine/disposable list for one
 // Dr/Service (an empty list removes it). See backend recipeController.js.
 export async function saveRecipeForProduct(

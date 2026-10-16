@@ -17,7 +17,7 @@ import { Store } from 'lucide-react';
 import { isTypingTarget, useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { useLanguage } from '@/i18n';
 import CompleteOrderModal from '@/components/CompleteOrderModal';
-import { buildTimeSlots, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, todayISO } from '@/lib/appointments';
+import { buildTimeSlots, describeUpcomingLeave, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo } from '@/lib/appointments';
 
 
 // A "product group" is every Product record that shares the same name +
@@ -72,6 +72,8 @@ export default function POSPage() {
   const [appointmentDate, setAppointmentDate] = useState(() => todayISO());
   const [appointmentTime, setAppointmentTime] = useState('');
   const [bookedSlots, setBookedSlots] = useState<Map<string, string>>(new Map());
+  // Leave of the Dr/Service being booked (Availability page).
+  const [leaveInfo, setLeaveInfo] = useState<LeaveInfo>(NO_LEAVE);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
@@ -404,6 +406,30 @@ export default function POSPage() {
       cancelled = true;
     };
   }, [doctorName, appointmentDate, slotsRefreshKey]);
+
+  useEffect(() => {
+    if (!doctorName) {
+      setLeaveInfo(NO_LEAVE);
+      return;
+    }
+    let cancelled = false;
+    void loadLeaveInfo(doctorName).then((info) => {
+      if (!cancelled) setLeaveInfo(info);
+    });
+    return () => {
+      cancelled = true;
+    };
+  }, [doctorName, slotsRefreshKey]);
+
+  const dayOnLeave = !!doctorName && leaveInfo.fullDays.has(appointmentDate);
+  const leaveTimes = leaveInfo.partTimes.get(appointmentDate);
+  const upcomingLeave = useMemo(() => describeUpcomingLeave(leaveInfo), [leaveInfo]);
+
+  // A picked time that turns out to be on leave is cleared.
+  useEffect(() => {
+    if (!appointmentTime) return;
+    if (dayOnLeave || leaveTimes?.has(appointmentTime)) setAppointmentTime('');
+  }, [dayOnLeave, leaveTimes, appointmentTime]);
 
   const productGroups = useMemo<ProductGroup[]>(() => {
     const map = new Map<string, ProductGroup>();
@@ -877,6 +903,8 @@ export default function POSPage() {
     if (doctorName) {
       if (!appointmentDate) return showValidationError(t('pos.appointmentDateRequired'));
       if (!appointmentTime) return showValidationError(t('pos.appointmentTimeRequired'));
+      if (dayOnLeave) return showValidationError(`${doctorName} is on leave on ${formatAppointmentDate(appointmentDate)}. Pick another date.`);
+      if (leaveTimes?.has(appointmentTime)) return showValidationError(`${doctorName} is on leave at ${formatSlot(appointmentTime)}. Pick another time.`);
       if (bookedSlots.has(appointmentTime)) return showValidationError(t('pos.appointmentSlotTaken'));
       if (isSlotInPast(appointmentDate, appointmentTime)) return showValidationError(t('pos.appointmentSlotPast'));
     }
@@ -1128,7 +1156,7 @@ export default function POSPage() {
         } catch (err) {
           // The slot was taken on another till a moment ago - don't queue
           // a double booking offline, show the error instead.
-          if (err instanceof ApiError && err.reason === 'slot_taken') throw err;
+          if (err instanceof ApiError && (err.reason === 'slot_taken' || err.reason === 'on_leave')) throw err;
           savedOrder = await queueLocally();
           isOfflineOrder = true;
         }
@@ -1543,13 +1571,19 @@ export default function POSPage() {
                 <p className="rounded-xl border border-dashed border-gray-300 bg-white/40 px-3 py-2 text-[11px] font-semibold text-gray-500">
                   {t('pos.appointmentPickDoctorFirst')}
                 </p>
+              ) : dayOnLeave ? (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-[11px] font-bold text-amber-800">
+                  {doctorName} is on leave on {formatAppointmentDate(appointmentDate)} - pick another date.
+                  {upcomingLeave ? <p className="mt-1 font-semibold text-amber-700">Leave: {upcomingLeave}</p> : null}
+                </div>
               ) : (
                 <div>
                   <div className="grid max-h-44 grid-cols-4 gap-1.5 overflow-y-auto pr-0.5">
                     {timeSlots.map((slot) => {
                       const bookedBy = bookedSlots.get(slot);
+                      const onLeave = !!leaveTimes?.has(slot);
                       const past = isSlotInPast(appointmentDate, slot);
-                      const disabled = !!bookedBy || past || slotsLoading;
+                      const disabled = !!bookedBy || onLeave || past || slotsLoading;
                       const selected = appointmentTime === slot;
                       return (
                         <button
@@ -1557,11 +1591,13 @@ export default function POSPage() {
                           type="button"
                           disabled={disabled}
                           onClick={() => setAppointmentTime(selected ? '' : slot)}
-                          title={bookedBy ? t('pos.appointmentSlotBookedBy', { name: bookedBy }) : past ? t('pos.appointmentSlotPast') : formatSlot(slot)}
+                          title={onLeave ? `${doctorName} is on leave` : bookedBy ? t('pos.appointmentSlotBookedBy', { name: bookedBy }) : past ? t('pos.appointmentSlotPast') : formatSlot(slot)}
                           className={`rounded-lg border px-1 py-1.5 text-[10px] font-black transition ${
                             selected
                               ? 'border-emerald-500 bg-emerald-500 text-white shadow'
-                              : bookedBy
+                              : onLeave
+                                ? 'cursor-not-allowed border-amber-200 bg-amber-50 text-amber-500'
+                                : bookedBy
                                 ? 'cursor-not-allowed border-rose-200 bg-rose-50 text-rose-400 line-through'
                                 : past
                                   ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-300'
@@ -1584,8 +1620,10 @@ export default function POSPage() {
                     </span>
                     <span className="flex items-center gap-2">
                       <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-rose-300" />{t('pos.appointmentLegendBooked')}</span>
+                      <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-amber-300" />Leave</span>
                     </span>
                   </div>
+                  {upcomingLeave ? <p className="mt-1 text-[10px] font-semibold text-amber-700">Leave: {upcomingLeave}</p> : null}
                 </div>
               )}
             </FormField>

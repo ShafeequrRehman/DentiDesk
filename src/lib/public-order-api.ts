@@ -157,9 +157,17 @@ export interface PublicOrderResult {
 // page reads err.response?.data on failure to show the backend's own
 // specific message instead of a generic "something went wrong".
 // Booked times (HH:mm) for one Dr on one date - never who booked them.
-export async function fetchPublicBookedSlots(shopId: string, doctor: string, date: string): Promise<string[]> {
-  const response = await api.get<{ booked: string[] }>(`/public/${shopId}/booked-slots`, { params: { doctor, date } });
-  return response.data.booked || [];
+export interface PublicSlotInfo {
+  booked: string[];
+  // Dr/Service leave on this date: whole day, or just these times.
+  leave: { fullDay: boolean; times: string[] } | null;
+  // Upcoming full-day leave dates (from this date on).
+  leaveDays: string[];
+}
+
+export async function fetchPublicBookedSlots(shopId: string, doctor: string, date: string): Promise<PublicSlotInfo> {
+  const response = await api.get<Partial<PublicSlotInfo>>(`/public/${shopId}/booked-slots`, { params: { doctor, date } });
+  return { booked: response.data.booked || [], leave: response.data.leave || null, leaveDays: response.data.leaveDays || [] };
 }
 
 export async function createPublicOrder(shopId: string, payload: PublicOrderPayload): Promise<PublicOrderResult> {

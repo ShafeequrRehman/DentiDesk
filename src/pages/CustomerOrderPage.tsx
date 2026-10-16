@@ -18,7 +18,7 @@ import {
   type PublicChangeRequest,
 } from '@/lib/public-order-api';
 import { getApiBaseCandidates } from '@/lib/api';
-import { buildTimeSlots, formatSlot, isDoctorProduct, isSlotInPast, todayISO } from '@/lib/appointments';
+import { buildTimeSlots, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, todayISO } from '@/lib/appointments';
 
 // A plain numbered table ("5") still needs the "Table " prefix to read as
 // a table at all - a custom label already reads fine on its own. Only ever
@@ -951,6 +951,10 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   const [appointmentDate, setAppointmentDate] = useState(() => todayISO());
   const [appointmentTime, setAppointmentTime] = useState('');
   const [bookedSlots, setBookedSlots] = useState<Set<string>>(new Set());
+  // Dr/Service leave for the picked date (Availability page).
+  const [leaveDay, setLeaveDay] = useState(false);
+  const [leaveSlots, setLeaveSlots] = useState<Set<string>>(new Set());
+  const [leaveDays, setLeaveDays] = useState<string[]>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
   const timeSlots = useMemo(() => buildTimeSlots(), []);
@@ -1060,19 +1064,31 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   useEffect(() => {
     if (!doctorName || !appointmentDate) {
       setBookedSlots(new Set());
+      setLeaveDay(false);
+      setLeaveSlots(new Set());
+      setLeaveDays([]);
       return;
     }
     let cancelled = false;
     setSlotsLoading(true);
     fetchPublicBookedSlots(shopId, doctorName, appointmentDate)
-      .then((booked) => {
+      .then((info) => {
         if (cancelled) return;
-        const set = new Set(booked);
+        const set = new Set(info.booked);
+        const off = new Set(info.leave?.times || []);
+        const fullDay = !!info.leave?.fullDay;
         setBookedSlots(set);
-        setAppointmentTime((current) => (current && set.has(current) ? '' : current));
+        setLeaveDay(fullDay);
+        setLeaveSlots(off);
+        setLeaveDays(info.leaveDays);
+        setAppointmentTime((current) => (current && (fullDay || set.has(current) || off.has(current)) ? '' : current));
       })
       .catch(() => {
-        if (!cancelled) setBookedSlots(new Set());
+        if (!cancelled) {
+          setBookedSlots(new Set());
+          setLeaveDay(false);
+          setLeaveSlots(new Set());
+        }
       })
       .finally(() => {
         if (!cancelled) setSlotsLoading(false);
@@ -1129,7 +1145,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
     customerName.trim().length >= 2 &&
     phoneDigits.length >= 10 &&
     (orderType !== 'Delivery' || customerAddress.trim().length >= 5) &&
-    (!doctorName || (!!appointmentTime && !bookedSlots.has(appointmentTime) && !isSlotInPast(appointmentDate, appointmentTime)));
+    (!doctorName || (!leaveDay && !!appointmentTime && !bookedSlots.has(appointmentTime) && !leaveSlots.has(appointmentTime) && !isSlotInPast(appointmentDate, appointmentTime)));
 
   async function handlePlaceOrder() {
     if (!canSubmit || placing) return;
@@ -1175,7 +1191,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
       setPlacedOrder(result);
     } catch (err) {
       const data = (err as { response?: { data?: { message?: string; reason?: string } } })?.response?.data;
-      if (data?.reason === 'slot_taken') {
+      if (data?.reason === 'slot_taken' || data?.reason === 'on_leave') {
         setAppointmentTime('');
         setSlotsRefreshKey((key) => key + 1);
       }
@@ -1388,10 +1404,21 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                   }}
                   className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm font-bold shadow-inner outline-none focus:border-[#009AAE]"
                 />
+                {leaveDays.length > 0 ? (
+                  <p className="text-[11px] font-semibold text-amber-700">
+                    {doctorName} is on leave: {leaveDays.slice(0, 5).map((d) => formatAppointmentDate(d).replace(/ \d{4}$/, '')).join(', ')}
+                  </p>
+                ) : null}
                 <p className="pt-1 text-xs font-black uppercase tracking-[0.14em] text-gray-400">Time Slot - {doctorName}</p>
+                {leaveDay ? (
+                  <p className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-xs font-bold text-amber-800">
+                    {doctorName} is not available on {formatAppointmentDate(appointmentDate)}. Please pick another date.
+                  </p>
+                ) : (
                 <div className="grid max-h-48 grid-cols-3 gap-1.5 overflow-y-auto pr-0.5 sm:grid-cols-4">
                   {timeSlots.map((slot) => {
-                    const booked = bookedSlots.has(slot);
+                    const onLeave = leaveSlots.has(slot);
+                    const booked = bookedSlots.has(slot) || onLeave;
                     const past = isSlotInPast(appointmentDate, slot);
                     const selected = appointmentTime === slot;
                     return (
@@ -1400,11 +1427,13 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                         type="button"
                         disabled={booked || past || slotsLoading}
                         onClick={() => setAppointmentTime(selected ? '' : slot)}
-                        title={booked ? 'Already booked' : past ? 'This time has passed' : formatSlot(slot)}
+                        title={onLeave ? 'Not available' : booked ? 'Already booked' : past ? 'This time has passed' : formatSlot(slot)}
                         className={`rounded-lg border px-1 py-2 text-[11px] font-black transition ${
                           selected
                             ? 'border-[#009AAE] bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] text-black shadow'
-                            : booked
+                            : onLeave
+                              ? 'cursor-not-allowed border-amber-200 bg-amber-50 text-amber-500'
+                              : booked
                               ? 'cursor-not-allowed border-rose-200 bg-rose-50 text-rose-400 line-through'
                               : past
                                 ? 'cursor-not-allowed border-gray-200 bg-gray-100 text-gray-300'
@@ -1416,12 +1445,16 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                     );
                   })}
                 </div>
+                )}
                 <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500">
                   <span className="flex items-center gap-1">
                     <Clock size={12} />
                     {slotsLoading ? 'Checking free times...' : appointmentTime ? `Selected: ${formatSlot(appointmentTime)}` : 'Pick a free time'}
                   </span>
-                  <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-rose-300" />Booked</span>
+                  <span className="flex items-center gap-2">
+                    <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-rose-300" />Booked</span>
+                    <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-amber-300" />Not available</span>
+                  </span>
                 </div>
               </div>
             ) : null}

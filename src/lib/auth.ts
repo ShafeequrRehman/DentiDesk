@@ -174,6 +174,7 @@ export function isPageEnabled(pageKey: string): boolean {
   const enabledPages = getAuthShop()?.enabledPages;
   if (!enabledPages) return true;
   // Set Medicine is part of Medicine Stock - shown wherever that page is on.
+  if (pageKey === 'availability') return enabledPages.includes(pageKey) || enabledPages.includes('doctors');
   if (pageKey === 'medicine-setup') return enabledPages.includes(pageKey) || enabledPages.includes('ingredient-stock');
   return enabledPages.includes(pageKey);
 }

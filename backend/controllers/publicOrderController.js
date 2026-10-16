@@ -12,6 +12,8 @@ const {
   verifyEasyPaisaCallback,
 } = require("../services/paymentGatewayService");
 const { notifyRiderForDelivery } = require("../services/riderNotificationService");
+const { findLeaveFor, leaveMessage } = require("../services/leaveService");
+const Leave = require("../models/Leave");
 
 // Everything in this file is reachable with NO login at all (see
 // routes/publicOrderRoutes.js / middleware/requireShopOrderable.js) - a
@@ -288,8 +290,18 @@ exports.getBookedSlots = async (req, res) => {
     if (!doctor || !/^\d{4}-\d{2}-\d{2}$/.test(date)) {
       return res.json({ booked: [] });
     }
-    const orders = await Order.find(slotTakenQuery(req.shop._id, doctor, date)).select("appointmentTime").lean();
-    res.json({ booked: [...new Set(orders.map((order) => order.appointmentTime).filter(Boolean))] });
+    const [orders, leave, fullDays] = await Promise.all([
+      Order.find(slotTakenQuery(req.shop._id, doctor, date)).select("appointmentTime").lean(),
+      findLeaveFor(req.shop._id, doctor, date),
+      Leave.find({ shopId: req.shop._id, name: doctor, fullDay: true, date: { $gte: date } }).sort({ date: 1 }).limit(60).select("date").lean(),
+    ]);
+    res.json({
+      booked: [...new Set(orders.map((order) => order.appointmentTime).filter(Boolean))],
+      // Dr/Service leave for this date - fullDay, or just these times.
+      leave: leave ? { fullDay: !!leave.fullDay, times: leave.times || [] } : null,
+      // Upcoming full-day leave dates, so the patient can see them up front.
+      leaveDays: fullDays.map((entry) => entry.date),
+    });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -400,6 +412,10 @@ exports.createOrder = async (req, res) => {
       const appointmentTime = String(payload.appointmentTime || "").trim();
       if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDate) || !/^\d{2}:\d{2}$/.test(appointmentTime)) {
         return res.status(400).json({ message: `Please pick a date and time slot for ${doctorItem.name}.`, reason: "slot_required" });
+      }
+      const leave = await findLeaveFor(shopId, doctorItem.name, appointmentDate, appointmentTime);
+      if (leave) {
+        return res.status(409).json({ message: leaveMessage(doctorItem.name, appointmentDate, appointmentTime, leave), reason: "on_leave" });
       }
       const taken = await Order.findOne(slotTakenQuery(shopId, doctorItem.name, appointmentDate, appointmentTime)).select("_id").lean();
       if (taken) {

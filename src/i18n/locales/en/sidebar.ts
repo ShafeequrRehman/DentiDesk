@@ -9,6 +9,7 @@ export const sidebar = {
   pos: "POS",
   sales: "Appointments",
   doctors: "Drs & Services",
+  availability: "Dr Availability",
   accounting: "Accounting",
   purchase: "Purchase",
   "ingredient-stock": "Medicine Stock",
