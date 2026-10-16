@@ -612,6 +612,7 @@ exports.getDashboardSummary = async (req, res) => {
         return;
       }
       adjustmentByKey[doc.key] = (doc.history || []).reduce((sum, entry) => {
+        if (entry.undone) return sum; // undone from the Dashboard history
         const t = entry.createdAt ? new Date(entry.createdAt).getTime() : null;
         if (t === null || t < start.getTime() || t > end.getTime()) return sum;
         return sum + (entry.direction === "out" ? -Number(entry.amount || 0) : Number(entry.amount || 0));

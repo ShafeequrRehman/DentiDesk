@@ -8,9 +8,9 @@ import {
 import {
   Target, Users, CheckCircle2, Clock,
   RotateCcw, XCircle, Wallet, Landmark, Package, Truck,
-  ShoppingBag, Receipt, HandCoins, PiggyBank, Pencil, History as HistoryIcon, List,
+  ShoppingBag, Receipt, HandCoins, PiggyBank, Pencil, History as HistoryIcon, List, Eraser, Undo2, Trash2,
 } from 'lucide-react';
-import { adjustCash, adjustDashboardTile, fetchCashSummary, fetchDashboardAdjustmentHistory, fetchDashboardSummary, fetchIngredients, fetchOrdersSummary, fetchProducts, fetchRecoveryHistory, fetchShopSessionHistory, fetchStockValueDetail, fetchVendorBalanceDetail, fetchSaleOnCashDetail, type OrderSummary } from '@/lib/pos-api';
+import { adjustCash, adjustDashboardTile, clearCash, clearDashboardTile, deleteCashEntry, deleteDashboardAdjustment, undoCashEntry, undoDashboardAdjustment, fetchCashSummary, fetchDashboardAdjustmentHistory, fetchDashboardSummary, fetchIngredients, fetchOrdersSummary, fetchProducts, fetchRecoveryHistory, fetchShopSessionHistory, fetchStockValueDetail, fetchVendorBalanceDetail, fetchSaleOnCashDetail, type OrderSummary } from '@/lib/pos-api';
 import { CashTransaction, DashboardAdjustmentHistoryEntry, DashboardAdjustmentKey, DashboardSummary, Product, RecoveryHistoryRow, SaleOnCashDetailRow, SavedOrder, ShopSession, StockValueDetailRow, VendorBalanceDetailRow } from '@/lib/pos-types';
 import { getBusinessWindow, filterOrdersInBusinessWindow, useShopSession, type BusinessWindow as SessionBusinessWindow } from '@/lib/shop-session';
 import { isDesktopApp } from '@/lib/api';
@@ -62,7 +62,7 @@ export default function DashboardPageClient() {
 }
 
 function DashboardPageClientInner() {
-  const { popup } = useToast();
+  const { popup, confirm } = useToast();
   // SavedOrder from the Local Hub cache-first paint, or the narrower
   // OrderSummary shape from the live cloud poll below - stats/chart code in
   // this file only ever reads the fields both shapes have in common
@@ -187,6 +187,49 @@ function DashboardPageClientInner() {
   const [summaryRange, setSummaryRange] = useState<'today' | 'month' | 'custom'>('today');
   const [summaryCustomFrom, setSummaryCustomFrom] = useState(() => new Date().toISOString().slice(0, 10));
   const [summaryCustomTo, setSummaryCustomTo] = useState(() => new Date().toISOString().slice(0, 10));
+
+  // Clear button: brings one figure to $0. Recorded in its history (who,
+  // when) and can be undone or deleted from there.
+  async function handleClearTile(key: DashboardAdjustmentKey, value: number, label: string) {
+    if (!(value > 0)) {
+      popup({ tone: 'info', title: 'Already $0', message: `${label} is already $0.` });
+      return;
+    }
+    const ok = await confirm(`Clear ${label} ($${Math.round(value).toLocaleString()}) to $0? This is saved in its history - you can undo it from there.`, {
+      title: 'Clear to $0',
+      confirmText: 'Clear',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await clearDashboardTile(key, value, label);
+      await loadSummary();
+      popup({ tone: 'success', title: 'Cleared', message: `${label} is now $0. Open its History to undo.` });
+    } catch (error) {
+      popup({ tone: 'error', title: "Couldn't clear", message: error instanceof Error ? error.message : 'Failed to clear.' });
+    }
+  }
+
+  async function handleClearCash() {
+    const value = Number(summary?.cashInHand || 0);
+    if (value === 0) {
+      popup({ tone: 'info', title: 'Already $0', message: 'Cash in Hand is already $0.' });
+      return;
+    }
+    const ok = await confirm(`Clear Cash in Hand ($${Math.round(value).toLocaleString()}) to $0? This is saved in its history - you can undo it from there.`, {
+      title: 'Clear to $0',
+      confirmText: 'Clear',
+      tone: 'danger',
+    });
+    if (!ok) return;
+    try {
+      await clearCash();
+      await loadSummary();
+      popup({ tone: 'success', title: 'Cleared', message: 'Cash in Hand is now $0. Open its History to undo.' });
+    } catch (error) {
+      popup({ tone: 'error', title: "Couldn't clear", message: error instanceof Error ? error.message : 'Failed to clear.' });
+    }
+  }
 
   async function loadSummary() {
     try {
@@ -365,6 +408,8 @@ function DashboardPageClientInner() {
         onOpenCashHistory={() => setShowCashHistory(true)}
         onAdjustTile={(key) => setAdjustTileKey(key)}
         onOpenTileHistory={(key) => setHistoryTileKey(key)}
+        onClearTile={(key, value, label) => void handleClearTile(key, value, label)}
+        onClearCash={() => void handleClearCash()}
         onOpenCustomerAdvances={() => setShowCustomerAdvances(true)}
         onOpenRecoveryHistory={() => setShowRecoveryHistory(true)}
         onOpenStockValueDetail={() => setShowStockValueDetail(true)}
@@ -492,7 +537,7 @@ function DashboardPageClientInner() {
         />
       ) : null}
 
-      {showCashHistory ? <CashHistoryModal onClose={() => setShowCashHistory(false)} /> : null}
+      {showCashHistory ? <CashHistoryModal canChange={hasPermission('dues.manage')} onChanged={() => void loadSummary()} onClose={() => setShowCashHistory(false)} /> : null}
 
       {adjustTileKey ? (
         <TileAdjustModal
@@ -513,7 +558,7 @@ function DashboardPageClientInner() {
         />
       ) : null}
 
-      {historyTileKey ? <TileHistoryModal tileKey={historyTileKey} onClose={() => setHistoryTileKey(null)} /> : null}
+      {historyTileKey ? <TileHistoryModal tileKey={historyTileKey} canChange={hasPermission('dues.manage')} onChanged={() => void loadSummary()} onClose={() => setHistoryTileKey(null)} /> : null}
 
       {showCustomerAdvances ? (
         <CustomerAdvancesModal advances={summary?.customerAdvances || []} onClose={() => setShowCustomerAdvances(false)} />
@@ -558,6 +603,8 @@ function AccountingOverview({
   onOpenCashHistory,
   onAdjustTile,
   onOpenTileHistory,
+  onClearTile,
+  onClearCash,
   onOpenCustomerAdvances,
   onOpenRecoveryHistory,
   onOpenStockValueDetail,
@@ -577,6 +624,8 @@ function AccountingOverview({
   onOpenCashHistory: () => void;
   onAdjustTile: (key: DashboardAdjustmentKey) => void;
   onOpenTileHistory: (key: DashboardAdjustmentKey) => void;
+  onClearTile: (key: DashboardAdjustmentKey, value: number, label: string) => void;
+  onClearCash: () => void;
   onOpenCustomerAdvances: () => void;
   onOpenRecoveryHistory: () => void;
   onOpenStockValueDetail: () => void;
@@ -598,9 +647,28 @@ function AccountingOverview({
   // Adjust+History pair, and Balance on Bank, which is corrected from the
   // Bank page itself) gets the same Pencil (correct it) + History (see
   // past corrections) actions, wired to one shared DashboardAdjustment key.
+  const tileLabel: Record<DashboardAdjustmentKey, string> = {
+    totalSaleToday: `Total Sale (${periodLabel})`,
+    customerUdharTotal: 'Patient Udhar',
+    customerAdvanceTotal: 'Patient Advance',
+    stockValue: 'Stock Value',
+    vendorBalance: 'Vendor Balance',
+    totalPurchaseToday: `Total Purchase (${periodLabel})`,
+    totalExpensesToday: `Total Expenses (${periodLabel})`,
+    saleOnCash: `Sale on Cash (${periodLabel})`,
+    saleOnBank: `Sale on Bank (${periodLabel})`,
+    saleOnCredit: `Sale on Udhar (${periodLabel})`,
+    totalRecoveryToday: `Total Recovery (${periodLabel})`,
+  } as Record<DashboardAdjustmentKey, string>;
+  // Clear (to $0) - recorded in the tile's History, undoable there.
+  const clearFor = (key: DashboardAdjustmentKey) =>
+    canAdjustCash
+      ? [{ icon: <Eraser size={12} />, onClick: () => onClearTile(key, Number((summary as unknown as Record<string, number> | null)?.[key] || 0), tileLabel[key] || 'This figure'), label: 'Clear to $0' }]
+      : [];
   const actionsFor = (key: DashboardAdjustmentKey) =>
     canAdjustCash
       ? [
+          ...clearFor(key),
           { icon: <Pencil size={12} />, onClick: () => onAdjustTile(key), label: 'Adjust' },
           { icon: <HistoryIcon size={12} />, onClick: () => onOpenTileHistory(key), label: 'History' },
         ]
@@ -611,8 +679,16 @@ function AccountingOverview({
   // there just crowded the tile with two near-identical grey circular
   // buttons for what the owner sees as the same "show me more" action, so
   // only Adjust is added here on top of Details for these two.
+  // These tiles already have a Details icon - Clear + Adjust are added, and
+  // the correction History (where Clear can be undone) as "Corrections".
   const adjustOnlyFor = (key: DashboardAdjustmentKey) =>
-    canAdjustCash ? [{ icon: <Pencil size={12} />, onClick: () => onAdjustTile(key), label: 'Adjust' }] : [];
+    canAdjustCash
+      ? [
+          ...clearFor(key),
+          { icon: <Pencil size={12} />, onClick: () => onAdjustTile(key), label: 'Adjust' },
+          { icon: <Undo2 size={12} />, onClick: () => onOpenTileHistory(key), label: 'Corrections history' },
+        ]
+      : [];
   return (
     <div className="rounded-[32px] bg-white p-6 shadow-sm">
       <div className="mb-6 flex flex-wrap items-center justify-between gap-3">
@@ -674,7 +750,12 @@ function AccountingOverview({
           onTileClick={onOpenCashHistory}
           actions={[
             { icon: <HistoryIcon size={12} />, onClick: onOpenCashHistory, label: 'History' },
-            ...(canAdjustCash ? [{ icon: <Pencil size={12} />, onClick: onAdjustCash, label: 'Adjust' }] : []),
+            ...(canAdjustCash
+              ? [
+                  { icon: <Eraser size={12} />, onClick: onClearCash, label: 'Clear to $0' },
+                  { icon: <Pencil size={12} />, onClick: onAdjustCash, label: 'Adjust' },
+                ]
+              : []),
           ]}
         />
         <OverviewTile icon={<Landmark size={18} />} color="bg-indigo-50 text-indigo-500" label={`Balance on Bank (${balanceAsOfLabel})`} value={money(summary?.balanceOnBank)} />
@@ -870,6 +951,21 @@ type HistoryRangeMode = 'all' | 'today' | 'month' | 'custom';
 // Purely a client-side filter/render concern - the real rows and their
 // balanceAfter/totalAfter are never touched, same rule every other range
 // filter in this app already follows.
+interface HistoryRow {
+  ref?: string;
+  kind?: 'adjust' | 'clear' | 'undo';
+  undone?: boolean;
+  undoneBy?: string;
+  undoneAt?: string;
+  canChange?: boolean;
+  direction: 'in' | 'out';
+  amount: number;
+  note: string;
+  createdBy: string;
+  createdAt: string;
+  balanceAfter?: number;
+}
+
 function HistoryModalShell({
   title,
   subtitle,
@@ -878,14 +974,19 @@ function HistoryModalShell({
   rows,
   pdfTitle,
   pdfFilename,
+  onUndo,
+  onDelete,
 }: {
   title: string;
   subtitle: string;
   onClose: () => void;
   loading: boolean;
-  rows: { direction: 'in' | 'out'; amount: number; note: string; createdBy: string; createdAt: string; balanceAfter?: number }[];
+  rows: HistoryRow[];
   pdfTitle?: string;
   pdfFilename?: string;
+  // Undo / Delete buttons per entry (only rows with canChange get them).
+  onUndo?: (row: HistoryRow) => void;
+  onDelete?: (row: HistoryRow) => void;
 }) {
   useBackspaceToClose(onClose);
   const enableFilterAndPdf = Boolean(pdfTitle);
@@ -1032,11 +1133,19 @@ function HistoryModalShell({
             <p className="py-8 text-center text-xs font-bold text-gray-400">No history yet.</p>
           ) : (
             filteredRows.map((row, index) => (
-              <div key={index} className="flex items-center justify-between rounded-2xl bg-[#F8F9FB] p-3">
+              <div key={row.ref || index} className={`flex items-center justify-between gap-2 rounded-2xl p-3 ${row.undone ? 'bg-gray-50 opacity-70' : row.kind === 'clear' ? 'bg-amber-50' : 'bg-[#F8F9FB]'}`}>
                 <div className="min-w-0">
-                  <p className={`text-sm font-black ${row.direction === 'in' ? 'text-emerald-600' : 'text-rose-600'}`}>
+                  <p className={`flex flex-wrap items-center gap-1.5 text-sm font-black ${row.undone ? 'text-gray-400 line-through' : row.direction === 'in' ? 'text-emerald-600' : 'text-rose-600'}`}>
                     {row.direction === 'in' ? '+' : '-'}${row.amount.toLocaleString()}
+                    {row.kind === 'clear' ? <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[9px] font-black uppercase text-amber-800 no-underline">Cleared</span> : null}
+                    {row.kind === 'undo' ? <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[9px] font-black uppercase text-sky-700">Undo</span> : null}
+                    {row.undone ? <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[9px] font-black uppercase text-gray-600">Undone</span> : null}
                   </p>
+                  {row.undone && (row.undoneBy || row.undoneAt) ? (
+                    <p className="text-[10px] font-bold text-gray-500">
+                      Undone{row.undoneBy ? ` by ${row.undoneBy}` : ''}{row.undoneAt ? ` · ${new Date(row.undoneAt).toLocaleString()}` : ''}
+                    </p>
+                  ) : null}
                   {row.note ? <p className="truncate text-[11px] text-gray-500">{row.note}</p> : null}
                   <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
                     {new Date(row.createdAt).toLocaleString()}
@@ -1046,6 +1155,20 @@ function HistoryModalShell({
                     <p className="text-[10px] font-bold text-gray-300">Balance after: ${row.balanceAfter.toLocaleString()}</p>
                   ) : null}
                 </div>
+                {row.canChange && row.ref && (onUndo || onDelete) ? (
+                  <div className="flex shrink-0 gap-1">
+                    {onUndo && !row.undone && row.kind !== 'undo' ? (
+                      <button type="button" onClick={() => onUndo(row)} title="Undo" className="flex items-center gap-1 rounded-full bg-white px-2.5 py-1.5 text-[10px] font-black text-sky-700 shadow-sm hover:bg-sky-50">
+                        <Undo2 size={12} /> Undo
+                      </button>
+                    ) : null}
+                    {onDelete ? (
+                      <button type="button" onClick={() => onDelete(row)} title="Delete from history" className="rounded-full bg-white p-1.5 text-rose-500 shadow-sm hover:bg-rose-50">
+                        <Trash2 size={12} />
+                      </button>
+                    ) : null}
+                  </div>
+                ) : null}
               </div>
             ))
           )}
@@ -1057,7 +1180,8 @@ function HistoryModalShell({
 
 // Task 2: clicking the Cash in Hand tile - GET /api/cash's own history[],
 // same data the "Adjust" pencil's balance already comes from.
-function CashHistoryModal({ onClose }: { onClose: () => void }) {
+function CashHistoryModal({ onClose, onChanged, canChange }: { onClose: () => void; onChanged: () => void; canChange: boolean }) {
+  const { popup, confirm } = useToast();
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<CashTransaction[]>([]);
 
@@ -1073,6 +1197,17 @@ function CashHistoryModal({ onClose }: { onClose: () => void }) {
     };
   }, []);
 
+  async function run(action: () => Promise<{ history?: CashTransaction[] } | undefined>, done: string) {
+    try {
+      const data = await action();
+      if (data?.history) setHistory(data.history);
+      onChanged();
+      popup({ tone: 'success', title: 'Done', message: done });
+    } catch (error) {
+      popup({ tone: 'error', title: "Couldn't update", message: error instanceof Error ? error.message : 'Failed.' });
+    }
+  }
+
   return (
     <HistoryModalShell
       title="Cash in Hand History"
@@ -1082,6 +1217,11 @@ function CashHistoryModal({ onClose }: { onClose: () => void }) {
       pdfTitle="Cash in Hand History"
       pdfFilename="cash_in_hand_history"
       rows={history.map((entry) => ({
+        ref: entry.ref,
+        kind: entry.kind,
+        undone: entry.undone,
+        // Only manual corrections / clears can be undone or deleted.
+        canChange: canChange && entry.type === 'adjustment',
         direction: entry.direction,
         amount: entry.amount,
         note: entry.note || entry.type,
@@ -1089,15 +1229,27 @@ function CashHistoryModal({ onClose }: { onClose: () => void }) {
         createdAt: entry.createdAt,
         balanceAfter: entry.balanceAfter,
       }))}
+      onUndo={async (row) => {
+        if (!row.ref) return;
+        const ok = await confirm(`Undo this ${row.kind === 'clear' ? 'clear' : 'correction'} of $${row.amount.toLocaleString()}? Cash in Hand goes back by the same amount.`, { title: 'Undo', confirmText: 'Undo' });
+        if (ok) void run(() => undoCashEntry(row.ref!), 'Undone - Cash in Hand updated.');
+      }}
+      onDelete={async (row) => {
+        if (!row.ref) return;
+        const ok = await confirm(`Delete this entry ($${row.amount.toLocaleString()}) from the history? Its effect on Cash in Hand is removed too.`, { title: 'Delete history entry', confirmText: 'Delete', tone: 'danger' });
+        if (ok) void run(() => deleteCashEntry(row.ref!), 'Entry deleted.');
+      }}
     />
   );
 }
 
 // Task 1/3: history of manual corrections made to any other Accounting
 // Overview tile - GET /api/dashboard-adjustments/:key/history.
-function TileHistoryModal({ tileKey, onClose }: { tileKey: DashboardAdjustmentKey; onClose: () => void }) {
+function TileHistoryModal({ tileKey, onClose, onChanged, canChange }: { tileKey: DashboardAdjustmentKey; onClose: () => void; onChanged: () => void; canChange: boolean }) {
+  const { popup, confirm } = useToast();
   const [loading, setLoading] = useState(true);
   const [history, setHistory] = useState<DashboardAdjustmentHistoryEntry[]>([]);
+  const [reloadKey, setReloadKey] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
@@ -1109,7 +1261,18 @@ function TileHistoryModal({ tileKey, onClose }: { tileKey: DashboardAdjustmentKe
     return () => {
       cancelled = true;
     };
-  }, [tileKey]);
+  }, [tileKey, reloadKey]);
+
+  async function run(action: () => Promise<unknown>, done: string) {
+    try {
+      await action();
+      setReloadKey((k) => k + 1);
+      onChanged();
+      popup({ tone: 'success', title: 'Done', message: done });
+    } catch (error) {
+      popup({ tone: 'error', title: "Couldn't update", message: error instanceof Error ? error.message : 'Failed.' });
+    }
+  }
 
   return (
     <HistoryModalShell
@@ -1119,7 +1282,22 @@ function TileHistoryModal({ tileKey, onClose }: { tileKey: DashboardAdjustmentKe
       loading={loading}
       pdfTitle="Correction History"
       pdfFilename={`${tileKey}_correction_history`}
-      rows={history.map((entry) => ({ ...entry, balanceAfter: entry.totalAfter }))}
+      rows={history.map((entry) => ({ ...entry, balanceAfter: entry.totalAfter, canChange }))}
+      onUndo={async (row) => {
+        if (!row.ref) return;
+        const ok = await confirm(`Undo this ${row.kind === 'clear' ? 'clear' : 'correction'} of $${row.amount.toLocaleString()}? The figure goes back to what it was.`, { title: 'Undo', confirmText: 'Undo' });
+        if (ok) void run(() => undoDashboardAdjustment(tileKey, row.ref!), 'Undone - the figure is back.');
+      }}
+      onDelete={async (row) => {
+        if (!row.ref) return;
+        const ok = await confirm(
+          row.undone
+            ? 'Delete this undone entry from the history?'
+            : `Delete this entry ($${row.amount.toLocaleString()}) from the history? Its effect on the figure is removed too.`,
+          { title: 'Delete history entry', confirmText: 'Delete', tone: 'danger' },
+        );
+        if (ok) void run(() => deleteDashboardAdjustment(tileKey, row.ref!), 'Entry deleted.');
+      }}
     />
   );
 }

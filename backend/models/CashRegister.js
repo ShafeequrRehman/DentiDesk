@@ -38,8 +38,15 @@ const cashHistorySchema = new mongoose.Schema(
     relatedCustomerName: { type: String, default: "" },
     relatedCustomerPhone: { type: String, default: "" },
     createdBy: { type: String, default: "" },
+    // Clear to $0 / Undo (Dashboard): "adjust" (normal correction),
+    // "clear" (Clear button), "undo" (reverses an earlier entry).
+    kind: { type: String, default: "adjust" },
+    // Set on an entry that has been undone, so it can't be undone twice.
+    undone: { type: Boolean, default: false },
   },
-  { _id: false, timestamps: { createdAt: true, updatedAt: false } }
+  // Entries get their own _id now (for Undo / Delete). Older entries have
+  // none - they're found by their createdAt time instead (entryRef).
+  { timestamps: { createdAt: true, updatedAt: false } }
 );
 
 const cashRegisterSchema = new mongoose.Schema(

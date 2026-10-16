@@ -111,6 +111,10 @@ export interface Bank {
 // Cash-method order payment/due recovery, plus a manual "Adjust Cash"
 // correction from the Dashboard.
 export interface CashTransaction {
+  // Id for Undo / Delete (Dashboard), plus how the entry was made.
+  ref?: string;
+  kind?: 'adjust' | 'clear' | 'undo';
+  undone?: boolean;
   type: 'sale' | 'due_recovery' | 'purchase' | 'due_given' | 'refund' | 'adjustment';
   direction: 'in' | 'out';
   amount: number;
@@ -207,6 +211,11 @@ export type DashboardAdjustmentKey =
   | 'totalRecoveryToday';
 
 export interface DashboardAdjustmentHistoryEntry {
+  ref?: string;
+  kind?: 'adjust' | 'clear' | 'undo';
+  undone?: boolean;
+  undoneBy?: string;
+  undoneAt?: string;
   direction: 'in' | 'out';
   amount: number;
   note: string;

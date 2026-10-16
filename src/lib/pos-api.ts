@@ -320,6 +320,61 @@ export async function fetchDashboardAdjustmentHistory(key: DashboardAdjustmentKe
   }
 }
 
+// Dashboard Clear to $0 / Undo / Delete history entry.
+export async function clearDashboardTile(key: DashboardAdjustmentKey, amount: number, label?: string) {
+  try {
+    const response = await api.post<{ key: string; total: number }>(`/dashboard-adjustments/${key}/clear`, { amount, label });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function undoDashboardAdjustment(key: DashboardAdjustmentKey, ref: string) {
+  try {
+    const response = await api.post<{ key: string; total: number }>(`/dashboard-adjustments/${key}/history/${encodeURIComponent(ref)}/undo`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function deleteDashboardAdjustment(key: DashboardAdjustmentKey, ref: string) {
+  try {
+    const response = await api.delete<{ key: string; total: number }>(`/dashboard-adjustments/${key}/history/${encodeURIComponent(ref)}`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function clearCash() {
+  try {
+    const response = await api.post<CashSummary>('/cash/clear');
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function undoCashEntry(ref: string) {
+  try {
+    const response = await api.post<CashSummary>(`/cash/history/${encodeURIComponent(ref)}/undo`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function deleteCashEntry(ref: string) {
+  try {
+    const response = await api.delete<CashSummary>(`/cash/history/${encodeURIComponent(ref)}`);
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 export async function adjustDashboardTile(key: DashboardAdjustmentKey, amount: number, direction: 'in' | 'out', note?: string) {
   try {
     const response = await api.post<{ key: string; total: number }>(`/dashboard-adjustments/${key}/adjust`, {

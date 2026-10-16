@@ -1,6 +1,7 @@
 const CashRegister = require("../models/CashRegister");
 const User = require("../models/User");
 const { shopScope } = require("../middleware/attachShopScope");
+const { entryRef, findEntryIndex, signedAmount } = require("../services/historyRefs");
 
 // Same pattern as customerController.currentUserName/bankController's own
 // copy - the JWT never carries a display name, only id/role/shopId.
@@ -25,7 +26,10 @@ function serializeRegister(register) {
     // Newest-first, same convention as Bank/Customer history rendering.
     history: (obj.history || [])
       .map((entry) => ({
+        ref: entryRef(entry),
         type: entry.type,
+        kind: entry.kind || "adjust",
+        undone: !!entry.undone,
         direction: entry.direction,
         amount: entry.amount,
         note: entry.note || "",
@@ -120,6 +124,99 @@ exports.recordCashMovement = async function recordCashMovement({
   });
   await register.save();
   return register;
+};
+
+// POST /api/cash/clear  body: { amount }
+// Clear button on Cash in Hand: takes the till to $0 with one recorded
+// adjustment (who cleared it, when). Can be undone from the history.
+exports.clearCash = async (req, res) => {
+  try {
+    const { shopId } = shopScope(req);
+    const register = await getOrCreateRegister(shopId);
+    const amount = Math.round(Number(register.balance || 0) * 100) / 100;
+    if (amount === 0) return res.status(400).json({ message: "Cash in Hand is already $0." });
+    const direction = amount > 0 ? "out" : "in";
+    register.balance = 0;
+    register.history.push({
+      type: "adjustment",
+      direction,
+      amount: Math.abs(amount),
+      note: `Cleared to $0 - was $${Math.round(amount).toLocaleString("en-US")}`,
+      balanceAfter: 0,
+      createdBy: await currentUserName(req),
+      kind: "clear",
+    });
+    await register.save();
+    res.json(serializeRegister(register));
+  } catch (error) {
+    res.status(500).json({ message: "Could not clear cash in hand", detail: error.message });
+  }
+};
+
+// Only manual entries (adjustments / clears / undos) can be undone or
+// deleted - real sales, purchases and recoveries are left alone.
+function findManualEntry(register, ref) {
+  const index = findEntryIndex(register.history, ref);
+  if (index === -1) return { error: [404, "That history entry no longer exists."] };
+  const entry = register.history[index];
+  if (entry.type !== "adjustment") {
+    return { error: [400, "Only manual corrections and clears can be changed here - this entry came from a real sale, purchase or payment."] };
+  }
+  return { index, entry };
+}
+
+// POST /api/cash/history/:ref/undo
+exports.undoCashEntry = async (req, res) => {
+  try {
+    const { shopId } = shopScope(req);
+    const register = await getOrCreateRegister(shopId);
+    const found = findManualEntry(register, req.params.ref);
+    if (found.error) return res.status(found.error[0]).json({ message: found.error[1] });
+    const { entry } = found;
+    if (entry.undone) return res.status(400).json({ message: "This entry was already undone." });
+    if (entry.kind === "undo") return res.status(400).json({ message: "An undo can't be undone - delete it instead." });
+    register.balance -= signedAmount(entry);
+    entry.undone = true;
+    register.history.push({
+      type: "adjustment",
+      direction: entry.direction === "out" ? "in" : "out",
+      amount: entry.amount,
+      note: `Undo: ${entry.note || "correction"}`,
+      balanceAfter: register.balance,
+      createdBy: await currentUserName(req),
+      kind: "undo",
+    });
+    register.markModified("history");
+    await register.save();
+    res.json(serializeRegister(register));
+  } catch (error) {
+    res.status(500).json({ message: "Could not undo", detail: error.message });
+  }
+};
+
+// DELETE /api/cash/history/:ref - removes a manual entry and its effect
+// on the balance.
+exports.deleteCashEntry = async (req, res) => {
+  try {
+    const { shopId } = shopScope(req);
+    const register = await getOrCreateRegister(shopId);
+    const found = findManualEntry(register, req.params.ref);
+    if (found.error) return res.status(found.error[0]).json({ message: found.error[1] });
+    const { index, entry } = found;
+    register.balance -= signedAmount(entry);
+    register.history.splice(index, 1);
+    if (entry.kind === "undo") {
+      const original = [...register.history]
+        .reverse()
+        .find((e) => e.undone && e.type === "adjustment" && e.amount === entry.amount && e.direction !== entry.direction);
+      if (original) original.undone = false;
+    }
+    register.markModified("history");
+    await register.save();
+    res.json(serializeRegister(register));
+  } catch (error) {
+    res.status(500).json({ message: "Could not delete this entry", detail: error.message });
+  }
 };
 
 exports.getOrCreateRegister = getOrCreateRegister;

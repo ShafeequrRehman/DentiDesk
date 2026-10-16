@@ -15,5 +15,9 @@ router.use(authenticate, requireShopMember, requireLicenseValid);
 router.get("/", requirePermission("view.dashboard"), ctrl.getAllAdjustments);
 router.get("/:key/history", requirePermission("view.dashboard"), ctrl.getHistory);
 router.post("/:key/adjust", requirePermission("dues.manage"), ctrl.adjust);
+// Clear to $0, and Undo / Delete of a history entry.
+router.post("/:key/clear", requirePermission("dues.manage"), ctrl.clear);
+router.post("/:key/history/:ref/undo", requirePermission("dues.manage"), ctrl.undo);
+router.delete("/:key/history/:ref", requirePermission("dues.manage"), ctrl.deleteEntry);
 
 module.exports = router;

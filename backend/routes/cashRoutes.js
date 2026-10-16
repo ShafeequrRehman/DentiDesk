@@ -15,5 +15,9 @@ router.use(authenticate, requireShopMember, requireLicenseValid);
 // shop's own money records" boundary.
 router.get("/", requirePermission("view.dashboard"), cashController.getCashSummary);
 router.post("/adjust", requirePermission("dues.manage"), cashController.adjustCash);
+// Clear to $0, and Undo / Delete of a manual history entry.
+router.post("/clear", requirePermission("dues.manage"), cashController.clearCash);
+router.post("/history/:ref/undo", requirePermission("dues.manage"), cashController.undoCashEntry);
+router.delete("/history/:ref", requirePermission("dues.manage"), cashController.deleteCashEntry);
 
 module.exports = router;
