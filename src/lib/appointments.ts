@@ -174,6 +174,7 @@ export function printPrescription(order: SavedOrder) {
     <p><b>DATE:</b> ${formatAppointmentDate(order.appointmentDate)} ${formatSlot(order.appointmentTime)}</p>
     ${checkedDate ? `<p><b>CHECKED:</b> ${checkedDate}</p>` : ''}
     ${services ? `<div class="dashed"></div><p><b>SERVICES:</b></p>${services}` : ''}
+    ${order.diagnosis ? `<div class="dashed"></div><p><b>DISEASE:</b> ${escapeHtml(order.diagnosis)}</p>` : ''}
     <div class="dashed"></div>
     <p style="font-size:16px;font-weight:900">Rx</p>
     <div style="font-size:13px;line-height:18px;white-space:normal">${prescription || '-'}</div>

@@ -937,6 +937,8 @@ export interface OrderPayload {
   doctorName?: string;
   checkupStatus?: '' | 'waiting' | 'done';
   prescription?: string;
+  // Disease/problem the Dr found at the checkup.
+  diagnosis?: string;
   checkedAt?: string | null;
   checkedBy?: string;
   // No longer settable when creating an order (Dining Tables removed from

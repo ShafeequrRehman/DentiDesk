@@ -156,6 +156,8 @@ const orderSchema = new mongoose.Schema(
     doctorName: { type: String, default: "", index: true },
     checkupStatus: { type: String, enum: ["", "waiting", "done"], default: "" },
     prescription: { type: String, default: "" },
+    // What the Dr found - the disease/problem (e.g. "Tooth decay, lower left molar").
+    diagnosis: { type: String, default: "" },
     checkedAt: { type: Date, default: null },
     checkedBy: { type: String, default: "" },
     status: { type: String, enum: ["pending", "completed", "cancelled", "paid"], default: "pending" },

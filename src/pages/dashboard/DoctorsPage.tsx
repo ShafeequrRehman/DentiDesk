@@ -405,6 +405,7 @@ function AppointmentRow({ order, showDate, offline, onCheckup, onReopen }: { ord
         {phone ? <p className="flex items-center gap-1 text-xs font-bold text-gray-500"><Phone size={12} />{phone}</p> : null}
         {services.length > 0 ? <p className="truncate text-xs font-semibold text-gray-500">Services: {services.map((s) => s.name).join(', ')}</p> : null}
         {order.note ? <p className="truncate text-xs font-semibold text-indigo-600">Note: {order.note}</p> : null}
+        {done && order.diagnosis ? <p className="truncate text-xs font-semibold text-rose-700">Disease: {order.diagnosis}</p> : null}
         {done && order.prescription ? <p className="line-clamp-2 whitespace-pre-line text-xs font-semibold text-emerald-700">Rx: {order.prescription}</p> : null}
       </div>
       <div className="flex shrink-0 flex-wrap items-center gap-2">
@@ -437,6 +438,7 @@ function AppointmentRow({ order, showDate, offline, onCheckup, onReopen }: { ord
 function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose: () => void; onSaved: (updated: SavedOrder) => void }) {
   const { toast } = useToast();
   const [prescription, setPrescription] = useState(order.prescription || '');
+  const [diagnosis, setDiagnosis] = useState(order.diagnosis || '');
   const [saving, setSaving] = useState(false);
   const alreadyDone = order.checkupStatus === 'done';
   useBackspaceToClose(onClose);
@@ -445,7 +447,7 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
     if (saving) return;
     setSaving(true);
     try {
-      const updated = await saveCheckup(order.id, prescription.trim(), true);
+      const updated = await saveCheckup(order.id, prescription.trim(), true, diagnosis.trim());
       if (!updated) throw new Error('Could not save this checkup.');
       const merged = { ...order, ...updated };
       if (print && !printPrescription(merged)) {
@@ -487,9 +489,18 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
 
         {order.note ? <p className="mb-3 rounded-xl bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700">Appointment note: {order.note}</p> : null}
 
+        <label className="mb-1 block text-xs font-black uppercase tracking-widest text-gray-400">Disease / Diagnosis</label>
+        <input
+          autoFocus
+          value={diagnosis}
+          onChange={(event) => setDiagnosis(event.target.value)}
+          maxLength={1000}
+          placeholder="e.g. Tooth decay (lower left molar), Gum infection, Sensitivity"
+          className="mb-3 w-full rounded-2xl border border-gray-200 bg-[#FFFDF5] px-4 py-3 text-sm font-semibold text-gray-800 outline-none focus:border-indigo-400"
+        />
+
         <label className="mb-1 block text-xs font-black uppercase tracking-widest text-gray-400">Medicine details / Prescription</label>
         <textarea
-          autoFocus
           value={prescription}
           onChange={(event) => setPrescription(event.target.value)}
           rows={10}

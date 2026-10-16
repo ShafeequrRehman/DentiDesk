@@ -659,7 +659,7 @@ exports.createOrder = async (req, res) => {
           reason: "slot_taken",
         });
       }
-      Object.assign(payload, slot, { checkupStatus: "waiting", prescription: "", checkedAt: null, checkedBy: "" });
+      Object.assign(payload, slot, { checkupStatus: "waiting", prescription: "", diagnosis: "", checkedAt: null, checkedBy: "" });
     } else {
       Object.assign(payload, { doctorName: "", appointmentDate: "", appointmentTime: "", checkupStatus: "" });
     }
@@ -2010,7 +2010,7 @@ exports.getAppointments = async (req, res) => {
     else if (status === "waiting") query.checkupStatus = { $ne: "done" };
 
     const orders = await Order.find(query)
-      .select("dailyOrderNumber shopSequenceNumber customer note items total paidAmount remainingAmount status orderType source paymentStatus paymentMethod appointmentDate appointmentTime doctorName checkupStatus prescription checkedAt checkedBy createdAt")
+      .select("dailyOrderNumber shopSequenceNumber customer note items total paidAmount remainingAmount status orderType source paymentStatus paymentMethod appointmentDate appointmentTime doctorName checkupStatus prescription diagnosis checkedAt checkedBy createdAt")
       .sort({ appointmentDate: 1, appointmentTime: 1 })
       .limit(500)
       .lean();
@@ -2020,7 +2020,7 @@ exports.getAppointments = async (req, res) => {
   }
 };
 
-// PATCH /orders/:id/checkup  body: { prescription, done }
+// PATCH /orders/:id/checkup  body: { prescription, diagnosis, done }
 // The Dr marks the checkup done (with the medicine details), which frees
 // the time slot. done:false re-opens it (slot booked again, if still free).
 exports.completeCheckup = async (req, res) => {
@@ -2033,6 +2033,9 @@ exports.completeCheckup = async (req, res) => {
     const done = req.body?.done !== false;
     if (typeof req.body?.prescription === "string") {
       order.prescription = req.body.prescription.slice(0, 5000);
+    }
+    if (typeof req.body?.diagnosis === "string") {
+      order.diagnosis = req.body.diagnosis.trim().slice(0, 1000);
     }
     let stockWarning = null;
     if (done) {
