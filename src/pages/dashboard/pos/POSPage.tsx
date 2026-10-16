@@ -1368,7 +1368,7 @@ export default function POSPage() {
               const isKeyboardFocused = viewMode === 'grid' && groupIndex === focusedProductIndex;
               return (
                 <button key={group.key} type="button" onClick={() => { handleGroupClick(group); setFocusedProductIndex(groupIndex); }} className={`group overflow-hidden rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-br from-white/70 to-white/30 p-2.5 text-left rtl:text-right backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-3px_8px_rgba(15,23,42,0.12)] transition hover:-translate-y-0.5 hover:border-[#00B0C7]/70 hover:shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-4px_10px_rgba(0,154,174,0.35)] ${isKeyboardFocused ? 'ring-2 ring-[#009AAE] ring-offset-2' : ''} ${viewMode === 'list' ? 'flex items-center gap-3' : 'flex h-[266px] flex-col'}`}>
-                  <div className={`relative overflow-hidden rounded-[14px] bg-slate-100 shrink-0 shadow-inner ${viewMode === 'list' ? 'h-16 w-16' : 'mb-2 h-[110px] w-full'}`}>
+                  <div className={`relative overflow-hidden rounded-[14px] bg-slate-100 shrink-0 shadow-inner ${viewMode === 'list' ? 'h-16 w-16' : 'mb-1.5 h-[160px] w-full'}`}>
                     <img src={resolveProductImage(group)} alt={group.name} loading="lazy" className="h-full w-full object-cover transition duration-300 group-hover:scale-110" />
                     <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent" />
                     {/* Stock badge - top-right corner of the product
@@ -1380,7 +1380,7 @@ export default function POSPage() {
                         Pending-order and Product Code/"null" badges that
                         used to occupy these corners. */}
                   </div>
-                  <div className={`flex flex-col justify-between overflow-hidden ${viewMode === 'list' ? 'flex-1 min-w-0' : 'w-full flex-1'}`}>
+                  <div className={`flex flex-col overflow-hidden ${viewMode === 'list' ? 'flex-1 min-w-0 justify-between' : 'w-full flex-1 justify-start'}`}>
                     <div className="min-h-0 overflow-hidden">
                       <div className="mb-0.5 flex items-start justify-between gap-1.5">
                         <div className="min-w-0">
@@ -1417,9 +1417,9 @@ export default function POSPage() {
                         the Select/Add button - squeezed side by side the two
                         were fighting for width and the price (the important
                         part) was the one getting truncated ("From PKR ..."). */}
-                    <div className={`${viewMode === 'list' ? '' : 'mt-3 pt-2 border-t border-gray-50'}`}>
+                    <div className={`${viewMode === 'list' ? '' : 'mt-1 pt-1 border-t border-gray-50'}`}>
                       <p className="truncate text-[12px] font-black text-gray-900">{hasVariations ? t('pos.fromPrice', { price: cheapestPrice }) : `$${group.variations[0].price}`}</p>
-                      <span className="mt-1.5 inline-flex w-fit shrink-0 items-center justify-center rounded-[8px] bg-black h-[22px] px-2.5 text-[9px] font-bold text-white transition group-hover:bg-[#00B0C7] group-hover:text-black">{hasVariations ? t('pos.select') : t('common.add')}</span>
+                      <span className="mt-1 inline-flex w-fit shrink-0 items-center justify-center rounded-[8px] bg-black h-[22px] px-2.5 text-[9px] font-bold text-white transition group-hover:bg-[#00B0C7] group-hover:text-black">{hasVariations ? t('pos.select') : t('common.add')}</span>
                     </div>
                   </div>
                 </button>
