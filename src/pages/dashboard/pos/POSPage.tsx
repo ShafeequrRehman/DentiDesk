@@ -19,7 +19,7 @@ import { useLanguage } from '@/i18n';
 import CompleteOrderModal from '@/components/CompleteOrderModal';
 import { writeOrderReceiptToWindow } from '@/lib/order-receipt-print';
 import { isValidWhatsappNumber, sendAppointmentSlip } from '@/lib/whatsapp-slips';
-import { useTimeSlots, dayOpen, slotOpen, extraFor, describeSchedule, scheduleOf, WEEKDAY_LONG, weekdayOfISO, describeUpcomingLeave, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo } from '@/lib/appointments';
+import { useTimeSlots, dayOpen, slotOpen, extraFor, describeSchedule, scheduleOf, WEEKDAY_LONG, weekdayOfISO, describeUpcomingLeave, describeUpcomingExtra, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo } from '@/lib/appointments';
 
 
 // A "product group" is every Product record that shares the same name +
@@ -432,6 +432,7 @@ export default function POSPage() {
   const dayOnLeave = !!doctorName && leaveInfo.fullDays.has(appointmentDate);
   const leaveTimes = leaveInfo.partTimes.get(appointmentDate);
   const upcomingLeave = useMemo(() => describeUpcomingLeave(leaveInfo), [leaveInfo]);
+  const upcomingExtra = useMemo(() => describeUpcomingExtra(leaveInfo), [leaveInfo]);
 
   // A picked time that turns out to be on leave is cleared.
   useEffect(() => {
@@ -1591,6 +1592,15 @@ export default function POSPage() {
                   className="w-full rounded-xl border border-white/60 bg-white/50 py-2 pl-9 pr-3 text-sm shadow-inner outline-none"
                 />
               </div>
+              {/* Before picking a date: when this Dr/Service normally works,
+                  extra days outside that routine, and upcoming leave. */}
+              {doctorName ? (
+                <div className="mt-1.5 space-y-0.5 text-[10px] font-bold leading-snug">
+                  <p className="text-[#007F90]">{doctorName} works: {scheduleText || 'Every day, all clinic hours'}</p>
+                  {upcomingExtra ? <p className="text-emerald-700">Also available: {upcomingExtra}</p> : null}
+                  {upcomingLeave ? <p className="text-amber-700">Leave: {upcomingLeave}</p> : null}
+                </div>
+              ) : null}
             </FormField>
 
             <FormField label={doctorName ? t('pos.appointmentTimeLabelFor', { doctor: doctorName }) : t('pos.appointmentTimeLabel')}>
@@ -1610,7 +1620,6 @@ export default function POSPage() {
                 </div>
               ) : (
                 <div>
-                  {scheduleText ? <p className="mb-1.5 text-[10px] font-bold text-[#007F90]">Available: {scheduleText}</p> : null}
                   {extraDay.fullDay || extraDay.times.size > 0 ? (
                     <p className="mb-1.5 text-[10px] font-bold text-emerald-700">
                       Extra availability on this date{extraDay.fullDay ? ' - full day' : ''} (Dr Availability)
@@ -1661,7 +1670,6 @@ export default function POSPage() {
                       <span className="flex items-center gap-1"><span className="inline-block h-2 w-2 rounded-sm bg-amber-300" />Leave</span>
                     </span>
                   </div>
-                  {upcomingLeave ? <p className="mt-1 text-[10px] font-semibold text-amber-700">Leave: {upcomingLeave}</p> : null}
                 </div>
               )}
             </FormField>

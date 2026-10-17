@@ -295,6 +295,20 @@ export function describeUpcomingLeave(info: LeaveInfo, limit = 4) {
     .join(' · ');
 }
 
+// "Sun 25 Oct (4:00 PM - 5:30 PM) · Sat 31 Oct (full day)" - next few
+// extra-availability days (outside the weekly routine).
+export function describeUpcomingExtra(info: LeaveInfo, limit = 5) {
+  const dates = [...new Set([...info.extraFullDays, ...info.extraTimes.keys()])].sort().slice(0, limit);
+  return dates
+    .map((date) => {
+      const short = `${WEEKDAY_SHORT[weekdayOfISO(date)]} ${formatAppointmentDate(date).replace(/ \d{4}$/, '')}`;
+      if (info.extraFullDays.has(date)) return `${short} (full day)`;
+      const times = [...(info.extraTimes.get(date) || [])].sort();
+      return `${short} (${formatSlot(times[0])} - ${formatSlot(times[times.length - 1])})`;
+    })
+    .join(' · ');
+}
+
 // Booked time -> patient name, for one Dr on one date.
 export async function loadBookedSlots(doctor: string, date: string): Promise<Map<string, string>> {
   const { list } = await loadAppointments({ doctor, date, status: 'waiting' });
