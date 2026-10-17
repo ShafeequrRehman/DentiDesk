@@ -668,7 +668,7 @@ export default function AccountingPage() {
                       onClick={() => navigate('/dashboard/dues')}
                       className="mt-6 flex items-center gap-2 rounded-[16px] bg-white/15 px-4 py-2.5 text-xs font-black hover:bg-white/25 transition-all"
                     >
-                      View Patient Dues <ChevronRight size={14}/>
+                      View Dues <ChevronRight size={14}/>
                     </button>
                 </div>
                 {/* Visual Flair */}

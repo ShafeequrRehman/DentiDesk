@@ -1,5 +1,5 @@
 export const dues = {
-  title: "مریض واجبات",
+  title: "واجبات",
   subtitle: "مریضوں کے باقی واجبات کا انتظام کریں اور یاد دہانی بھیجیں۔",
   addCustomer: "مریض شامل کریں",
   searchPlaceholder: "نام یا فون سے مریضوں تلاش کریں...",

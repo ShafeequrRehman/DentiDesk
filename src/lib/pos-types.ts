@@ -143,7 +143,7 @@ export interface CashSummary {
 // currentStock at fetch time.
 export interface IngredientLedgerEntry {
   date: string;
-  type: 'purchase' | 'sale';
+  type: 'purchase' | 'sale' | 'adjustment';
   label: string;
   detail: string;
   quantity: number;

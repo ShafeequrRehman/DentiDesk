@@ -8,6 +8,7 @@ import {
   restockIngredient,
   createIngredientPurchase,
   fetchSuppliers,
+  fetchBanks,
   createSupplier,
   updateSupplier,
   deleteSupplier,
@@ -17,7 +18,7 @@ import {
   fetchCustomerSearch,
   fetchIngredientLedger,
 } from "@/lib/pos-api";
-import { Customer, Ingredient, IngredientLedgerEntry, IngredientPurchase, IngredientUnit, INGREDIENT_UNIT_OPTIONS, Product, Recipe, Supplier } from "@/lib/pos-types";
+import { Bank, Customer, Ingredient, IngredientLedgerEntry, IngredientPurchase, IngredientUnit, INGREDIENT_UNIT_OPTIONS, Product, Recipe, Supplier } from "@/lib/pos-types";
 import { getAuthShop } from "@/lib/auth";
 import { useToast } from "@/lib/toast";
 import { ReportPdfDocument, downloadPdfDocument, pdfDocumentToBase64 } from "@/lib/pdf-export";
@@ -230,6 +231,13 @@ export function IngredientStockSection({
   const [purchaseContactQuery, setPurchaseContactQuery] = useState("");
   const [purchaseContactResults, setPurchaseContactResults] = useState<Customer[]>([]);
   const [purchaseContactSearching, setPurchaseContactSearching] = useState(false);
+  // Paid from Cash in Hand or a Bank. Neither picked = the whole bill goes
+  // to Dues (nothing paid now).
+  const [purchasePaySource, setPurchasePaySource] = useState<'' | 'cash' | 'bank'>('');
+  const [purchaseBankId, setPurchaseBankId] = useState('');
+  const [banks, setBanks] = useState<Bank[]>([]);
+  // Note for a stock adjustment (kept in the medicine's history).
+  const [restockNote, setRestockNote] = useState("");
   const purchaseContactSearchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   function resetPurchaseForm() {
@@ -246,6 +254,8 @@ export function IngredientStockSection({
     setPurchaseLinkedCustomer(null);
     setPurchaseContactQuery("");
     setPurchaseContactResults([]);
+    setPurchasePaySource('');
+    setPurchaseBankId('');
   }
 
   // Debounced name search against the same GET /api/customers/search
@@ -288,8 +298,26 @@ export function IngredientStockSection({
   function clearPurchaseContact() {
     setPurchaseLinkedCustomer(null);
     setPurchaseCustomerId(null);
+    setPurchaseSupplierId("");
     setPurchaseCompany("");
   }
+
+  // "Buy through company or patient": picking a company from the
+  // Companies list.
+  function pickPurchaseSupplier(supplier: Supplier) {
+    setPurchaseSupplierId(supplier.id);
+    setPurchaseCompany(supplier.name);
+    setPurchaseLinkedCustomer(null);
+    setPurchaseCustomerId(null);
+    setPurchaseContactQuery("");
+    setPurchaseContactResults([]);
+  }
+
+  useEffect(() => {
+    fetchBanks()
+      .then((list) => setBanks(list || []))
+      .catch(() => setBanks([]));
+  }, []);
 
   useEffect(() => {
     void loadAll();
@@ -498,7 +526,7 @@ export function IngredientStockSection({
       return;
     }
     try {
-      const updated = await restockIngredient(ingredient.id, quantity);
+      const updated = await restockIngredient(ingredient.id, quantity, restockNote.trim() || undefined);
       if (updated) {
         setIngredients((prev) => prev.map((i) => (i.id === ingredient.id ? updated : i)));
         setStatusMessage({
@@ -509,6 +537,7 @@ export function IngredientStockSection({
       }
       setRestockingId(null);
       setRestockQty("");
+      setRestockNote("");
     } catch (error) {
       popup({ tone: "error", title: t('ingredientStock.toasts.updateStockFailedTitle'), message: error instanceof Error ? error.message : t('ingredientStock.toasts.updateStockFailedMessage') });
     }
@@ -569,7 +598,8 @@ export function IngredientStockSection({
   // blank field reads as "nothing paid yet" (the whole total becomes Due),
   // same default this had before. Due Amount is ALWAYS this derived value,
   // never its own input - see purchasePaid's own comment above.
-  const purchasePaidAmount = purchasePaid === "" ? 0 : Math.min(Math.max(Number(purchasePaid) || 0, 0), purchaseTotal);
+  // No Cash/Bank picked = nothing paid now, the whole bill goes to Dues.
+  const purchasePaidAmount = !purchasePaySource || purchasePaid === "" ? 0 : Math.min(Math.max(Number(purchasePaid) || 0, 0), purchaseTotal);
   const purchaseDueAmount = Math.max(purchaseTotal - purchasePaidAmount, 0);
 
   async function handleConfirmPurchase(ingredient: Ingredient) {
@@ -581,6 +611,10 @@ export function IngredientStockSection({
     }
     if (!rate || rate <= 0) {
       popup({ tone: "error", title: t('ingredientStock.toasts.missingPurchaseRateTitle'), message: t('ingredientStock.toasts.enterCostPerUnit', { unit: ingredient.unit }) });
+      return;
+    }
+    if (purchasePaySource === 'bank' && !purchaseBankId) {
+      popup({ tone: "error", title: "Pick a bank", message: "Choose which bank this payment is from." });
       return;
     }
     // Opened here, synchronously, before the first `await` below - the
@@ -600,7 +634,9 @@ export function IngredientStockSection({
         quantity,
         rate,
         paidAmount: purchasePaidAmount,
-        companyName: purchaseCompany.trim(),
+        paymentSource: purchasePaySource,
+        bankId: purchasePaySource === 'bank' ? purchaseBankId : undefined,
+        companyName: (purchaseCompany || purchaseContactQuery).trim(),
         productDetails: purchaseProductDetails.trim(),
         supplierId: purchaseSupplierId || null,
         customerId: purchaseCustomerId || null,
@@ -1512,26 +1548,7 @@ export function IngredientStockSection({
                 </div>
                 {isPurchasing ? (
                   <div className="mt-3 space-y-3 border-t border-slate-100 pt-3">
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                      <div className="space-y-1.5">
-                        <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('ingredientStock.purchaseForm.companyNameLabel')}</label>
-                        <select
-                          autoFocus
-                          value={purchaseSupplierId}
-                          onChange={(e) => {
-                            const supplier = suppliers.find((s) => s.id === e.target.value);
-                            setPurchaseSupplierId(e.target.value);
-                            setPurchaseCompany(supplier?.name || "");
-                          }}
-                          title={suppliers.length === 0 ? t('ingredientStock.purchaseForm.addCompanyFirstTitle') : undefined}
-                          className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all appearance-none"
-                        >
-                          <option value="">{suppliers.length === 0 ? t('ingredientStock.purchaseForm.noCompaniesSelect') : t('ingredientStock.purchaseForm.selectCompany')}</option>
-                          {suppliers.map((s) => (
-                            <option key={s.id} value={s.id}>{s.name}</option>
-                          ))}
-                        </select>
-                      </div>
+                    <div className="grid grid-cols-1 gap-3">
                       <div className="space-y-1.5">
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('ingredientStock.purchaseForm.productDetailsLabel')}</label>
                         <input
@@ -1543,12 +1560,12 @@ export function IngredientStockSection({
                       </div>
                     </div>
                     <div className="space-y-1.5">
-                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Or link to an existing Khata contact (optional)</label>
-                      {purchaseLinkedCustomer ? (
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Buy through company or patient</label>
+                      {purchaseLinkedCustomer || purchaseSupplierId ? (
                         <div className="flex items-center justify-between rounded-2xl bg-indigo-50 border border-indigo-200 px-4 py-2.5">
                           <div className="min-w-0">
-                            <p className="truncate text-sm font-black text-indigo-900">{purchaseLinkedCustomer.name}</p>
-                            <p className="truncate text-[11px] font-bold text-indigo-500">{purchaseLinkedCustomer.phone}</p>
+                            <p className="truncate text-sm font-black text-indigo-900">{purchaseLinkedCustomer ? purchaseLinkedCustomer.name : purchaseCompany}</p>
+                            <p className="truncate text-[11px] font-bold text-indigo-500">{purchaseLinkedCustomer ? `Patient · ${purchaseLinkedCustomer.phone}` : 'Company'}</p>
                           </div>
                           <button type="button" onClick={clearPurchaseContact} className="shrink-0 rounded-full p-1.5 text-indigo-400 hover:bg-indigo-100 hover:text-indigo-700">
                             <X size={16} />
@@ -1558,16 +1575,31 @@ export function IngredientStockSection({
                         <div className="relative">
                           <input
                             value={purchaseContactQuery}
+                            autoFocus
                             onChange={(e) => searchPurchaseContacts(e.target.value)}
-                            placeholder="Search a patient by name..."
+                            placeholder="Buy through company or patient"
                             className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                           />
-                          {purchaseContactQuery.trim().length >= 2 ? (
-                            <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
-                              {purchaseContactSearching ? (
-                                <p className="px-3 py-2 text-xs font-bold text-slate-400">Searching...</p>
+                          {purchaseContactQuery.trim().length >= 1 ? (
+                            <div className="absolute z-10 mt-1 max-h-56 w-full overflow-y-auto rounded-xl border border-slate-200 bg-white shadow-lg">
+                              {suppliers
+                                .filter((s) => s.name.toLowerCase().includes(purchaseContactQuery.trim().toLowerCase()))
+                                .slice(0, 8)
+                                .map((supplier) => (
+                                  <button
+                                    key={`s-${supplier.id}`}
+                                    type="button"
+                                    onClick={() => pickPurchaseSupplier(supplier)}
+                                    className="flex w-full items-center justify-between px-3 py-2 text-left text-xs font-bold text-slate-700 hover:bg-indigo-50"
+                                  >
+                                    <span>{supplier.name}</span>
+                                    <span className="rounded-full bg-slate-100 px-2 py-0.5 text-[9px] font-black uppercase text-slate-500">Company</span>
+                                  </button>
+                                ))}
+                              {purchaseContactQuery.trim().length < 2 ? null : purchaseContactSearching ? (
+                                <p className="px-3 py-2 text-xs font-bold text-slate-400">Searching patients...</p>
                               ) : purchaseContactResults.length === 0 ? (
-                                <p className="px-3 py-2 text-xs font-bold text-slate-400">No matching patients.</p>
+                                <p className="px-3 py-2 text-xs font-bold text-slate-400">No matching patients - the name you typed is saved as the company.</p>
                               ) : (
                                 purchaseContactResults.map((customer) => (
                                   <button
@@ -1585,7 +1617,7 @@ export function IngredientStockSection({
                         </div>
                       )}
                       <p className="text-[10px] font-bold text-slate-400">
-                        Links this purchase to a Khata contact's account so their sales and purchase dues net into one balance on the Unified Khata page. Leave this empty for a plain supplier who isn't a clinic patient.
+                        Pick a company (from the Companies list) or a patient. A patient's purchase dues and appointment dues net into one balance on the Dues page. You can also just type a name.
                       </p>
                     </div>
                     <div className="grid grid-cols-1 sm:grid-cols-4 gap-3">
@@ -1622,7 +1654,8 @@ export function IngredientStockSection({
                         <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('ingredientStock.purchaseForm.amountPaidLabel')}</label>
                         <input
                           type="number"
-                          value={purchasePaid}
+                          value={purchasePaySource ? purchasePaid : ''}
+                          disabled={!purchasePaySource}
                           onChange={(e) => setPurchasePaid(e.target.value)}
                           onKeyDown={(e) => { if (e.key === "Enter") void handleConfirmPurchase(ingredient); }}
                           placeholder="0"
@@ -1636,10 +1669,41 @@ export function IngredientStockSection({
                         separately-typed field (see purchasePaid's own
                         comment). "Full Payment" just snaps Amount Paid up
                         to the total, which instantly zeroes this out. */}
+                    <div className="flex flex-wrap items-center gap-2">
+                      <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">Paid from</span>
+                      {(['cash', 'bank'] as const).map((source) => (
+                        <button
+                          key={source}
+                          type="button"
+                          onClick={() => setPurchasePaySource((current) => (current === source ? '' : source))}
+                          className={`rounded-xl px-4 py-2 text-xs font-black transition ${purchasePaySource === source ? 'bg-slate-900 text-white shadow' : 'bg-white text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50'}`}
+                        >
+                          {source === 'cash' ? 'Cash in Hand' : 'Bank'}
+                        </button>
+                      ))}
+                      {purchasePaySource === 'bank' ? (
+                        <select
+                          value={purchaseBankId}
+                          onChange={(e) => setPurchaseBankId(e.target.value)}
+                          className="rounded-xl bg-white px-3 py-2 text-xs font-bold ring-1 ring-slate-200 outline-none"
+                        >
+                          <option value="">{banks.length === 0 ? 'No banks - add one on the Bank page' : 'Choose bank...'}</option>
+                          {banks.map((bank) => (
+                            <option key={bank.id} value={bank.id}>{bank.name} (${Math.round(bank.balance).toLocaleString()})</option>
+                          ))}
+                        </select>
+                      ) : null}
+                      {!purchasePaySource ? (
+                        <span className="text-[11px] font-bold text-amber-700">Not paid now - the full amount goes to Dues.</span>
+                      ) : null}
+                    </div>
                     <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl bg-slate-100 px-4 py-3">
                       <button
                         type="button"
-                        onClick={() => setPurchasePaid(String(purchaseTotal))}
+                        onClick={() => {
+                          if (!purchasePaySource) setPurchasePaySource('cash');
+                          setPurchasePaid(String(purchaseTotal));
+                        }}
                         disabled={purchaseTotal <= 0}
                         className="inline-flex items-center gap-1.5 rounded-xl bg-white ring-1 ring-emerald-200 px-3.5 py-2 text-xs font-black uppercase tracking-wider text-emerald-700 hover:bg-emerald-50 transition-colors shadow-sm disabled:cursor-not-allowed disabled:opacity-50"
                       >
@@ -1672,6 +1736,18 @@ export function IngredientStockSection({
                         value={restockQty}
                         onChange={(e) => setRestockQty(e.target.value)}
                         onKeyDown={(e) => { if (e.key === "Enter") void handleConfirmRestock(ingredient); }}
+                        className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+                      />
+                    </div>
+                    <div className="flex-1 space-y-1.5">
+                      <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">Reason (saved in history)</label>
+                      <input
+                        type="text"
+                        value={restockNote}
+                        onChange={(e) => setRestockNote(e.target.value)}
+                        onKeyDown={(e) => { if (e.key === "Enter") void handleConfirmRestock(ingredient); }}
+                        placeholder="e.g. Expired, Damaged, Used outside appointment"
+                        maxLength={300}
                         className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-slate-50 px-4 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
                       />
                     </div>
@@ -1808,8 +1884,8 @@ function IngredientLedgerModal({ ingredient, onClose }: { ingredient: Ingredient
     () =>
       filteredEntries.reduce(
         (acc, e) => ({
-          purchased: acc.purchased + (e.type === 'purchase' ? e.quantity : 0),
-          sold: acc.sold + (e.type === 'sale' ? e.quantity : 0),
+          purchased: acc.purchased + (e.direction === 'in' ? e.quantity : 0),
+          sold: acc.sold + (e.direction === 'out' ? e.quantity : 0),
         }),
         { purchased: 0, sold: 0 }
       ),
@@ -1820,8 +1896,8 @@ function IngredientLedgerModal({ ingredient, onClose }: { ingredient: Ingredient
     return filteredEntries.map((e) => [
       formatLedgerDateTime(e.date),
       `${e.label} · ${e.detail}`,
-      e.type === 'purchase' ? `${formatStockQty(e.quantity)}${ingredient.unit}` : '—',
-      e.type === 'sale' ? `${formatStockQty(e.quantity)}${ingredient.unit}` : '—',
+      e.direction === 'in' ? `${formatStockQty(e.quantity)}${ingredient.unit}` : '—',
+      e.direction === 'out' ? `${formatStockQty(e.quantity)}${ingredient.unit}` : '—',
       `${formatStockQty(e.remaining)}${ingredient.unit}`,
     ]);
   }
@@ -1947,8 +2023,8 @@ function IngredientLedgerModal({ ingredient, onClose }: { ingredient: Ingredient
               {filteredEntries.map((entry, index) => (
                 <div key={index} className="flex items-center justify-between gap-3 rounded-2xl bg-white/60 px-4 py-3 shadow-sm ring-1 ring-slate-100">
                   <div className="flex min-w-0 items-center gap-3">
-                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${entry.type === 'purchase' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
-                      {entry.type === 'purchase' ? <ArrowDownCircle size={18} /> : <ArrowUpCircle size={18} />}
+                    <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${entry.type === 'adjustment' ? 'bg-amber-50 text-amber-600' : entry.direction === 'in' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
+                      {entry.direction === 'in' ? <ArrowDownCircle size={18} /> : <ArrowUpCircle size={18} />}
                     </div>
                     <div className="min-w-0">
                       <p className="truncate text-sm font-black text-slate-800">{entry.label}</p>

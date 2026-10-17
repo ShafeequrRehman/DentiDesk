@@ -288,9 +288,9 @@ export default function OfflineSyncPage() {
           engine/interval as everything else on this page. */}
       <div className="rounded-[28px] border border-slate-200 bg-white p-6">
         <div>
-          <h2 className="text-lg font-black text-slate-900">Offline Patient Dues</h2>
+          <h2 className="text-lg font-black text-slate-900">Offline Dues</h2>
           <p className="mt-1 text-sm text-slate-500">
-            A patient added, or a dues amount added/paid, on Patient Dues while offline or on a slow connection.
+            A patient added, or a dues amount added/paid, on Dues while offline or on a slow connection.
             They sync automatically the same way offline appointments do.
           </p>
         </div>

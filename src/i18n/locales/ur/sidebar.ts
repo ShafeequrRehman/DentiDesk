@@ -8,7 +8,7 @@ export const sidebar = {
   purchase: "خریداری",
   "ingredient-stock": "میڈیسن اسٹاک",
   "medicine-setup": "میڈیسن سیٹ کریں",
-  dues: "مریض واجبات",
+  dues: "واجبات",
   ledger: "لیجر",
   bank: "بینک",
   record: "ریکارڈ",

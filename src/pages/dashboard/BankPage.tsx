@@ -96,7 +96,7 @@ export default function BankPage() {
             Bank <Landmark className="text-indigo-600" size={32} />
           </h1>
           <p className="text-slate-500 font-bold">
-            Your own bank accounts - add a payment here to deposit into one, or pick one from Patient Dues when a payment goes through the bank.
+            Your own bank accounts - add a payment here to deposit into one, or pick one from Dues when a payment goes through the bank.
           </p>
         </div>
         <div className="flex items-center gap-3">

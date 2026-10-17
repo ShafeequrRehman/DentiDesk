@@ -14,7 +14,7 @@ export const sidebar = {
   purchase: "Purchase",
   "ingredient-stock": "Medicine Stock",
   "medicine-setup": "Set Medicine",
-  dues: "Patient Dues",
+  dues: "Dues",
   ledger: "Ledger",
   bank: "Bank",
   record: "Record",

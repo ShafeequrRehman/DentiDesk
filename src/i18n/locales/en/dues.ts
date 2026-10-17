@@ -2,7 +2,7 @@
 // form, per-customer add/pay/clear dues card and its history dropdown) -
 // see src/pages/dashboard/DuesPage.tsx.
 export const dues = {
-  title: "Patient Dues",
+  title: "Dues",
   subtitle: "Manage patient outstanding balances and send reminders.",
   addCustomer: "Add Patient",
   searchPlaceholder: "Search patients by name or phone...",

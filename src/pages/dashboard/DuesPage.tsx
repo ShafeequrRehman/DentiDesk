@@ -686,7 +686,7 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
 
   async function handleDeleteCustomer() {
     const confirmed = await confirm(
-      `Delete ${customer.name}? This removes them from Patient Dues entirely - their past appointments/purchases keep their own record, but this contact and its dues history will be gone for good.`,
+      `Delete ${customer.name}? This removes them from Dues entirely - their past appointments/purchases keep their own record, but this contact and its dues history will be gone for good.`,
       { title: 'Delete patient', confirmText: 'Delete', tone: 'danger' }
     );
     if (!confirmed) return;
@@ -1159,7 +1159,7 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
     const balanceByKey = computeRunningBalances();
     return (
       <ReportPdfDocument
-        title="Patient Dues Statement"
+        title="Dues Statement"
         subtitle={`${customer.name}${hasRealPhone(customer.phone) ? ` · ${customer.phone}` : ''} · ${historyRangeLabel}`}
         stats={[
           { label: 'Current Dues', value: `$${totalDue}` },

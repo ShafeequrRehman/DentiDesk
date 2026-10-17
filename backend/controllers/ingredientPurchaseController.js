@@ -8,6 +8,7 @@ const { shopScope } = require("../middleware/attachShopScope");
 const { toMilliUnits, fromMilliUnits } = require("../config/ingredientUnits");
 const { reverseIngredientReceipt } = require("../services/stockService");
 const { recordCashMovement } = require("./cashController");
+const { recordCustomerBankMovement } = require("./bankController");
 
 // Unified Khata: resolves an optional `customerId` from a purchase request
 // body into that Customer's own document (just id/name - all that's needed
@@ -139,7 +140,13 @@ exports.getPurchase = async (req, res) => {
 // marks a single-line legacy purchase "received".
 exports.createPurchase = async (req, res) => {
   try {
-    const { ingredientId, quantity, rate, paidAmount, companyName, productDetails, supplierId, purchaseDate, note, customerId } = req.body || {};
+    const { ingredientId, quantity, rate, paidAmount, companyName, productDetails, supplierId, purchaseDate, note, customerId, paymentSource, bankId } = req.body || {};
+    // Paid from Cash in Hand or a Bank. Neither picked = nothing paid now,
+    // the whole bill goes to Dues.
+    const source = paymentSource === "bank" ? "bank" : paymentSource === "cash" ? "cash" : "";
+    if (source === "bank" && !bankId) {
+      return res.status(400).json({ error: "Pick which bank the payment is from." });
+    }
 
     if (!ingredientId || !mongoose.Types.ObjectId.isValid(ingredientId)) {
       return res.status(400).json({ error: "A valid ingredient is required." });
@@ -169,7 +176,7 @@ exports.createPurchase = async (req, res) => {
     // always lands remaining at strictly 0 this way; anything less always
     // leaves the true difference as Due, which getCompanyLedger below
     // rolls into that company's credit-ledger balance automatically.
-    const paid = Math.min(Math.max(Number(paidAmount) || 0, 0), totalAmount);
+    const paid = source ? Math.min(Math.max(Number(paidAmount) || 0, 0), totalAmount) : 0;
     const remaining = Math.max(totalAmount - paid, 0);
 
     // Purchase Order Number: a permanent, never-reused invoice number for
@@ -224,7 +231,17 @@ exports.createPurchase = async (req, res) => {
     // to the supplier right now is assumed to have left the till.
     // Best-effort/non-fatal, same as every other recordCashMovement call
     // site - never blocks the purchase itself.
-    if (paid > 0) {
+    if (paid > 0 && source === "bank") {
+      await recordCustomerBankMovement({
+        bankId,
+        shopId: req.user.shopId,
+        type: "withdrawal",
+        amount: paid,
+        note: `Purchase ${purchaseOrderNumber} - ${purchase.companyName || "supplier"}`,
+        customerName: purchase.companyName || "",
+        createdBy: await currentUserName(req),
+      });
+    } else if (paid > 0) {
       await recordCashMovement({
         shopId: req.user.shopId,
         type: "purchase",

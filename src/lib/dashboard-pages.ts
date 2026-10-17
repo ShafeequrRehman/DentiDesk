@@ -66,7 +66,7 @@ export const DASHBOARD_PAGES: DashboardPageDef[] = [
   // Which medicines/disposables each Dr or Service uses - taken off
   // Medicine Stock when the appointment is finished.
   { key: 'medicine-setup', label: 'Set Medicine', href: '/dashboard/medicine-setup', permission: ['inventory.manage', 'stock.manage'] },
-  { key: 'dues', label: 'Patient Dues', href: '/dashboard/dues', permission: 'dues.manage', hotkey: 'F7' },
+  { key: 'dues', label: 'Dues', href: '/dashboard/dues', permission: 'dues.manage', hotkey: 'F7' },
   { key: 'ledger', label: 'Ledger', href: '/dashboard/ledger', permission: 'dues.manage', hotkey: 'F8' },
   // The shop's own bank accounts - same dues.manage gate as Dues/Ledger
   // above, since Bank exists to back Customer Dues payments made "via

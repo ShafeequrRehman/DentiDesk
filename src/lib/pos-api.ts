@@ -738,6 +738,9 @@ export interface IngredientPurchaseInput {
   customerId?: string | null;
   purchaseDate?: string;
   note?: string;
+  // Paid from Cash in Hand or a Bank; '' = not paid now (all to Dues).
+  paymentSource?: '' | 'cash' | 'bank';
+  bankId?: string;
 }
 
 // Records a batch (rate/total/paid/due), restocks the ingredient, and folds

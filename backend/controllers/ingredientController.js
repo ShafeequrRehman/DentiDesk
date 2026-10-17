@@ -5,6 +5,8 @@ const Product = require("../models/Product");
 const Recipe = require("../models/Recipe");
 const IngredientPurchase = require("../models/IngredientPurchase");
 const Order = require("../models/Order");
+const StockAdjustment = require("../models/StockAdjustment");
+const User = require("../models/User");
 const { shopScope } = require("../middleware/attachShopScope");
 const { escapeRegex } = require("../utils/escapeRegex");
 const { INGREDIENT_UNITS, UNIT_FAMILY, toMilliUnits, fromMilliUnits } = require("../config/ingredientUnits");
@@ -195,8 +197,33 @@ exports.restockIngredient = async (req, res) => {
   // same drift plain `+`/`-` on the raw fractional numbers would.
   const beforeMilli = toMilliUnits(ingredient.currentStock);
   const deltaMilli = toMilliUnits(quantity);
-  ingredient.currentStock = Math.max(fromMilliUnits(beforeMilli + deltaMilli), 0);
+  const afterMilli = Math.max(beforeMilli + deltaMilli, 0);
+  ingredient.currentStock = fromMilliUnits(afterMilli);
   await ingredient.save();
+  // Kept in the medicine's history: who added/removed how much, and why.
+  const changed = fromMilliUnits(Math.abs(afterMilli - beforeMilli));
+  if (changed > 0) {
+    try {
+      let createdBy = "";
+      if (req.user?.id) {
+        const user = await User.findById(req.user.id).select("name username").lean();
+        createdBy = user?.name || user?.username || "";
+      }
+      await StockAdjustment.create({
+        shopId: ingredient.shopId,
+        ingredientId: ingredient._id,
+        ingredientName: ingredient.name,
+        unit: ingredient.unit,
+        direction: afterMilli >= beforeMilli ? "in" : "out",
+        quantity: changed,
+        stockAfter: ingredient.currentStock,
+        note: String(req.body?.note || "").trim().slice(0, 300),
+        createdBy,
+      });
+    } catch (error) {
+      console.error("Non-fatal: could not record stock adjustment history", error);
+    }
+  }
   res.json(ingredient);
 };
 
@@ -250,13 +277,14 @@ exports.getIngredientLedger = async (req, res) => {
     const ingredient = await Ingredient.findOne({ _id: req.params.id, ...scope }).lean();
     if (!ingredient) return res.status(404).json({ error: "Ingredient not found" });
 
-    const [purchases, orders] = await Promise.all([
+    const [purchases, orders, adjustments] = await Promise.all([
       IngredientPurchase.find({ ...scope, ingredientId: ingredient._id, status: "received" })
         .select("purchaseOrderNumber companyName quantity rate totalAmount purchaseDate receivedAt")
         .lean(),
       Order.find({ ...scope, status: { $ne: "cancelled" }, "stockDeductions.ingredientId": ingredient._id })
         .select("dailyOrderNumber shopSequenceNumber customer createdAt stockDeductions")
         .lean(),
+      StockAdjustment.find({ ...scope, ingredientId: ingredient._id }).lean(),
     ]);
 
     const entries = [];
@@ -282,6 +310,17 @@ exports.getIngredientLedger = async (req, res) => {
         detail: order.customer?.name || "Walk-in Patient",
         quantity: Number(deduction.quantity || 0),
         direction: "out",
+      });
+    }
+
+    for (const adjustment of adjustments) {
+      entries.push({
+        date: adjustment.createdAt,
+        type: "adjustment",
+        label: adjustment.direction === "in" ? "Stock added (adjust)" : "Stock removed (adjust)",
+        detail: [adjustment.note, adjustment.createdBy ? `by ${adjustment.createdBy}` : ""].filter(Boolean).join(" · ") || "Manual adjustment",
+        quantity: Number(adjustment.quantity || 0),
+        direction: adjustment.direction,
       });
     }
 
