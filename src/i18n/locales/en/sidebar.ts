@@ -25,5 +25,6 @@ export const sidebar = {
   employees: "Manage Staff",
   settings: "Settings",
   whatsapp: "WhatsApp",
+  post: "Post",
   help: "Help",
 } as const;

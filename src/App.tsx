@@ -30,6 +30,7 @@ import AdminPage from '@/pages/dashboard/AdminPage';
 import EmployeesPage from '@/pages/dashboard/EmployeesPage';
 import SettingsPage from '@/pages/dashboard/SettingsPage';
 import WhatsappPage from '@/pages/dashboard/WhatsappPage';
+import PostPage from '@/pages/dashboard/PostPage';
 import HelpPage from '@/pages/dashboard/HelpPage';
 import SuperAdminShell from '@/pages/superadmin/components/SuperAdminShell';
 import OverviewPage from '@/pages/superadmin/OverviewPage';
@@ -155,6 +156,7 @@ export default function App() {
             </Route>
             <Route element={<RequirePermission permission="whatsapp.manage" />}>
               <Route path="whatsapp" element={<WhatsappPage />} />
+              <Route path="post" element={<PostPage />} />
             </Route>
             <Route path="help" element={<HelpPage />} />
             {/* Not in DASHBOARD_PAGES/the sidebar either, but freely read

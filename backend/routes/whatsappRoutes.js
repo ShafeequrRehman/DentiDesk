@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
-const { getWhatsAppServiceForShop } = require("../services/whatsappService");
+const { getWhatsAppServiceForShop, normalizePhone } = require("../services/whatsappService");
+const Customer = require("../models/Customer");
 const authenticate = require("../middleware/authenticate");
 const { requireShopMember } = require("../middleware/roleGuards");
 const requireAnyPermission = require("../middleware/requireAnyPermission");
@@ -106,6 +107,17 @@ router.post("/send-document", canSendDocument, async (req, res) => {
     if (!fileBase64) {
       return res.status(400).json({ success: false, error: "fileBase64 is required" });
     }
+    // Clear errors instead of a send that never happens: a missing/wrong
+    // number, WhatsApp not linked, or a number that isn't on WhatsApp.
+    if (!normalizePhone(phone)) {
+      return res.status(400).json({ success: false, reason: "invalid_phone", error: "This patient has no correct phone number - add a correct number first." });
+    }
+    if (!service.getStatus().isConnected) {
+      return res.status(409).json({ success: false, reason: "not_connected", error: "WhatsApp is not connected - link it on the WhatsApp page first." });
+    }
+    if ((await service.isOnWhatsApp(phone)) === false) {
+      return res.status(400).json({ success: false, reason: "not_on_whatsapp", error: `${phone} is not on WhatsApp - check the patient's number.` });
+    }
 
     const fileBuffer = Buffer.from(fileBase64, "base64");
     await service.sendDocument(phone, fileBuffer, fileName);
@@ -114,6 +126,74 @@ router.post("/send-document", canSendDocument, async (req, res) => {
   } catch (err) {
     res.status(500).json({ success: false, error: err.message });
   }
+});
+
+// --- Post page: send one picture to every patient ------------------------
+// Runs in the background (a few seconds apart, so WhatsApp doesn't flag the
+// clinic's number). Numbers that are wrong or not on WhatsApp are skipped
+// quietly and only counted. Progress: GET /broadcast/:id.
+const broadcastJobs = new Map();
+const canPost = requireAnyPermission("whatsapp.manage");
+
+router.post("/broadcast", canPost, async (req, res) => {
+  try {
+    const { imageBase64, mimetype, caption } = req.body || {};
+    if (!imageBase64) return res.status(400).json({ error: "Pick a picture to post." });
+    const service = await getServiceForRequest(req);
+    if (!service.getStatus().isConnected) {
+      return res.status(409).json({ reason: "not_connected", error: "WhatsApp is not connected - link it on the WhatsApp page first." });
+    }
+    const imageBuffer = Buffer.from(String(imageBase64).replace(/^data:[^;]+;base64,/, ""), "base64");
+    if (imageBuffer.length === 0) return res.status(400).json({ error: "The picture could not be read." });
+
+    const customers = await Customer.find({ shopId: req.user.shopId, phone: { $nin: ["", "03000000000"] } }).select("name phone").lean();
+    const seen = new Set();
+    const recipients = [];
+    let invalid = 0;
+    for (const customer of customers) {
+      const normalized = normalizePhone(customer.phone);
+      if (!normalized) {
+        invalid += 1;
+        continue;
+      }
+      if (seen.has(normalized)) continue;
+      seen.add(normalized);
+      recipients.push(customer.phone);
+    }
+
+    const id = `${req.user.shopId}-${Date.now()}`;
+    const job = { id, total: recipients.length, sent: 0, notOnWhatsApp: 0, failed: 0, invalid, done: false, startedAt: new Date() };
+    broadcastJobs.set(id, job);
+    res.json(job);
+
+    (async () => {
+      for (const phone of recipients) {
+        try {
+          const onWhatsApp = await service.isOnWhatsApp(phone);
+          if (onWhatsApp === false) {
+            job.notOnWhatsApp += 1;
+            continue;
+          }
+          await service.sendImage(phone, imageBuffer, mimetype, String(caption || "").slice(0, 1000));
+          job.sent += 1;
+        } catch {
+          job.failed += 1;
+        }
+        await new Promise((resolve) => setTimeout(resolve, 2500));
+      }
+      job.done = true;
+      job.finishedAt = new Date();
+      setTimeout(() => broadcastJobs.delete(id), 6 * 60 * 60 * 1000);
+    })();
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+router.get("/broadcast/:id", canPost, (req, res) => {
+  const job = broadcastJobs.get(req.params.id);
+  if (!job || !String(job.id).startsWith(String(req.user.shopId))) return res.status(404).json({ error: "Post not found." });
+  res.json(job);
 });
 
 module.exports = router;

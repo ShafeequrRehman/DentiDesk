@@ -434,7 +434,7 @@ export default function CustomerDuesPage() {
       <div className="flex justify-between items-center">
         <div>
           <h1 className="text-3xl font-black text-slate-900 tracking-tight flex items-center gap-3">
-            Unified Khata <DollarSign className="text-indigo-600" size={32} />
+            Unified Record <DollarSign className="text-indigo-600" size={32} />
           </h1>
           <p className="text-slate-500 font-bold">
             Patient dues, plus any purchases linked to a contact - netted into one balance per person.
@@ -453,7 +453,7 @@ export default function CustomerDuesPage() {
             onClick={() => setShowAddCustomer(true)}
             className="flex items-center gap-2 px-6 py-3 border-[0.5px] border-white/20 bg-black text-white rounded-2xl font-black hover:bg-slate-800 transition-all shadow-[inset_0_1px_0_rgba(255,255,255,0.2),inset_0_-3px_7px_rgba(0,0,0,0.5)]"
           >
-            <Plus size={18} /> Add Patient
+            <Plus size={18} /> Add Patient / Company / Supplier
           </button>
         </div>
       </div>
@@ -496,7 +496,7 @@ export default function CustomerDuesPage() {
       {showAddCustomer && (
         <div className="bg-white p-6 rounded-[28px] border border-slate-200 shadow-sm space-y-4">
           <div className="flex justify-between items-center">
-            <h2 className="text-lg font-black">New Patient</h2>
+            <h2 className="text-lg font-black">New Patient / Company / Supplier</h2>
             <button onClick={() => setShowAddCustomer(false)} className="text-slate-400 hover:text-red-500"><X size={20} /></button>
           </div>
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
@@ -532,7 +532,7 @@ export default function CustomerDuesPage() {
             Is this a vendor? (someone the clinic also buys stock from)
           </label>
           <button onClick={handleAddCustomer} disabled={isAddingCustomer} className="flex items-center gap-2 px-5 py-2.5 bg-indigo-600 text-white rounded-xl font-bold hover:bg-indigo-700 disabled:opacity-60 disabled:cursor-not-allowed">
-            {isAddingCustomer ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {isAddingCustomer ? 'Saving...' : 'Save Patient'}
+            {isAddingCustomer ? <Loader2 size={16} className="animate-spin" /> : <Save size={16} />} {isAddingCustomer ? 'Saving...' : 'Save'}
           </button>
         </div>
       )}

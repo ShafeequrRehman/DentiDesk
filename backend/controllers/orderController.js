@@ -1536,10 +1536,10 @@ exports.updateOrder = async (req, res) => {
     // walk-in/staff order already gets its own separate PDF-receipt
     // WhatsApp flow client-side, so this would double-message that
     // customer if it fired for every order.
-    if (req.body?.action === "completeAndSettle" && updated.source === "customer-qr") {
-      const shop = await Shop.findById(updated.shopId).select("name phone address").lean();
-      void notifyCustomerCompleted(updated, shop);
-    }
+    // Clinic: the Complete popup now sends the appointment slip (PDF) on
+    // WhatsApp itself, for every appointment - so no second text message
+    // here. notifyCustomerCompleted is kept for reference.
+    void notifyCustomerCompleted;
 
     res.json({ ...updated.toObject(), id: String(updated._id) });
   } catch (error) {

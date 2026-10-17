@@ -23,6 +23,7 @@ import { saveOrderEditOffline } from '@/lib/offline-order-helpers';
 import { triggerBackgroundSync } from '@/lib/offline-sync';
 import { ToastLike } from '@/lib/print-notify';
 import { writeOrderReceiptToWindow } from '@/lib/order-receipt-print';
+import { isValidWhatsappNumber, sendAppointmentSlip } from '@/lib/whatsapp-slips';
 
 type PaymentModeKey = 'cash' | 'card' | 'ewallet' | 'bank';
 
@@ -37,6 +38,21 @@ const PAYMENT_MODES: Array<{ key: PaymentModeKey; value: 'Cash' | 'Card' | 'E-Wa
 
 function modeFromOrder(method?: string): PaymentModeKey {
   return PAYMENT_MODES.find((mode) => mode.value === method)?.key || 'cash';
+}
+
+// Completed appointment: the slip also goes to the patient on WhatsApp
+// (as a PDF). Walk-in patients with no number are skipped quietly; a wrong
+// number or WhatsApp not linked shows why it wasn't sent.
+function sendSlipOnWhatsapp(order: SavedOrder, toast?: ToastLike) {
+  const phone = String(order.customer?.phone || '').replace(/\D/g, '');
+  if (!phone || phone === '03000000000') return;
+  if (!isValidWhatsappNumber(phone)) {
+    toast?.error(`Slip not sent on WhatsApp - ${order.customer?.name || 'this patient'}'s number is not correct. Fix the number, then send it from Appointments.`);
+    return;
+  }
+  void sendAppointmentSlip(order, 'completed')
+    .then(() => toast?.success('Slip sent to the patient on WhatsApp.'))
+    .catch((error) => toast?.error(`Slip not sent on WhatsApp: ${error instanceof Error ? error.message : 'failed'}`));
 }
 
 export default function CompleteOrderModal({
@@ -206,6 +222,7 @@ export default function CompleteOrderModal({
         // order-receipt-print.ts's own comment on why that line was
         // removed entirely, per the shop owner's request).
         if (printWindow && !printWindow.closed) writeOrderReceiptToWindow(printWindow, updated, customerDue);
+        if (!trulyOffline) sendSlipOnWhatsapp(updated, toast);
         return;
       }
 
@@ -215,6 +232,7 @@ export default function CompleteOrderModal({
       toast.success(t('record.toast.orderCompleted'));
       onCompleted(updated);
       if (printWindow && !printWindow.closed) writeOrderReceiptToWindow(printWindow, updated, customerDue);
+      sendSlipOnWhatsapp(updated, toast);
     } catch (err) {
       if (printWindow && !printWindow.closed) printWindow.close();
       setError(err instanceof Error ? err.message : t('record.errors.completeFailed'));

@@ -79,6 +79,33 @@ class ShopWhatsAppSession {
   // a path from the client's disk means nothing here. Callers must read
   // the file into memory and send the bytes (base64 over HTTP - see
   // whatsappRoutes.js's /send-document route).
+  // Is this number on WhatsApp? true / false; null when it can't be checked
+  // right now (not connected, or WhatsApp didn't answer).
+  async isOnWhatsApp(phone) {
+    const normalized = normalizePhone(phone);
+    if (!normalized) return false;
+    if (!this.sock || !this.socketReady) return null;
+    try {
+      const result = await this.sock.onWhatsApp(`${normalized}@s.whatsapp.net`);
+      return Array.isArray(result) && result.length > 0 ? Boolean(result[0].exists) : false;
+    } catch {
+      return null;
+    }
+  }
+
+  // Post page: one picture (with an optional caption) to one number. Only
+  // sends while connected - never queued.
+  async sendImage(phone, imageBuffer, mimetype, caption) {
+    const normalized = normalizePhone(phone);
+    if (!normalized) throw new Error("invalid-phone");
+    if (!this.sock || !this.socketReady) throw new Error("socket-not-ready");
+    return this.sock.sendMessage(`${normalized}@s.whatsapp.net`, {
+      image: imageBuffer,
+      mimetype: mimetype || "image/jpeg",
+      caption: caption || "",
+    });
+  }
+
   async _sendDocumentNow(phone, fileBuffer, fileName) {
     const normalized = normalizePhone(phone);
     if (!normalized) throw new Error("invalid-phone");
@@ -251,4 +278,4 @@ function getWhatsAppServiceForShop(shopId) {
   return sessionPromise;
 }
 
-module.exports = { getWhatsAppServiceForShop };
+module.exports = { getWhatsAppServiceForShop, normalizePhone };

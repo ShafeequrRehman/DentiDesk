@@ -54,6 +54,47 @@ function orderNumberOf(order) {
   return order.dailyOrderNumber ?? String(order._id || "").slice(-6);
 }
 
+function formatSlotTime(hhmm) {
+  if (!/^\d{2}:\d{2}$/.test(hhmm || "")) return "";
+  const [h, m] = hhmm.split(":").map(Number);
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
+
+function formatSlotDate(iso) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(iso || "")) return "";
+  const [y, mo, d] = iso.split("-").map(Number);
+  return new Date(y, mo - 1, d).toLocaleDateString("en-GB", { weekday: "short", day: "2-digit", month: "short", year: "numeric" });
+}
+
+// Sent when the clinic presses "Mark Confirmed" on an online appointment.
+function buildAppointmentConfirmedMessage(order, shop) {
+  const shopName = shop?.name || "";
+  const forLabel = /^dr\.?\s/i.test(order.doctorName || "") ? "Dr" : "Service";
+  return [
+    `*Your appointment is confirmed* ✅`,
+    `Hello ${order.customer?.name || "there"},`,
+    `${shopName} has confirmed your appointment.`,
+    ``,
+    `*Appointment Details*`,
+    `------------------------`,
+    `Appointment No: ${orderNumberOf(order)}`,
+    order.doctorName ? `${forLabel}: ${order.doctorName}` : null,
+    order.appointmentDate ? `Date: ${formatSlotDate(order.appointmentDate)}` : null,
+    order.appointmentTime ? `Time: ${formatSlotTime(order.appointmentTime)}` : null,
+    `Services:`,
+    formatItems(order.items),
+    `Total: $${formatMoney(order.total)}`,
+    `Payment: ${Number(order.remainingAmount || 0) > 0 ? `$${formatMoney(order.remainingAmount)} to pay at the clinic` : "Paid"}`,
+    `------------------------`,
+    `Please arrive 10 minutes before your time.`,
+    `${shop?.phone || ""}`,
+    `${shop?.address || ""}`,
+    `${shopName}`,
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
+}
+
 function buildOrderPlacedMessage(order, shop) {
   const shopName = shop?.name || "";
   return [
@@ -128,7 +169,7 @@ async function sendCustomerMessage(order, shop, message) {
 }
 
 async function notifyCustomerConfirmed(order, shop) {
-  return sendCustomerMessage(order, shop, buildOrderPlacedMessage(order, shop));
+  return sendCustomerMessage(order, shop, order.appointmentTime ? buildAppointmentConfirmedMessage(order, shop) : buildOrderPlacedMessage(order, shop));
 }
 
 async function notifyCustomerCompleted(order, shop) {

@@ -4,17 +4,17 @@
 export const dues = {
   title: "Dues",
   subtitle: "Manage patient outstanding balances and send reminders.",
-  addCustomer: "Add Patient",
+  addCustomer: "Add Patient / Company / Supplier",
   searchPlaceholder: "Search patients by name or phone...",
   clearSearch: "Clear search",
   whatsappNotConnectedBanner: "WhatsApp is not connected. Reminders cannot be sent until you link your WhatsApp in the WhatsApp menu.",
   failedToLoadCustomers: "Failed to load patients.",
 
-  newCustomer: "New Patient",
+  newCustomer: "New Patient / Company / Supplier",
   fullNamePlaceholder: "Full Name",
   phoneNumberPlaceholder: "Phone Number (e.g. 923...)",
   initialDuesPlaceholder: "Initial Dues",
-  saveCustomer: "Save Patient",
+  saveCustomer: "Save",
 
   loadingCustomers: "Loading patients...",
   pendingDues: "Pending Dues ({{count}})",

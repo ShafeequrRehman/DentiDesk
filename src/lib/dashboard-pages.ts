@@ -89,6 +89,8 @@ export const DASHBOARD_PAGES: DashboardPageDef[] = [
   { key: 'employees', label: 'Manage Staff', href: '/dashboard/employees' },
   { key: 'settings', label: 'Settings', href: '/dashboard/settings', permission: 'settings.manage' },
   { key: 'whatsapp', label: 'WhatsApp', href: '/dashboard/whatsapp', permission: 'whatsapp.manage' },
+  // One picture to every patient on WhatsApp.
+  { key: 'post', label: 'Post', href: '/dashboard/post', permission: 'whatsapp.manage' },
   { key: 'help', label: 'Help', href: '/dashboard/help' },
 ];
 

@@ -19,5 +19,6 @@ export const sidebar = {
   employees: "عملہ کا انتظام",
   settings: "ترتیبات",
   whatsapp: "واٹس ایپ",
+  post: "پوسٹ",
   help: "مدد",
 } as const;

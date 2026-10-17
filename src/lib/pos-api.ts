@@ -1415,3 +1415,32 @@ export async function fetchShopSessionHistory() {
     handleApiError(error);
   }
 }
+
+// --- Post page: one picture to every patient on WhatsApp ---
+export interface BroadcastJob {
+  id: string;
+  total: number;
+  sent: number;
+  notOnWhatsApp: number;
+  failed: number;
+  invalid: number;
+  done: boolean;
+}
+
+export async function startBroadcast(payload: { imageBase64: string; mimetype: string; caption: string }) {
+  try {
+    const response = await api.post<BroadcastJob>('/whatsapp/broadcast', payload, { baseURL: getSystemApiBaseUrl() });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function fetchBroadcast(id: string) {
+  try {
+    const response = await api.get<BroadcastJob>(`/whatsapp/broadcast/${encodeURIComponent(id)}`, { baseURL: getSystemApiBaseUrl() });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}

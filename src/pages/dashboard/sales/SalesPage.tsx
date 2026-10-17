@@ -16,6 +16,7 @@ import { computeDiscountFromInputs, loadDiscountDraft, saveDiscountDraft } from 
 import { reportPrintOutcome, listenForPrintSentMessages } from '@/lib/print-notify';
 import { useToast } from '@/lib/toast';
 import CompleteOrderModal from '@/components/CompleteOrderModal';
+import { sendAppointmentSlip, slipPhoneProblem } from '@/lib/whatsapp-slips';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { useNotifications } from '@/lib/notifications';
 import AddItemsManager from '@/pages/dashboard/sales/components/AddItemsManager';
@@ -1422,6 +1423,24 @@ export default function SalesPage() {
                       </button>
                     )}
                     <button disabled={!isSelectedOrderHydrated} type="button" onClick={() => printCustomerReceipt(selectedOrder)} className="glass-pill rounded-2xl px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-gray-700 disabled:opacity-50">{t('sales.printReceipt')}</button>
+                    <button
+                      disabled={!isSelectedOrderHydrated}
+                      type="button"
+                      title="Send the appointment slip to the patient on WhatsApp"
+                      onClick={() => {
+                        const problem = slipPhoneProblem(selectedOrder);
+                        if (problem) {
+                          toast.error(problem);
+                          return;
+                        }
+                        void sendAppointmentSlip(selectedOrder, selectedOrder.status === 'pending' ? 'booked' : 'completed')
+                          .then(() => toast.success('Slip sent to the patient on WhatsApp.'))
+                          .catch((error) => toast.error(`Slip not sent: ${error instanceof Error ? error.message : 'failed'}`));
+                      }}
+                      className="rounded-2xl bg-[#25D366] px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-white disabled:opacity-50"
+                    >
+                      WhatsApp Slip
+                    </button>
                     <Link to={`/dashboard/sales/print/${selectedOrder.id}`} className="glass-pill rounded-2xl p-2.5 text-gray-500"><Printer size={16} /></Link>
                     <button type="button" onClick={() => void refreshOne(selectedOrder.id)} className="glass-pill rounded-2xl p-2.5 text-gray-500"><RefreshCcw size={16} /></button>
                     {/* A completed order stays editable here too (not

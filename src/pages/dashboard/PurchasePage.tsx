@@ -1232,7 +1232,7 @@ function NewPurchaseOrderModal({
               </div>
             )}
             <p className="mt-1 text-[10px] font-bold text-slate-400">
-              Links this purchase to a Khata contact's account so their sales and purchase dues net into one balance on the Unified Khata page. Leave this empty for a plain supplier who isn't a clinic patient.
+              Links this purchase to a contact's account so their sales and purchase dues net into one balance on the Unified Record page. Leave this empty for a plain supplier who isn't a clinic patient.
             </p>
           </div>
 

@@ -9,7 +9,7 @@
 //
 // Services tab: every other Drs/Services item, with its price.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Building2, CalendarDays, CheckCircle2, Globe, Wallet, ClipboardList, Clock, Phone, Printer, RefreshCcw, RotateCcw, Search, Stethoscope, Undo2, UserRound, X } from 'lucide-react';
+import { Building2, CalendarDays, CheckCircle2, Globe, Wallet, ClipboardList, Clock, Phone, Printer, RefreshCcw, RotateCcw, Search, Stethoscope, Undo2, UserRound, X, MessageCircle } from 'lucide-react';
 import { fetchProducts, saveCheckup } from '@/lib/pos-api';
 import type { Product, SavedOrder } from '@/lib/pos-types';
 import { getReferenceData } from '@/lib/local-hub-api';
@@ -18,6 +18,23 @@ import { resolveProductImage } from '@/lib/food-images';
 import { useToast } from '@/lib/toast';
 import { formatAppointmentDate, formatSlot, isDoctorProduct, loadAppointments, printPrescription, todayISO } from '@/lib/appointments';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
+import { sendPrescriptionSlip, slipPhoneProblem } from '@/lib/whatsapp-slips';
+
+// Prescription on WhatsApp (PDF) - one shared helper for the row button
+// and the checkup pad. A missing/wrong number says so.
+async function whatsappPrescription(order: SavedOrder, toast: { success: (m: string) => void; error: (m: string) => void }) {
+  const problem = slipPhoneProblem(order);
+  if (problem) {
+    toast.error(problem);
+    return;
+  }
+  try {
+    await sendPrescriptionSlip(order);
+    toast.success(`Prescription sent to ${order.customer?.name || 'the patient'} on WhatsApp.`);
+  } catch (error) {
+    toast.error(`Prescription not sent: ${error instanceof Error ? error.message : 'failed'}`);
+  }
+}
 
 type Tab = 'drs' | 'services';
 type StatusFilter = 'all' | 'waiting' | 'done';
@@ -400,6 +417,7 @@ function PaymentTag({ order }: { order: SavedOrder }) {
 }
 
 function AppointmentRow({ order, showDate, offline, onCheckup, onReopen }: { order: SavedOrder; showDate: boolean; offline: boolean; onCheckup: () => void; onReopen: () => void }) {
+  const { toast } = useToast();
   const done = order.checkupStatus === 'done';
   const phone = order.customer?.phone && order.customer.phone !== '03000000000' ? order.customer.phone : '';
   const services = order.items.filter((item) => item.name !== order.doctorName);
@@ -428,6 +446,7 @@ function AppointmentRow({ order, showDate, offline, onCheckup, onReopen }: { ord
             <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-black text-emerald-700"><CheckCircle2 size={13} />Checked</span>
             <button type="button" onClick={onCheckup} disabled={offline} className="rounded-xl bg-gray-100 px-3 py-2 text-xs font-black text-gray-700 hover:bg-gray-200 disabled:opacity-50">View / Edit</button>
             <button type="button" onClick={() => printPrescription(order)} className="flex items-center gap-1 rounded-xl bg-gray-100 px-3 py-2 text-xs font-black text-gray-700 hover:bg-gray-200"><Printer size={13} />Print</button>
+            <button type="button" onClick={() => void whatsappPrescription(order, toast)} title="Send the prescription on WhatsApp" className="flex items-center gap-1 rounded-xl bg-[#25D366] px-3 py-2 text-xs font-black text-white hover:brightness-95"><MessageCircle size={13} />WhatsApp</button>
             <button type="button" onClick={onReopen} disabled={offline} title="Mark as not checked - books this time slot again" className="flex items-center gap-1 rounded-xl bg-gray-100 px-3 py-2 text-xs font-black text-gray-500 hover:bg-gray-200 disabled:opacity-50"><Undo2 size={13} />Uncheck</button>
           </>
         ) : (
@@ -457,7 +476,7 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
   const alreadyDone = order.checkupStatus === 'done';
   useBackspaceToClose(onClose);
 
-  async function submit(print: boolean) {
+  async function submit(print: boolean, whatsapp = false) {
     if (saving) return;
     setSaving(true);
     try {
@@ -472,6 +491,7 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
         ? 'Medicine details updated.'
         : `Checkup complete - the ${formatSlot(order.appointmentTime)} slot is free again. Its set medicines were taken off Medicine Stock.`);
       if (updated.stockWarning) toast.error(updated.stockWarning);
+      if (whatsapp) void whatsappPrescription(merged, toast);
       onSaved(merged);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save this checkup.');
@@ -530,6 +550,9 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
           </button>
           <button type="button" disabled={saving} onClick={() => void submit(true)} className="flex items-center gap-2 rounded-2xl bg-black px-4 py-3 text-sm font-black text-white hover:bg-gray-800 disabled:opacity-60">
             <Printer size={16} /> {alreadyDone ? 'Save & Print' : 'Complete & Print'}
+          </button>
+          <button type="button" disabled={saving} onClick={() => void submit(false, true)} className="flex items-center gap-2 rounded-2xl bg-[#25D366] px-4 py-3 text-sm font-black text-white hover:brightness-95 disabled:opacity-60">
+            <MessageCircle size={16} /> {alreadyDone ? 'Save & WhatsApp' : 'Complete & WhatsApp'}
           </button>
         </div>
       </div>
