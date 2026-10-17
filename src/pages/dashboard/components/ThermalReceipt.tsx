@@ -135,7 +135,8 @@ export default function ThermalReceipt({
         {order.appointmentTime ? (
           <p>APPOINTMENT: {formatAppointmentDate(order.appointmentDate).toUpperCase()}{order.appointmentDate ? ' · ' : ''}{formatSlot(order.appointmentTime)}</p>
         ) : null}
-        {order.doctorName ? <p>DR: {order.doctorName.toUpperCase()}</p> : null}
+        <p>TYPE: {order.source === 'customer-qr' ? 'ONLINE' : 'CLINIC'}</p>
+        {order.doctorName ? <p>{/^dr\.?\s/i.test(order.doctorName) ? 'DR' : 'SERVICE'}: {order.doctorName.toUpperCase()}</p> : null}
         {order.customer && order.customer.name && !['Walk-in Customer', 'Walk-in Patient'].includes(order.customer.name) && (
           <p>PATIENT: {order.customer.name.toUpperCase()}</p>
         )}

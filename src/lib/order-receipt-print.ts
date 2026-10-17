@@ -132,6 +132,7 @@ function buildOrderReceiptBodyHtml(order: SavedOrder) {
     <p>DATE: ${dateString}</p>
     <p>TIME: ${timeString}</p>
     ${order.appointmentTime ? `<p>APPOINTMENT: ${appointmentSlotLabel(order.appointmentDate, order.appointmentTime)}</p>` : ''}
+    <p>TYPE: ${order.source === 'customer-qr' ? 'ONLINE' : 'CLINIC'}</p>
     ${order.doctorName ? `<p>${/^dr\.?\s/i.test(order.doctorName) ? 'DR' : 'SERVICE'}: ${order.doctorName.toUpperCase()}</p>` : ''}
     ${hasRealCustomer ? `<p>PATIENT: ${order.customer.name.toUpperCase()}</p>` : ''}
     ${hasRealPhone ? `<p>PHONE: ${order.customer.phone}</p>` : ''}

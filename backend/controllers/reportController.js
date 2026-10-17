@@ -132,7 +132,9 @@ exports.getDayEndReport = async (req, res) => {
       // ever produce one row per distinct _id.
       Order.aggregate([
         { $match: { shopId: shopObjectId, status: { $ne: "cancelled" }, createdAt: { $gte: start, $lte: end } } },
-        { $group: { _id: "$orderType", count: { $sum: 1 } } },
+        // Clinic: Online (booked by the patient on the online page) vs
+        // Clinic (booked at the POS).
+        { $group: { _id: { $cond: [{ $eq: ["$source", "customer-qr"] }, "Online", "Clinic"] }, count: { $sum: 1 } } },
       ]),
       Expense.aggregate([
         { $match: { shopId: shopObjectId, date: { $gte: start, $lte: end } } },
@@ -191,7 +193,7 @@ exports.getDayEndReport = async (req, res) => {
     // the closing screen rather than omitting the row entirely, which is
     // why this starts as a fixed object instead of building it purely from
     // whatever _id values the aggregate happened to return.
-    const orderTypeBreakdown = { DineIn: 0, TakeAway: 0, Delivery: 0 };
+    const orderTypeBreakdown = { Online: 0, Clinic: 0 };
     for (const row of orderTypeTotals) {
       if (row._id && Object.prototype.hasOwnProperty.call(orderTypeBreakdown, row._id)) {
         orderTypeBreakdown[row._id] = row.count;

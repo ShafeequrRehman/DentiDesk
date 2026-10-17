@@ -94,14 +94,13 @@ export default function ShopClosingSummaryModal({
   }
 
   function buildOrderTypeTable(): PdfTable {
-    const breakdown = report?.orderTypeBreakdown || { DineIn: 0, TakeAway: 0, Delivery: 0 };
+    const breakdown = { Online: 0, Clinic: 0, ...(report?.orderTypeBreakdown || {}) };
     return {
       title: 'Appointments by Type',
       columns: [{ label: 'Appointment Type', width: 2 }, { label: 'Count', width: 1, align: 'right' }],
       rows: [
-        ['Dine-In', breakdown.DineIn],
-        ['Takeaway', breakdown.TakeAway],
-        ['Delivery', breakdown.Delivery],
+        ['Online', breakdown.Online],
+        ['Clinic', breakdown.Clinic],
       ],
       footer: ['Total Appointments', report?.orderCount || 0],
     };
@@ -150,7 +149,7 @@ export default function ShopClosingSummaryModal({
     }
   }
 
-  const breakdown = report?.orderTypeBreakdown || { DineIn: 0, TakeAway: 0, Delivery: 0 };
+  const breakdown = { Online: 0, Clinic: 0, ...(report?.orderTypeBreakdown || {}) };
 
   return (
     <div className="glass-overlay fixed inset-0 z-[300] flex items-center justify-center p-4 sm:p-6">
@@ -200,18 +199,14 @@ export default function ShopClosingSummaryModal({
 
               <div className="rounded-2xl bg-white/60 p-4">
                 <h3 className="mb-3 text-xs font-black uppercase tracking-wide text-gray-500">Appointments by Type</h3>
-                <div className="grid grid-cols-3 gap-3 text-center">
+                <div className="grid grid-cols-2 gap-3 text-center">
                   <div>
-                    <div className="text-lg font-black text-gray-900">{breakdown.DineIn}</div>
-                    <div className="text-[11px] font-bold uppercase text-gray-400">Dine-In</div>
+                    <div className="text-lg font-black text-sky-700">{breakdown.Online}</div>
+                    <div className="text-[11px] font-bold uppercase text-gray-400">Online</div>
                   </div>
                   <div>
-                    <div className="text-lg font-black text-gray-900">{breakdown.TakeAway}</div>
-                    <div className="text-[11px] font-bold uppercase text-gray-400">Takeaway</div>
-                  </div>
-                  <div>
-                    <div className="text-lg font-black text-gray-900">{breakdown.Delivery}</div>
-                    <div className="text-[11px] font-bold uppercase text-gray-400">Delivery</div>
+                    <div className="text-lg font-black text-violet-700">{breakdown.Clinic}</div>
+                    <div className="text-[11px] font-bold uppercase text-gray-400">Clinic</div>
                   </div>
                 </div>
               </div>

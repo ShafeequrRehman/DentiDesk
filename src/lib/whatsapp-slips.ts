@@ -54,6 +54,7 @@ export async function sendAppointmentSlip(order: SavedOrder, kind: SlipKind) {
   const remaining = typeof order.remainingAmount === 'number' ? order.remainingAmount : Math.max(Number(order.total || 0) - Number(order.paidAmount || 0), 0);
   const stats = [
     { label: 'Appointment No', value: `#${appointmentNo(order)}` },
+    { label: 'Type', value: order.source === 'customer-qr' ? 'Online' : 'Clinic' },
     { label: 'Patient', value: order.customer?.name || 'Patient' },
     ...(withWhom ? [{ label: withWhom.label, value: withWhom.value }] : []),
     ...(order.appointmentDate ? [{ label: 'Date', value: formatAppointmentDate(order.appointmentDate) }] : []),

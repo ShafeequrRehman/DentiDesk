@@ -694,7 +694,8 @@ export interface DayEndReport {
   // Day-End Shop Closing Summary: order count split by orderType, always
   // all three keys present (0 for a type with no orders in range) - see
   // reportController.getDayEndReport's own comment.
-  orderTypeBreakdown: { DineIn: number; TakeAway: number; Delivery: number };
+  // Online = booked on the online page, Clinic = booked at the POS.
+  orderTypeBreakdown: { Online: number; Clinic: number };
   // Total still-owed amount (sum of Order.remainingAmount) across every
   // non-cancelled order in range - what the Close Shop screen shows as
   // "Outstanding Due".
