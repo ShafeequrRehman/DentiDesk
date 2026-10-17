@@ -18,7 +18,7 @@ import {
   type PublicChangeRequest,
 } from '@/lib/public-order-api';
 import { getApiBaseCandidates } from '@/lib/api';
-import { buildTimeSlots, describeSchedule, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, scheduleOf, slotInHours, todayISO, WEEKDAY_LONG, weekdayOfISO, worksOnDate } from '@/lib/appointments';
+import { buildTimeSlots, describeSchedule, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, scheduleOf, slotInHours, SLOT_DAY_END, SLOT_DAY_START, todayISO, WEEKDAY_LONG, WEEKDAY_SHORT, weekdayOfISO, worksOnDate } from '@/lib/appointments';
 
 // A plain numbered table ("5") still needs the "Table " prefix to read as
 // a table at all - a custom label already reads fine on its own. Only ever
@@ -222,6 +222,35 @@ function redirectToGateway(redirect: PaymentRedirect) {
 }
 
 // Same "choose a size/variation" bottom sheet as desktop's
+// Which days and hours a Dr/Service can be booked (set in Manage
+// Appointments) - shown on the card so patients know before they book.
+function ScheduleInfo({ product, compact }: { product: PublicMenuProduct; compact?: boolean }) {
+  const schedule = scheduleOf(product);
+  const everyDay = schedule.days.length === 0 || schedule.days.length === 7;
+  const hours = `${formatSlot(schedule.start || SLOT_DAY_START)} - ${formatSlot(schedule.end || SLOT_DAY_END)}`;
+  return (
+    <div className={compact ? 'mt-1' : 'mt-1.5 space-y-1'}>
+      <div className="flex flex-wrap gap-0.5" title={everyDay ? 'Available every day' : `Available: ${schedule.days.map((d) => WEEKDAY_LONG[d]).join(', ')}`}>
+        {WEEKDAY_SHORT.map((label, day) => {
+          const on = everyDay || schedule.days.includes(day);
+          return (
+            <span
+              key={label}
+              className={`rounded-md px-1 py-0.5 text-[9px] font-black leading-none ${on ? 'bg-[#00B0C7] text-white' : 'bg-gray-100 text-gray-300 line-through'}`}
+            >
+              {label.slice(0, 2)}
+            </span>
+          );
+        })}
+      </div>
+      <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-gray-500">
+        <Clock size={11} className="shrink-0 text-[#007F90]" />
+        <span className="truncate">{everyDay ? 'Every day' : schedule.days.map((d) => WEEKDAY_SHORT[d]).join(', ')} · {hours}</span>
+      </p>
+    </div>
+  );
+}
+
 // VariationPickerModal (POSPage.tsx) - a single tap adds ONE of that
 // variation straight to the cart and closes the sheet, matching desktop's
 // own tap-to-add behavior exactly (no separate quantity stepper inside
@@ -252,7 +281,10 @@ function VariationPickerSheet({ group, onSelect, onClose }: { group: ProductGrou
               onClick={() => onSelect(variation)}
               className="flex w-full items-center justify-between rounded-2xl border border-white/50 bg-white/50 px-4 py-3 text-left shadow-inner transition hover:border-[#00B0C7]/70 hover:bg-[#EBFAFC]/70"
             >
-              <p className="truncate text-sm font-black text-gray-900">{variation.variation || 'Standard'}</p>
+              <div className="min-w-0">
+                <p className="truncate text-sm font-black text-gray-900">{variation.variation || 'Standard'}</p>
+                <ScheduleInfo product={variation} compact />
+              </div>
               <span className="shrink-0 text-sm font-black text-gray-900">${formatter.format(variation.price)}</span>
             </button>
           ))}
@@ -1330,9 +1362,11 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                   <span className="truncate">{group.variations.find((v) => v.workAs)?.workAs}</span>
                 </p>
               ) : null}
-              {describeSchedule(scheduleOf(single)) ? (
-                <p className="mt-0.5 truncate text-[10px] font-semibold text-gray-500">{describeSchedule(scheduleOf(single))}</p>
-              ) : null}
+              {!hasVariations || new Set(group.variations.map((v) => JSON.stringify(scheduleOf(v)))).size === 1 ? (
+                <ScheduleInfo product={single} />
+              ) : (
+                <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-gray-500"><Clock size={11} className="text-[#007F90]" /> Days differ per option - tap Select</p>
+              )}
               <p className="text-[11px] text-gray-400">{hasVariations ? `${group.variations.length} sizes/options` : single.variation}</p>
               <p className="mt-1 text-sm font-black text-gray-900">{hasVariations ? `From $${formatter.format(cheapest)}` : `$${formatter.format(single.price)}`}</p>
               {hasVariations ? (
