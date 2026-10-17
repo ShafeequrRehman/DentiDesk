@@ -334,6 +334,7 @@ export default function DashboardShell() {
 function InstallAppButton() {
   const [installEvent, setInstallEvent] = useState<any>(null);
   const [showIosHint, setShowIosHint] = useState(false);
+  const [iosStepsOpen, setIosStepsOpen] = useState(false);
 
   useEffect(() => {
     if (isDesktopApp()) return undefined;
@@ -363,7 +364,8 @@ function InstallAppButton() {
   useEffect(() => {
     if (isDesktopApp()) return;
     const ua = window.navigator.userAgent;
-    const isIos = /iphone|ipad|ipod/i.test(ua) && !(window as any).MSStream;
+    // iPadOS reports itself as a Mac - a touch screen gives it away.
+    const isIos = (/iphone|ipad|ipod/i.test(ua) && !(window as any).MSStream) || (navigator.platform === 'MacIntel' && navigator.maxTouchPoints > 1);
     const isStandalone = (window.navigator as any).standalone === true || window.matchMedia('(display-mode: standalone)').matches;
     setShowIosHint(isIos && !isStandalone);
   }, []);
@@ -387,15 +389,37 @@ function InstallAppButton() {
     );
   }
 
+  // iPhone/iPad: Apple doesn't let a website show its own Install
+  // button - the app is added from Safari's Share menu. This button just
+  // shows the steps.
   if (showIosHint) {
     return (
-      <div
-        title="On iPhone/iPad: tap Share, then Add to Home Screen"
-        className="flex items-center gap-2 rounded-full border border-indigo-200 bg-indigo-50 px-3 py-2.5 text-xs font-bold text-indigo-700"
-      >
-        <Smartphone size={14} />
-        <span className="hidden sm:inline">Share → Add to Home Screen</span>
-      </div>
+      <>
+        <button
+          type="button"
+          onClick={() => setIosStepsOpen(true)}
+          className="flex items-center gap-2 rounded-full bg-black px-3 py-2.5 text-sm font-bold text-white shadow-sm"
+        >
+          <Smartphone size={16} />
+          <span>Install App</span>
+        </button>
+        {iosStepsOpen ? (
+          <div className="fixed inset-0 z-[200] flex items-end justify-center bg-black/40 p-4 sm:items-center" onClick={() => setIosStepsOpen(false)}>
+            <div className="w-full max-w-sm rounded-[28px] bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+              <h3 className="text-lg font-black text-gray-900">Install on iPhone / iPad</h3>
+              <ol className="mt-3 list-decimal space-y-2 pl-5 text-sm font-semibold text-gray-700">
+                <li>Open this page in <b>Safari</b> (in Chrome on iPhone use the Share button next to the address bar).</li>
+                <li>Tap the <b>Share</b> button (the square with an arrow ↑) at the bottom of the screen.</li>
+                <li>Scroll down and tap <b>Add to Home Screen</b>.</li>
+                <li>Tap <b>Add</b> - DentiDesk now opens from your home screen like an app.</li>
+              </ol>
+              <button type="button" onClick={() => setIosStepsOpen(false)} className="mt-5 w-full rounded-2xl bg-[#00B0C7] py-3 text-sm font-black text-gray-900">
+                Got it
+              </button>
+            </div>
+          </div>
+        ) : null}
+      </>
     );
   }
 
