@@ -19,7 +19,7 @@ import { useLanguage } from '@/i18n';
 import CompleteOrderModal from '@/components/CompleteOrderModal';
 import { writeOrderReceiptToWindow } from '@/lib/order-receipt-print';
 import { isValidWhatsappNumber, sendAppointmentSlip } from '@/lib/whatsapp-slips';
-import { buildTimeSlots, describeUpcomingLeave, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo } from '@/lib/appointments';
+import { buildTimeSlots, describeSchedule, scheduleOf, slotInHours, worksOnDate, WEEKDAY_LONG, weekdayOfISO, describeUpcomingLeave, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo } from '@/lib/appointments';
 
 
 // A "product group" is every Product record that shares the same name +
@@ -423,6 +423,10 @@ export default function POSPage() {
     };
   }, [doctorName, slotsRefreshKey]);
 
+  // Weekly schedule of the Dr/Service being booked (Manage Appointments).
+  const bookedSchedule = useMemo(() => scheduleOf(products.find((p) => p.name === doctorName)), [products, doctorName]);
+  const notWorkingDay = !!doctorName && !worksOnDate(bookedSchedule, appointmentDate);
+  const scheduleText = describeSchedule(bookedSchedule);
   const dayOnLeave = !!doctorName && leaveInfo.fullDays.has(appointmentDate);
   const leaveTimes = leaveInfo.partTimes.get(appointmentDate);
   const upcomingLeave = useMemo(() => describeUpcomingLeave(leaveInfo), [leaveInfo]);
@@ -430,8 +434,8 @@ export default function POSPage() {
   // A picked time that turns out to be on leave is cleared.
   useEffect(() => {
     if (!appointmentTime) return;
-    if (dayOnLeave || leaveTimes?.has(appointmentTime)) setAppointmentTime('');
-  }, [dayOnLeave, leaveTimes, appointmentTime]);
+    if (dayOnLeave || notWorkingDay || leaveTimes?.has(appointmentTime) || (!!appointmentTime && !slotInHours(bookedSchedule, appointmentTime))) setAppointmentTime('');
+  }, [dayOnLeave, notWorkingDay, bookedSchedule, leaveTimes, appointmentTime]);
 
   const productGroups = useMemo<ProductGroup[]>(() => {
     const map = new Map<string, ProductGroup>();
@@ -905,6 +909,8 @@ export default function POSPage() {
     if (doctorName) {
       if (!appointmentDate) return showValidationError(t('pos.appointmentDateRequired'));
       if (!appointmentTime) return showValidationError(t('pos.appointmentTimeRequired'));
+      if (notWorkingDay) return showValidationError(`${doctorName} doesn't work on ${WEEKDAY_LONG[weekdayOfISO(appointmentDate)]}s (${scheduleText}). Pick another date.`);
+      if (!slotInHours(bookedSchedule, appointmentTime)) return showValidationError(`${doctorName} is available ${scheduleText}. Pick another time.`);
       if (dayOnLeave) return showValidationError(`${doctorName} is on leave on ${formatAppointmentDate(appointmentDate)}. Pick another date.`);
       if (leaveTimes?.has(appointmentTime)) return showValidationError(`${doctorName} is on leave at ${formatSlot(appointmentTime)}. Pick another time.`);
       if (bookedSlots.has(appointmentTime)) return showValidationError(t('pos.appointmentSlotTaken'));
@@ -1590,6 +1596,11 @@ export default function POSPage() {
                 <p className="rounded-xl border border-dashed border-gray-300 bg-white/40 px-3 py-2 text-[11px] font-semibold text-gray-500">
                   {t('pos.appointmentPickDoctorFirst')}
                 </p>
+              ) : notWorkingDay ? (
+                <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-[11px] font-bold text-amber-800">
+                  {doctorName} doesn't work on {WEEKDAY_LONG[weekdayOfISO(appointmentDate)]}s - pick another date.
+                  {scheduleText ? <p className="mt-1 font-semibold text-amber-700">Available: {scheduleText}</p> : null}
+                </div>
               ) : dayOnLeave ? (
                 <div className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-2.5 text-[11px] font-bold text-amber-800">
                   {doctorName} is on leave on {formatAppointmentDate(appointmentDate)} - pick another date.
@@ -1597,8 +1608,9 @@ export default function POSPage() {
                 </div>
               ) : (
                 <div>
+                  {scheduleText ? <p className="mb-1.5 text-[10px] font-bold text-[#007F90]">Available: {scheduleText}</p> : null}
                   <div className="grid max-h-44 grid-cols-4 gap-1.5 overflow-y-auto pr-0.5">
-                    {timeSlots.map((slot) => {
+                    {timeSlots.filter((slot) => slotInHours(bookedSchedule, slot)).map((slot) => {
                       const bookedBy = bookedSlots.get(slot);
                       const onLeave = !!leaveTimes?.has(slot);
                       const past = isSlotInPast(appointmentDate, slot);

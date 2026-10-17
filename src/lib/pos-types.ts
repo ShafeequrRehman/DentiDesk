@@ -22,6 +22,11 @@ export interface Product {
   // Clinic: what this Dr works as ("General Dentist", "Anesthetist"...) -
   // shown only on the public appointment page, not on POS.
   workAs?: string;
+  // Weekly schedule (Manage Appointments): working days (0=Sun..6=Sat;
+  // empty = every day) and hours ("HH:MM"; empty = clinic hours).
+  workDays?: number[];
+  workStart?: string;
+  workEnd?: string;
   // Product Code / SKU: optional, typed or barcode-scanned on the POS
   // screen to instantly add this product/deal to the cart - see
   // POSPage.tsx's product-code entry box. Unique per shop when set (see

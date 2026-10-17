@@ -8,7 +8,7 @@ const { shopScope } = require("../middleware/attachShopScope");
 const { notifyRiderForDelivery, notifyAssignedRider } = require("../services/riderNotificationService");
 const { notifyCustomerConfirmed, notifyCustomerCompleted } = require("../services/customerNotificationService");
 const { deductStockForItems, restoreStockForOrder, restoreStockForItems } = require("../services/stockService");
-const { findLeaveFor, leaveMessage } = require("../services/leaveService");
+const { findLeaveFor, leaveMessage, findScheduleProblem } = require("../services/leaveService");
 const { recordCashMovement } = require("../controllers/cashController");
 const { recordCustomerBankMovement } = require("../controllers/bankController");
 
@@ -653,6 +653,10 @@ exports.createOrder = async (req, res) => {
     // right here, in this same request, instead of blocking the new order.
     const slot = cleanSlotFields(payload);
     if (slot) {
+      const scheduleProblem = await findScheduleProblem(req.user.shopId, slot.doctorName, slot.appointmentDate, slot.appointmentTime);
+      if (scheduleProblem) {
+        return res.status(409).json({ error: scheduleProblem, reason: "on_leave" });
+      }
       const leave = await findLeaveFor(req.user.shopId, slot.doctorName, slot.appointmentDate, slot.appointmentTime);
       if (leave) {
         return res.status(409).json({ error: leaveMessage(slot.doctorName, slot.appointmentDate, slot.appointmentTime, leave), reason: "on_leave" });

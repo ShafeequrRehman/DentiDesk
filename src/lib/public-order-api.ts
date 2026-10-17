@@ -23,6 +23,9 @@ export interface PublicMenuProduct {
   description: string;
   // What the Dr works as (e.g. "Senior Dentist") - shown to patients.
   workAs?: string;
+  workDays?: number[];
+  workStart?: string;
+  workEnd?: string;
   isDeal: boolean;
 }
 

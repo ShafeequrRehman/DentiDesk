@@ -18,7 +18,7 @@ import {
   type PublicChangeRequest,
 } from '@/lib/public-order-api';
 import { getApiBaseCandidates } from '@/lib/api';
-import { buildTimeSlots, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, todayISO } from '@/lib/appointments';
+import { buildTimeSlots, describeSchedule, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, scheduleOf, slotInHours, todayISO, WEEKDAY_LONG, weekdayOfISO, worksOnDate } from '@/lib/appointments';
 
 // A plain numbered table ("5") still needs the "Table " prefix to read as
 // a table at all - a custom label already reads fine on its own. Only ever
@@ -1060,6 +1060,13 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   const cartTotal = cartLines.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
   // The Dr in the cart, or - a Service booked on its own - that Service.
   const doctorName = cartLines.find((line) => isDoctorProduct(line.product))?.product.name || cartLines[0]?.product.name || '';
+  // Weekly schedule of the Dr/Service being booked (Manage Appointments).
+  const bookedSchedule = scheduleOf(cartLines.find((line) => line.product.name === doctorName)?.product);
+  const notWorkingDay = !!doctorName && !worksOnDate(bookedSchedule, appointmentDate);
+  const scheduleText = describeSchedule(bookedSchedule);
+  useEffect(() => {
+    if (appointmentTime && (notWorkingDay || !slotInHours(bookedSchedule, appointmentTime))) setAppointmentTime('');
+  }, [notWorkingDay, bookedSchedule, appointmentTime]);
 
   useEffect(() => {
     if (!doctorName || !appointmentDate) {
@@ -1145,7 +1152,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
     customerName.trim().length >= 2 &&
     phoneDigits.length >= 10 &&
     (orderType !== 'Delivery' || customerAddress.trim().length >= 5) &&
-    (!doctorName || (!leaveDay && !!appointmentTime && !bookedSlots.has(appointmentTime) && !leaveSlots.has(appointmentTime) && !isSlotInPast(appointmentDate, appointmentTime)));
+    (!doctorName || (!leaveDay && !notWorkingDay && !!appointmentTime && slotInHours(bookedSchedule, appointmentTime) && !bookedSlots.has(appointmentTime) && !leaveSlots.has(appointmentTime) && !isSlotInPast(appointmentDate, appointmentTime)));
 
   async function handlePlaceOrder() {
     if (!canSubmit || placing) return;
@@ -1323,6 +1330,9 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                   <span className="truncate">{group.variations.find((v) => v.workAs)?.workAs}</span>
                 </p>
               ) : null}
+              {describeSchedule(scheduleOf(single)) ? (
+                <p className="mt-0.5 truncate text-[10px] font-semibold text-gray-500">{describeSchedule(scheduleOf(single))}</p>
+              ) : null}
               <p className="text-[11px] text-gray-400">{hasVariations ? `${group.variations.length} sizes/options` : single.variation}</p>
               <p className="mt-1 text-sm font-black text-gray-900">{hasVariations ? `From $${formatter.format(cheapest)}` : `$${formatter.format(single.price)}`}</p>
               {hasVariations ? (
@@ -1415,13 +1425,18 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                   </p>
                 ) : null}
                 <p className="pt-1 text-xs font-black uppercase tracking-[0.14em] text-gray-400">Time Slot - {doctorName}</p>
-                {leaveDay ? (
+                {scheduleText ? <p className="text-[11px] font-bold text-[#007F90]">{doctorName} is available: {scheduleText}</p> : null}
+                {notWorkingDay ? (
+                  <p className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-xs font-bold text-amber-800">
+                    {doctorName} doesn't work on {WEEKDAY_LONG[weekdayOfISO(appointmentDate)]}s. Please pick another date.
+                  </p>
+                ) : leaveDay ? (
                   <p className="rounded-xl border border-amber-300 bg-amber-50 px-3 py-3 text-xs font-bold text-amber-800">
                     {doctorName} is not available on {formatAppointmentDate(appointmentDate)}. Please pick another date.
                   </p>
                 ) : (
                 <div className="grid max-h-48 grid-cols-3 gap-1.5 overflow-y-auto pr-0.5 sm:grid-cols-4">
-                  {timeSlots.map((slot) => {
+                  {timeSlots.filter((slot) => slotInHours(bookedSchedule, slot)).map((slot) => {
                     const onLeave = leaveSlots.has(slot);
                     const booked = bookedSlots.has(slot) || onLeave;
                     const past = isSlotInPast(appointmentDate, slot);

@@ -1,4 +1,38 @@
 const Leave = require("../models/Leave");
+const Product = require("../models/Product");
+
+const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
+
+function weekdayOf(date) {
+  const [y, m, d] = String(date).split("-").map(Number);
+  return new Date(Date.UTC(y, m - 1, d)).getUTCDay();
+}
+
+function prettyTime(hhmm) {
+  const [h, m] = String(hhmm).split(":").map(Number);
+  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+}
+
+// Weekly schedule check (Manage Appointments' work days / hours). Returns
+// a message when the Dr/Service doesn't work at that date/time, else null.
+async function findScheduleProblem(shopId, name, date, time) {
+  if (!shopId || !name || !/^\d{4}-\d{2}-\d{2}$/.test(date || "")) return null;
+  const product = await Product.findOne({ shopId, name }).select("workDays workStart workEnd").lean();
+  if (!product) return null;
+  const days = Array.isArray(product.workDays) ? product.workDays.filter((d) => d >= 0 && d <= 6) : [];
+  if (days.length > 0 && !days.includes(weekdayOf(date))) {
+    const list = [...days].sort((a, b) => a - b).map((d) => DAY_NAMES[d]).join(", ");
+    return `${name} doesn't work on ${DAY_NAMES[weekdayOf(date)]}s - available on ${list}. Please pick another date.`;
+  }
+  if (time && /^\d{2}:\d{2}$/.test(time)) {
+    const start = /^\d{2}:\d{2}$/.test(product.workStart || "") ? product.workStart : "";
+    const end = /^\d{2}:\d{2}$/.test(product.workEnd || "") ? product.workEnd : "";
+    if ((start && time < start) || (end && time >= end)) {
+      return `${name} is available ${start ? `from ${prettyTime(start)}` : ""}${end ? ` until ${prettyTime(end)}` : ""}. Please pick another time.`;
+    }
+  }
+  return null;
+}
 
 // Is this Dr/Service on leave at this date (and time)? Returns the leave
 // document, or null when they are available.
@@ -16,4 +50,4 @@ function leaveMessage(name, date, time, leave) {
   return `${name} is on leave at ${time} on ${date}. Please pick another time.`;
 }
 
-module.exports = { findLeaveFor, leaveMessage };
+module.exports = { findLeaveFor, leaveMessage, findScheduleProblem };

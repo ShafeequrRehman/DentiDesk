@@ -12,7 +12,7 @@ const {
   verifyEasyPaisaCallback,
 } = require("../services/paymentGatewayService");
 const { notifyRiderForDelivery } = require("../services/riderNotificationService");
-const { findLeaveFor, leaveMessage } = require("../services/leaveService");
+const { findLeaveFor, leaveMessage, findScheduleProblem } = require("../services/leaveService");
 const Leave = require("../models/Leave");
 
 // Everything in this file is reachable with NO login at all (see
@@ -198,6 +198,9 @@ exports.getMenu = async (req, res) => {
         color: product.color || "bg-slate-50",
         description: product.description || "",
         workAs: product.workAs || "",
+        workDays: Array.isArray(product.workDays) ? product.workDays : [],
+        workStart: product.workStart || "",
+        workEnd: product.workEnd || "",
         isDeal: Boolean(product.isDeal),
       })),
     });
@@ -421,6 +424,10 @@ exports.createOrder = async (req, res) => {
       const appointmentTime = String(payload.appointmentTime || "").trim();
       if (!/^\d{4}-\d{2}-\d{2}$/.test(appointmentDate) || !/^\d{2}:\d{2}$/.test(appointmentTime)) {
         return res.status(400).json({ message: `Please pick a date and time slot for ${doctorItem.name}.`, reason: "slot_required" });
+      }
+      const scheduleProblem = await findScheduleProblem(shopId, doctorItem.name, appointmentDate, appointmentTime);
+      if (scheduleProblem) {
+        return res.status(409).json({ message: scheduleProblem, reason: "on_leave" });
       }
       const leave = await findLeaveFor(shopId, doctorItem.name, appointmentDate, appointmentTime);
       if (leave) {

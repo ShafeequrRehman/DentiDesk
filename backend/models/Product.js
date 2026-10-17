@@ -15,6 +15,14 @@ const productSchema = new mongoose.Schema(
     // Clinic: what this Dr works as - "General Dentist", "Senior Orthodontist",
     // "Anesthetist"... Shown only to patients on the public appointment page.
     workAs: { type: String, default: "", trim: true, maxlength: 120 },
+    // Weekly schedule (Manage Appointments): days this Dr/Service works
+    // (0 = Sunday ... 6 = Saturday; empty = every day) and the hours
+    // ("HH:MM"; empty = the clinic's full day). POS and the online page
+    // only offer dates/times inside this. One-off leave goes on the Dr
+    // Availability page instead.
+    workDays: { type: [Number], default: [] },
+    workStart: { type: String, default: "" },
+    workEnd: { type: String, default: "" },
     isDeal: { type: Boolean, default: false },
     dealItems: { type: [String], default: [] },
     // Product Code / SKU: an optional string the staff can type on the POS

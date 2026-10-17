@@ -1,5 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { buildTimeSlots, formatSlot, SLOT_DAY_END, SLOT_DAY_START, WEEKDAY_SHORT } from '@/lib/appointments';
 import { Plus, Package, Edit, Archive, X, Trash2, Search, ChevronDown, ChevronRight, Upload } from "lucide-react";
 import { createProduct, deleteProduct, fetchProducts, updateProduct } from "@/lib/pos-api";
 import { IngredientUnit, Product } from "@/lib/pos-types";
@@ -113,6 +114,10 @@ export function ProductManagementSection({
   // POSPage.tsx's product-code entry box.
   const [productCode, setProductCode] = useState("");
   const [workAs, setWorkAs] = useState("");
+  // Weekly schedule - days (0=Sun..6=Sat, none = every day) and hours.
+  const [workDays, setWorkDays] = useState<number[]>([]);
+  const [workStart, setWorkStart] = useState("");
+  const [workEnd, setWorkEnd] = useState("");
   // How this product is counted/measured - reused from Ingredient's own
   // unit list (see backend/models/Product.js's own comment) so a newly
   // added product's auto-created Stock entry is tracked in the same unit.
@@ -175,6 +180,9 @@ export function ProductManagementSection({
     setVariation("Standard");
     setProductCode("");
     setWorkAs("");
+    setWorkDays([]);
+    setWorkStart("");
+    setWorkEnd("");
     setUnit("pcs");
     setPreservedDealFields({ isDeal: false, dealItems: [], description: "" });
   }
@@ -187,6 +195,9 @@ export function ProductManagementSection({
       image: image,
       color: "bg-indigo-500",
       workAs: workAs.trim(),
+      workDays,
+      workStart,
+      workEnd,
       unit,
       // Preserved as-is from whatever was already on the product being
       // edited (or the "not a deal" defaults for a brand new product) -
@@ -260,6 +271,9 @@ export function ProductManagementSection({
     setImage(product.image || "");
     setProductCode(product.productCode || "");
     setWorkAs(product.workAs || "");
+    setWorkDays(product.workDays || []);
+    setWorkStart(product.workStart || "");
+    setWorkEnd(product.workEnd || "");
     setCategory(product.category);
     setCompany(product.company || "");
     setUnit(product.unit || "pcs");
@@ -435,6 +449,63 @@ export function ProductManagementSection({
               className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
             />
             <p className="text-[10px] font-bold text-slate-400 ml-1">{t("productManagement.fields.workAsHint")}</p>
+          </div>
+          {/* Weekly schedule - which days and hours this Dr/Service can be
+              booked. POS and the online page only offer these. One-off
+              leave is set on the Dr Availability page. */}
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Available Days</label>
+            <div className="flex flex-wrap gap-1.5">
+              {WEEKDAY_SHORT.map((label, day) => {
+                const on = workDays.includes(day);
+                return (
+                  <button
+                    key={label}
+                    type="button"
+                    onClick={() => setWorkDays((prev) => (on ? prev.filter((d) => d !== day) : [...prev, day].sort((a, b) => a - b)))}
+                    className={`rounded-xl px-3.5 py-2 text-xs font-black transition ${on ? "bg-indigo-600 text-white shadow" : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"}`}
+                  >
+                    {label}
+                  </button>
+                );
+              })}
+              {workDays.length > 0 ? (
+                <button type="button" onClick={() => setWorkDays([])} className="rounded-xl px-3 py-2 text-xs font-bold text-slate-400 hover:text-slate-600">
+                  Every day
+                </button>
+              ) : null}
+            </div>
+            <p className="text-[10px] font-bold text-slate-400 ml-1">
+              {workDays.length === 0 ? "None picked = available every day." : `Bookable only on ${workDays.map((d) => WEEKDAY_SHORT[d]).join(", ")}.`}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-4">
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Available From</label>
+              <select
+                value={workStart}
+                onChange={(e) => setWorkStart(e.target.value)}
+                className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Clinic opening ({formatSlot(SLOT_DAY_START)})</option>
+                {buildTimeSlots().map((slot) => (
+                  <option key={slot} value={slot}>{formatSlot(slot)}</option>
+                ))}
+              </select>
+            </div>
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Available Until</label>
+              <select
+                value={workEnd}
+                onChange={(e) => setWorkEnd(e.target.value)}
+                className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
+              >
+                <option value="">Clinic closing ({formatSlot(SLOT_DAY_END)})</option>
+                {[...buildTimeSlots().slice(1), SLOT_DAY_END].map((slot) => (
+                  <option key={slot} value={slot} disabled={!!workStart && slot <= workStart}>{formatSlot(slot)}</option>
+                ))}
+              </select>
+            </div>
           </div>
         </div>
 

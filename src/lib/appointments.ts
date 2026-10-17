@@ -69,6 +69,47 @@ export function isSlotInPast(date: string, hhmm: string, now = new Date()) {
   return toMinutes(hhmm) <= now.getHours() * 60 + now.getMinutes();
 }
 
+// --- Weekly schedule (Manage Appointments) ------------------------------
+export const WEEKDAY_SHORT = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'];
+export const WEEKDAY_LONG = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday'];
+
+export interface WorkSchedule {
+  days: number[]; // empty = every day
+  start: string; // '' = clinic opening
+  end: string; // '' = clinic closing
+}
+
+export function scheduleOf(product?: { workDays?: number[]; workStart?: string; workEnd?: string } | null): WorkSchedule {
+  const days = (product?.workDays || []).filter((d) => Number.isInteger(d) && d >= 0 && d <= 6);
+  const valid = (t?: string) => (t && /^\d{2}:\d{2}$/.test(t) ? t : '');
+  return { days: [...new Set(days)].sort((a, b) => a - b), start: valid(product?.workStart), end: valid(product?.workEnd) };
+}
+
+export function weekdayOfISO(iso: string) {
+  const [y, m, d] = iso.split('-').map(Number);
+  return new Date(y, m - 1, d).getDay();
+}
+
+export function worksOnDate(schedule: WorkSchedule, iso: string) {
+  if (!iso || schedule.days.length === 0) return true;
+  return schedule.days.includes(weekdayOfISO(iso));
+}
+
+export function slotInHours(schedule: WorkSchedule, hhmm: string) {
+  if (schedule.start && hhmm < schedule.start) return false;
+  if (schedule.end && hhmm >= schedule.end) return false;
+  return true;
+}
+
+// "Mon, Tue · 10:00 AM - 2:00 PM" ('' when it's every day, all day)
+export function describeSchedule(schedule: WorkSchedule) {
+  const days = schedule.days.length === 0 || schedule.days.length === 7 ? '' : schedule.days.map((d) => WEEKDAY_SHORT[d]).join(', ');
+  const hours = schedule.start || schedule.end
+    ? `${formatSlot(schedule.start || SLOT_DAY_START)} - ${formatSlot(schedule.end || SLOT_DAY_END)}`
+    : '';
+  return [days, hours].filter(Boolean).join(' · ');
+}
+
 // A Drs/Services item counts as a Dr when its category is something like
 // "Dr", "Drs", "Doctor", "Doctors", or its name starts with "Dr".
 export function isDoctorProduct(product: { name?: string; category?: string } | undefined | null) {
