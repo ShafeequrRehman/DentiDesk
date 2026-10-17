@@ -15,6 +15,7 @@ import { triggerBackgroundSync } from '@/lib/offline-sync';
 import { computeDiscountFromInputs, loadDiscountDraft, saveDiscountDraft } from '@/lib/discount-draft';
 import { reportPrintOutcome, listenForPrintSentMessages } from '@/lib/print-notify';
 import { useToast } from '@/lib/toast';
+import CompleteOrderModal from '@/components/CompleteOrderModal';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { useNotifications } from '@/lib/notifications';
 import AddItemsManager from '@/pages/dashboard/sales/components/AddItemsManager';
@@ -149,6 +150,9 @@ export default function SalesPage() {
   const [status, setStatus] = useState<{ tone: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [loading, setLoading] = useState(true);
   const [showPayment, setShowPayment] = useState(false);
+  // Same Complete Appointment popup the POS shows after Save Appointment
+  // (payment method, partial amount, pending) - prints the slip too.
+  const [completeTarget, setCompleteTarget] = useState<SavedOrder | null>(null);
   const [showCancel, setShowCancel] = useState(false);
   const [showAddItems, setShowAddItems] = useState(false);
   const [settings, setSettings] = useState<StoreSettings | null>(null);
@@ -760,7 +764,7 @@ export default function SalesPage() {
     if (order.status !== 'pending') return;
     setDiscountAmountInput('');
     setDiscountPercentInput('');
-    setShowPayment(true);
+    setCompleteTarget(order);
   }
 
   // Instant Checkout arriving from POS: POSPage.tsx's handleSaveOrder
@@ -1521,7 +1525,7 @@ export default function SalesPage() {
                     onAssignRider={handleAssignRider}
                     respondingToChangeRequest={respondingToChangeRequest}
                     onRespondToChangeRequest={handleRespondToChangeRequest}
-                    onComplete={selectedOrder.status === 'pending' && isSelectedOrderHydrated ? () => { setDiscountAmountInput(''); setDiscountPercentInput(''); setShowPayment(true); } : undefined}
+                    onComplete={selectedOrder.status === 'pending' && isSelectedOrderHydrated ? () => { setDiscountAmountInput(''); setDiscountPercentInput(''); setCompleteTarget(selectedOrder); } : undefined}
                   />
                 ) : null}
 
@@ -1586,7 +1590,7 @@ export default function SalesPage() {
                     <button
                       disabled={!isSelectedOrderHydrated}
                       type="button"
-                      onClick={() => { setDiscountAmountInput(''); setDiscountPercentInput(''); setShowPayment(true); }}
+                      onClick={() => { setDiscountAmountInput(''); setDiscountPercentInput(''); setCompleteTarget(selectedOrder); }}
                       className="flex items-center justify-center gap-2 rounded-full border-[0.5px] border-white/40 bg-gradient-to-b from-emerald-400 to-emerald-600 px-5 py-4 text-lg font-black text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.5),inset_0_-4px_10px_rgba(6,95,70,0.45)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
                     >
                       <CheckCircle2 size={20} /> {t('sales.completeOrder')}
@@ -1614,6 +1618,21 @@ export default function SalesPage() {
           ) : <div className="flex min-h-[680px] flex-col items-center justify-center gap-4 p-6 text-center text-gray-400 lg:min-h-0 lg:h-full"><ShoppingBag size={56} strokeWidth={1.4} /><div><p className="font-bold text-gray-500">{t('sales.selectOrderTitle')}</p><p className="text-sm">{t('sales.selectOrderHint')}</p></div></div>}
         </aside>
       </div>
+
+      {completeTarget ? (
+        <CompleteOrderModal
+          order={completeTarget}
+          isOnline={isOnline}
+          toast={toast}
+          onClose={() => setCompleteTarget(null)}
+          onCompleted={(updated) => {
+            setCompleteTarget(null);
+            setOrders((previous) => previous.map((order) => (order.id === updated.id ? updated : order)));
+            setSelectedOrder((current) => (current && current.id === updated.id ? updated : current));
+            popup({ tone: 'success', title: 'Appointment completed', message: `Appointment #${orderNumber(updated)} is completed and the slip is printing.` });
+          }}
+        />
+      ) : null}
 
       {showPayment && selectedOrder ? (
         <Modal title={t('sales.completePaymentTitle')} onClose={() => { setShowPayment(false); setConfirmPending(false); }}>
