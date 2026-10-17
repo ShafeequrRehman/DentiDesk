@@ -57,6 +57,15 @@ window.addEventListener('error', (event) => {
   }
 });
 
+// "Install App": Chrome fires beforeinstallprompt once, often while the
+// login page is still showing - keep it here so the dashboard's Install
+// button can still use it after login.
+window.addEventListener('beforeinstallprompt', (event) => {
+  event.preventDefault();
+  (window as unknown as { __installPrompt?: Event }).__installPrompt = event;
+  window.dispatchEvent(new Event('dentidesk-install-ready'));
+});
+
 window.addEventListener('unhandledrejection', (event) => {
   console.error('[main.tsx] Unhandled promise rejection:', event.reason);
 });

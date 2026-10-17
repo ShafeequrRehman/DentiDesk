@@ -1,11 +1,12 @@
 {
-  "name": "POS System",
-  "short_name": "POS",
-  "start_url": "./#/dashboard",
+  "id": "/?app=dashboard",
+  "name": "DentiDesk Clinic",
+  "short_name": "DentiDesk",
+  "start_url": "./?app=dashboard#/dashboard",
   "scope": "./",
   "display": "standalone",
   "background_color": "#ffffff",
-  "theme_color": "#2F9E75",
+  "theme_color": "#00B0C7",
   "icons": [
     {
       "src": "./icon-192.png",

@@ -85,6 +85,20 @@ export default function DashboardShell() {
     .filter((item) => !item.permission || (Array.isArray(item.permission) ? hasAnyPermission(item.permission) : hasPermission(item.permission)))
     .filter((item) => isPageEnabled(item.key))
     .map((item) => ({ ...item, icon: PAGE_ICONS[item.key] }));
+  // F1, F2, F3... in the exact order the sidebar shows them (after
+  // Dashboard), so the badges always run in sequence for whatever pages
+  // this user can see. Stops at F10 - F11/F12 belong to the browser.
+  {
+    let next = 1;
+    navItems.forEach((item) => {
+      if (item.key === 'dashboard' || next > 10) {
+        item.hotkey = undefined;
+        return;
+      }
+      item.hotkey = `F${next}`;
+      next += 1;
+    });
+  }
 
   // Keyboard Shortcuts - Core Navigation: every DASHBOARD_PAGES entry that
   // carries a `hotkey` (F1-F10 - see that file's own comment on why it
@@ -323,12 +337,24 @@ function InstallAppButton() {
 
   useEffect(() => {
     if (isDesktopApp()) return undefined;
+    // The prompt may have fired before this mounted (e.g. on the login
+    // page) - main.tsx keeps it on window.__installPrompt.
+    const saved = (window as unknown as { __installPrompt?: Event }).__installPrompt;
+    if (saved) setInstallEvent(saved);
     function handler(event: Event) {
       event.preventDefault();
       setInstallEvent(event);
     }
+    function onReady() {
+      const latest = (window as unknown as { __installPrompt?: Event }).__installPrompt;
+      if (latest) setInstallEvent(latest);
+    }
     window.addEventListener('beforeinstallprompt', handler);
-    return () => window.removeEventListener('beforeinstallprompt', handler);
+    window.addEventListener('dentidesk-install-ready', onReady);
+    return () => {
+      window.removeEventListener('beforeinstallprompt', handler);
+      window.removeEventListener('dentidesk-install-ready', onReady);
+    };
   }, []);
 
   // iOS Safari never fires beforeinstallprompt (an Apple platform
@@ -349,6 +375,7 @@ function InstallAppButton() {
         onClick={async () => {
           installEvent.prompt();
           await installEvent.userChoice;
+          (window as unknown as { __installPrompt?: Event }).__installPrompt = undefined;
           setInstallEvent(null);
         }}
         title="Install this dashboard as an app on this phone/computer"

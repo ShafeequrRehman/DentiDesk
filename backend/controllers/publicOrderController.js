@@ -147,7 +147,11 @@ exports.getManifest = (req, res) => {
   res.json({
     name: `${req.shop.name} - Appointment Online`,
     short_name: req.shop.name,
-    start_url: `${origin}/#/order/${req.shop._id}`,
+    // Own app identity (id + ?app=...), so installing the patient page
+    // never counts as "already installed" for the staff dashboard app -
+    // Chrome ignores the #... part, so without this both looked identical.
+    id: `/?app=order-${req.shop._id}`,
+    start_url: `${origin}/?app=order#/order/${req.shop._id}`,
     scope: `${origin}/`,
     display: "standalone",
     background_color: "#ffffff",
