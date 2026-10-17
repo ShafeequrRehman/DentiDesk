@@ -1,19 +1,31 @@
 // Dr Availability page.
 //
 // Pick a Dr or Service, pick a date, and mark leave - the whole day, or
-// just some time slots. Leave is blocked on the POS time-slot picker and
+// just some time slots. Or the opposite: mark them Available on a date or
+// time outside their weekly routine (Manage Appointments' work days and
+// hours) - those extra slots can then be booked too. Leave is blocked on the POS time-slot picker and
 // on the patients' online appointment page (and by the backend on save -
 // see backend/services/leaveService.js), so nobody can book a Dr or
 // Service while they're away.
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { CalendarDays, CalendarOff, CheckCircle2, Pencil, RefreshCcw, Save, Search, Trash2, UserRound } from 'lucide-react';
+import { CalendarCheck, CalendarDays, CalendarOff, CheckCircle2, Pencil, RefreshCcw, Save, Search, Trash2, UserRound } from 'lucide-react';
 import { deleteLeave, fetchLeaves, fetchProducts, saveLeave, type LeaveEntry } from '@/lib/pos-api';
 import type { Product } from '@/lib/pos-types';
 import { resolveProductImage } from '@/lib/food-images';
-import { buildTimeSlots, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, todayISO } from '@/lib/appointments';
+import { describeSchedule, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, scheduleOf, slotInHours, todayISO, useTimeSlots, WEEKDAY_LONG, WEEKDAY_SHORT, weekdayOfISO, worksOnDate } from '@/lib/appointments';
 import { useToast } from '@/lib/toast';
 
 type Tab = 'drs' | 'services';
+// What a tap on a time slot marks: leave, or extra availability.
+type Mode = 'leave' | 'extra';
+
+function hasLeave(entry: LeaveEntry) {
+  return entry.fullDay || entry.times.length > 0;
+}
+
+function hasExtra(entry: LeaveEntry) {
+  return !!entry.extraFullDay || (entry.extraTimes?.length || 0) > 0;
+}
 
 interface Card {
   name: string;
@@ -38,12 +50,15 @@ export default function AvailabilityPage() {
   const [date, setDate] = useState(() => todayISO());
   const [fullDay, setFullDay] = useState(false);
   const [times, setTimes] = useState<Set<string>>(new Set());
+  const [mode, setMode] = useState<Mode>('leave');
+  const [extraFullDay, setExtraFullDay] = useState(false);
+  const [extraTimes, setExtraTimes] = useState<Set<string>>(new Set());
   const [note, setNote] = useState('');
   const [dirty, setDirty] = useState(false);
   const [saving, setSaving] = useState(false);
   const [booked, setBooked] = useState<Map<string, string>>(new Map());
 
-  const timeSlots = useMemo(() => buildTimeSlots(), []);
+  const timeSlots = useTimeSlots();
 
   useEffect(() => {
     let cancelled = false;
@@ -96,12 +111,19 @@ export default function AvailabilityPage() {
   const selectedLeaves = selected ? leavesByName.get(selected) || [] : [];
   const savedForDate = selectedLeaves.find((leave) => leave.date === date) || null;
   const kind = tab === 'drs' ? 'Dr' : 'Service';
+  // Weekly routine from Manage Appointments.
+  const routine = useMemo(() => scheduleOf(products.find((p) => p.name === selected)), [products, selected]);
+  const routineText = describeSchedule(routine) || 'Every day, all clinic hours';
+  const routineDay = worksOnDate(routine, date);
+  const inRoutine = (slot: string) => routineDay && slotInHours(routine, slot);
 
   // Load what's saved for this Dr/Service + date into the editor.
   const loadEditor = useCallback((name: string | null, forDate: string, source: LeaveEntry[]) => {
     const saved = name ? source.find((leave) => leave.name === name && leave.date === forDate) : null;
     setFullDay(!!saved?.fullDay);
     setTimes(new Set(saved?.times || []));
+    setExtraFullDay(!!saved?.extraFullDay);
+    setExtraTimes(new Set(saved?.extraTimes || []));
     setNote(saved?.note || '');
     setDirty(false);
   }, []);
@@ -155,18 +177,42 @@ export default function AvailabilityPage() {
     setDirty(false);
   }
 
+  // A slot is leave OR extra, never both - marking one clears the other.
   function toggleTime(slot: string) {
-    setTimes((previous) => {
-      const next = new Set(previous);
-      if (next.has(slot)) next.delete(slot);
-      else next.add(slot);
-      return next;
-    });
+    const [mine, other] = mode === 'leave' ? [times, extraTimes] : [extraTimes, times];
+    const [setMine, setOther] = mode === 'leave' ? [setTimes, setExtraTimes] : [setExtraTimes, setTimes];
+    const nextMine = new Set(mine);
+    if (nextMine.has(slot)) nextMine.delete(slot);
+    else nextMine.add(slot);
+    setMine(nextMine);
+    if (other.has(slot)) {
+      const nextOther = new Set(other);
+      nextOther.delete(slot);
+      setOther(nextOther);
+    }
     setDirty(true);
   }
 
   function selectAllAfter(fromSlot: string | null, toSlot: string | null) {
-    setTimes(new Set(timeSlots.filter((slot) => (!fromSlot || slot >= fromSlot) && (!toSlot || slot < toSlot))));
+    const picked = timeSlots.filter((slot) => (!fromSlot || slot >= fromSlot) && (!toSlot || slot < toSlot) && !isSlotInPast(date, slot));
+    if (mode === 'leave') {
+      setTimes(new Set(picked));
+      setExtraTimes((previous) => new Set([...previous].filter((slot) => !picked.includes(slot))));
+    } else {
+      setExtraTimes(new Set(picked));
+      setTimes((previous) => new Set([...previous].filter((slot) => !picked.includes(slot))));
+    }
+    setDirty(true);
+  }
+
+  function setModeFullDay(on: boolean) {
+    if (mode === 'leave') {
+      setFullDay(on);
+      if (on) setExtraFullDay(false);
+    } else {
+      setExtraFullDay(on);
+      if (on) setFullDay(false);
+    }
     setDirty(true);
   }
 
@@ -179,8 +225,9 @@ export default function AvailabilityPage() {
 
   async function handleSave() {
     if (!selected) return;
-    if (!fullDay && times.size === 0 && !savedForDate) {
-      toast.error('Turn on Full day, or tap the time slots the ' + kind + ' is away.');
+    const extraOn = !fullDay && (extraFullDay || extraTimes.size > 0);
+    if (!fullDay && times.size === 0 && !extraOn && !savedForDate) {
+      toast.error(`Tap the time slots the ${kind} is away (Leave) or extra available (Available), or turn on Full day.`);
       return;
     }
     const clashes = [...booked.entries()].filter(([slot]) => fullDay || times.has(slot));
@@ -195,16 +242,24 @@ export default function AvailabilityPage() {
     }
     setSaving(true);
     try {
-      const saved = await saveLeave({ name: selected, date, fullDay, times: fullDay ? [] : [...times].sort(), note: note.trim() });
+      const saved = await saveLeave({
+        name: selected,
+        date,
+        fullDay,
+        times: fullDay ? [] : [...times].sort(),
+        extraFullDay: !fullDay && extraFullDay,
+        extraTimes: fullDay || extraFullDay ? [] : [...extraTimes].sort(),
+        note: note.trim(),
+      });
       if (saved) applySaved(saved);
       setDirty(false);
-      toast.success(
-        saved?.deleted
-          ? `${selected} is available all day on ${formatAppointmentDate(date)}.`
-          : fullDay
-            ? `${selected} is on leave all day on ${formatAppointmentDate(date)} - no bookings can be made that day.`
-            : `${selected} is on leave for ${times.size} time slot${times.size === 1 ? '' : 's'} on ${formatAppointmentDate(date)}.`,
-      );
+      const day = formatAppointmentDate(date);
+      const parts: string[] = [];
+      if (fullDay) parts.push(`on leave all day on ${day} - no bookings that day`);
+      else if (times.size) parts.push(`on leave for ${times.size} slot${times.size === 1 ? '' : 's'}`);
+      if (!fullDay && extraFullDay) parts.push(`available all day on ${day}`);
+      else if (!fullDay && extraTimes.size) parts.push(`extra available for ${extraTimes.size} slot${extraTimes.size === 1 ? '' : 's'}`);
+      toast.success(saved?.deleted ? `${selected} follows the normal routine on ${day}.` : `${selected} is ${parts.join(' and ')} on ${day}.`);
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not save the leave.');
     } finally {
@@ -213,8 +268,8 @@ export default function AvailabilityPage() {
   }
 
   async function handleDelete(leave: LeaveEntry) {
-    const ok = await confirm(`Remove ${leave.name}'s leave on ${formatAppointmentDate(leave.date)}? They can be booked that day again.`, {
-      title: 'Remove leave',
+    const ok = await confirm(`Remove ${leave.name}'s leave / extra availability on ${formatAppointmentDate(leave.date)}? That day goes back to the normal routine.`, {
+      title: 'Remove',
       confirmText: 'Remove',
       tone: 'danger',
     });
@@ -225,10 +280,12 @@ export default function AvailabilityPage() {
       if (leave.name === selected && leave.date === date) {
         setFullDay(false);
         setTimes(new Set());
+        setExtraFullDay(false);
+        setExtraTimes(new Set());
         setNote('');
         setDirty(false);
       }
-      toast.success('Leave removed.');
+      toast.success('Removed - back to the normal routine.');
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Could not remove the leave.');
     }
@@ -247,7 +304,7 @@ export default function AvailabilityPage() {
           <h1 className="flex items-center gap-3 text-3xl font-black tracking-tight text-gray-900">
             Dr Availability <CalendarOff className="text-[#00B0C7]" size={30} />
           </h1>
-          <p className="font-bold text-gray-500">Mark when a Dr or Service is on leave - those dates and times can&apos;t be booked.</p>
+          <p className="font-bold text-gray-500">Mark leave (can&apos;t be booked), or extra availability outside the weekly routine (can be booked).</p>
         </div>
         <div className="flex items-center gap-2">
           <button
@@ -288,8 +345,10 @@ export default function AvailabilityPage() {
               <p className="p-4 text-sm text-gray-400">{tab === 'drs' ? 'No Drs yet.' : 'No Services yet.'}</p>
             ) : (
               list.map((card) => {
-                const count = leavesByName.get(card.name)?.length || 0;
-                const offToday = leavesByName.get(card.name)?.some((leave) => leave.date === todayISO());
+                const entries = leavesByName.get(card.name) || [];
+                const count = entries.length;
+                const offToday = entries.some((leave) => leave.date === todayISO() && hasLeave(leave));
+                const extraToday = entries.some((leave) => leave.date === todayISO() && hasExtra(leave));
                 const active = card.name === selected;
                 return (
                   <button
@@ -305,8 +364,10 @@ export default function AvailabilityPage() {
                     </div>
                     {offToday ? (
                       <span className="shrink-0 rounded-full bg-amber-100 px-2.5 py-1 text-[10px] font-black text-amber-700">Leave today</span>
+                    ) : extraToday ? (
+                      <span className="shrink-0 rounded-full bg-emerald-100 px-2.5 py-1 text-[10px] font-black text-emerald-700">Extra today</span>
                     ) : count > 0 ? (
-                      <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-black text-gray-600">{count} leave</span>
+                      <span className="shrink-0 rounded-full bg-gray-100 px-2.5 py-1 text-[10px] font-black text-gray-600">{count} date{count === 1 ? '' : 's'}</span>
                     ) : (
                       <span className="shrink-0 rounded-full bg-emerald-50 px-2.5 py-1 text-[10px] font-black text-emerald-700">Available</span>
                     )}
@@ -332,7 +393,13 @@ export default function AvailabilityPage() {
                   <div className="min-w-0">
                     <h2 className="truncate text-xl font-black text-gray-900">{selected}</h2>
                     <p className="text-xs font-bold text-gray-400">
-                      {savedForDate ? (savedForDate.fullDay ? 'On leave all day' : `On leave ${savedForDate.times.length} slot${savedForDate.times.length === 1 ? '' : 's'}`) : 'Available'} on {formatAppointmentDate(date)}
+                      {savedForDate && hasLeave(savedForDate)
+                        ? savedForDate.fullDay ? 'On leave all day' : `On leave ${savedForDate.times.length} slot${savedForDate.times.length === 1 ? '' : 's'}`
+                        : savedForDate && hasExtra(savedForDate)
+                          ? 'Extra available'
+                          : routineDay ? 'Normal routine' : 'Not in routine'}{' '}
+                      on {WEEKDAY_SHORT[weekdayOfISO(date)]} {formatAppointmentDate(date)}
+                      {savedForDate && hasLeave(savedForDate) && hasExtra(savedForDate) ? ' + extra slots' : ''}
                       {dirty ? <span className="ml-2 text-amber-600">Unsaved changes</span> : null}
                     </p>
                   </div>
@@ -346,6 +413,32 @@ export default function AvailabilityPage() {
                   {saving ? <RefreshCcw size={16} className="animate-spin" /> : dirty ? <Save size={16} /> : <CheckCircle2 size={16} />}
                   {saving ? 'Saving...' : dirty ? 'Save' : 'Saved'}
                 </button>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-2 rounded-[20px] bg-gray-50 p-3">
+                <span className="text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">Routine</span>
+                <span className="text-sm font-black text-[#007F90]">{routineText}</span>
+                <span className="text-[11px] font-semibold text-gray-400">(set in Manage Appointments)</span>
+              </div>
+
+              <div className="flex flex-wrap gap-2">
+                <button
+                  type="button"
+                  onClick={() => setMode('leave')}
+                  className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition ${mode === 'leave' ? 'bg-amber-400 text-white shadow' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-amber-50'}`}
+                >
+                  <CalendarOff size={16} /> Mark Leave
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setMode('extra')}
+                  className={`flex items-center gap-2 rounded-2xl px-4 py-2.5 text-sm font-black transition ${mode === 'extra' ? 'bg-emerald-500 text-white shadow' : 'bg-white text-gray-600 ring-1 ring-gray-200 hover:bg-emerald-50'}`}
+                >
+                  <CalendarCheck size={16} /> Mark Available
+                </button>
+                <p className="self-center text-[11px] font-semibold text-gray-400">
+                  {mode === 'leave' ? 'Tap slots the ' + kind + ' is away - they can\'t be booked.' : 'Tap slots outside the routine the ' + kind + ' will be in - they can be booked.'}
+                </p>
               </div>
 
               <div className="flex flex-wrap items-center gap-3">
@@ -362,16 +455,13 @@ export default function AvailabilityPage() {
                 <label className="flex cursor-pointer items-center gap-2 rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-black text-gray-700">
                   <input
                     type="checkbox"
-                    checked={fullDay}
-                    onChange={(e) => {
-                      setFullDay(e.target.checked);
-                      setDirty(true);
-                    }}
+                    checked={mode === 'leave' ? fullDay : extraFullDay}
+                    onChange={(e) => setModeFullDay(e.target.checked)}
                     className="h-4 w-4 accent-[#00B0C7]"
                   />
-                  Full day leave
+                  {mode === 'leave' ? 'Full day leave' : 'Available full day'}
                 </label>
-                {!fullDay ? (
+                {!fullDay && !extraFullDay ? (
                   <div className="flex flex-wrap gap-1.5">
                     <button type="button" onClick={() => selectAllAfter(null, '13:00')} className="rounded-xl bg-gray-100 px-3 py-2 text-xs font-black text-gray-600 hover:bg-gray-200">Morning</button>
                     <button type="button" onClick={() => selectAllAfter('13:00', '17:00')} className="rounded-xl bg-gray-100 px-3 py-2 text-xs font-black text-gray-600 hover:bg-gray-200">Afternoon</button>
@@ -379,7 +469,8 @@ export default function AvailabilityPage() {
                     <button
                       type="button"
                       onClick={() => {
-                        setTimes(new Set());
+                        if (mode === 'leave') setTimes(new Set());
+                        else setExtraTimes(new Set());
                         setDirty(true);
                       }}
                       className="rounded-xl bg-gray-100 px-3 py-2 text-xs font-black text-gray-600 hover:bg-gray-200"
@@ -394,12 +485,25 @@ export default function AvailabilityPage() {
                 <div className="rounded-[20px] border border-amber-300 bg-amber-50 p-5 text-sm font-bold text-amber-800">
                   {selected} won&apos;t be bookable at all on {formatAppointmentDate(date)} - on the POS or online.
                 </div>
+              ) : extraFullDay ? (
+                <div className="rounded-[20px] border border-emerald-300 bg-emerald-50 p-5 text-sm font-bold text-emerald-800">
+                  {selected} can be booked all day on {WEEKDAY_LONG[weekdayOfISO(date)]} {formatAppointmentDate(date)} (all clinic hours) - even outside the routine.
+                </div>
               ) : (
                 <div>
-                  <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">Tap the time slots {selected} is away</p>
+                  {!routineDay ? (
+                    <p className="mb-2 rounded-xl bg-gray-50 px-3 py-2 text-xs font-bold text-gray-500">
+                      {selected} doesn&apos;t normally work on {WEEKDAY_LONG[weekdayOfISO(date)]}s. Use <span className="text-emerald-700">Mark Available</span> to open some slots for this date.
+                    </p>
+                  ) : null}
+                  <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">
+                    {mode === 'leave' ? `Tap the time slots ${selected} is away` : `Tap the extra time slots ${selected} will be in`}
+                  </p>
                   <div className="grid grid-cols-3 gap-1.5 sm:grid-cols-4 xl:grid-cols-6">
                     {timeSlots.map((slot) => {
                       const off = times.has(slot);
+                      const extra = extraTimes.has(slot);
+                      const normal = inRoutine(slot);
                       const patient = booked.get(slot);
                       const past = isSlotInPast(date, slot);
                       return (
@@ -408,23 +512,31 @@ export default function AvailabilityPage() {
                           type="button"
                           disabled={past}
                           onClick={() => toggleTime(slot)}
-                          title={patient ? `Booked: ${patient}` : formatSlot(slot)}
+                          title={patient ? `Booked: ${patient}` : normal ? formatSlot(slot) : `${formatSlot(slot)} - outside the routine`}
                           className={`rounded-xl border px-1 py-2 text-xs font-black transition ${
                             off
                               ? 'border-amber-400 bg-amber-400 text-white shadow'
-                              : past
-                                ? 'cursor-not-allowed border-gray-100 bg-gray-50 text-gray-300'
-                                : 'border-gray-200 bg-white text-gray-700 hover:border-amber-300 hover:bg-amber-50'
+                              : extra
+                                ? 'border-emerald-500 bg-emerald-500 text-white shadow'
+                                : past
+                                  ? 'cursor-not-allowed border-gray-100 bg-gray-50 text-gray-300'
+                                  : !normal
+                                    ? `border-dashed border-gray-200 bg-gray-50 text-gray-400 ${mode === 'extra' ? 'hover:border-emerald-300 hover:bg-emerald-50' : ''}`
+                                    : `border-gray-200 bg-white text-gray-700 ${mode === 'leave' ? 'hover:border-amber-300 hover:bg-amber-50' : 'hover:border-emerald-300 hover:bg-emerald-50'}`
                           }`}
                         >
                           {formatSlot(slot)}
-                          {patient ? <span className={`block truncate text-[9px] font-bold ${off ? 'text-white/90' : 'text-rose-500'}`}>{patient}</span> : null}
+                          {patient ? (
+                            <span className={`block truncate text-[9px] font-bold ${off || extra ? 'text-white/90' : 'text-rose-500'}`}>{patient}</span>
+                          ) : !normal && !off && !extra && !past ? (
+                            <span className="block text-[9px] font-bold text-gray-400">Off routine</span>
+                          ) : null}
                         </button>
                       );
                     })}
                   </div>
                   <p className="mt-2 text-[11px] font-semibold text-gray-400">
-                    Orange = on leave. A name under a time means a patient is already booked then.
+                    <span className="text-amber-600">Orange</span> = on leave · <span className="text-emerald-600">Green</span> = extra available · Dashed = outside the routine (not bookable unless marked green). A name under a time means a patient is already booked then.
                   </p>
                 </div>
               )}
@@ -436,30 +548,37 @@ export default function AvailabilityPage() {
                   setDirty(true);
                 }}
                 maxLength={300}
-                placeholder="Reason (optional) - e.g. Conference, Personal leave"
+                placeholder="Reason (optional) - e.g. Conference, Personal leave, Extra Saturday clinic"
                 className="w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold outline-none focus:ring-2 focus:ring-[#00B0C7]/40"
               />
 
               <div>
-                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">Upcoming leave</p>
+                <p className="mb-2 text-[11px] font-black uppercase tracking-[0.16em] text-gray-400">Upcoming leave &amp; extra days</p>
                 {selectedLeaves.length === 0 ? (
-                  <p className="rounded-[18px] bg-gray-50 p-4 text-sm text-gray-400">No leave set - {selected} is available on every date.</p>
+                  <p className="rounded-[18px] bg-gray-50 p-4 text-sm text-gray-400">Nothing set - {selected} follows the normal routine on every date.</p>
                 ) : (
                   <div className="space-y-2">
                     {selectedLeaves.map((leave) => (
                       <div key={leave.id || leave.date} className={`flex flex-wrap items-center justify-between gap-2 rounded-[18px] border p-3 ${leave.date === date ? 'border-[#00B0C7] bg-[#EBFAFC]' : 'border-gray-100 bg-gray-50'}`}>
                         <div className="min-w-0">
-                          <p className="text-sm font-black text-gray-900">{formatAppointmentDate(leave.date)}</p>
-                          <p className="text-xs font-semibold text-gray-500">
-                            {leave.fullDay ? 'Full day' : leave.times.map(formatSlot).join(', ')}
-                            {leave.note ? ` · ${leave.note}` : ''}
-                          </p>
+                          <p className="text-sm font-black text-gray-900">{WEEKDAY_SHORT[weekdayOfISO(leave.date)]} {formatAppointmentDate(leave.date)}</p>
+                          {hasLeave(leave) ? (
+                            <p className="text-xs font-semibold text-amber-700">
+                              Leave: {leave.fullDay ? 'Full day' : leave.times.map(formatSlot).join(', ')}
+                            </p>
+                          ) : null}
+                          {hasExtra(leave) ? (
+                            <p className="text-xs font-semibold text-emerald-700">
+                              Available: {leave.extraFullDay ? 'Full day' : (leave.extraTimes || []).map(formatSlot).join(', ')}
+                            </p>
+                          ) : null}
+                          {leave.note ? <p className="text-xs font-semibold text-gray-500">{leave.note}</p> : null}
                         </div>
                         <div className="flex gap-1.5">
                           <button type="button" onClick={() => void editLeave(leave)} title="Edit" className="rounded-xl bg-white p-2 text-gray-600 shadow-sm hover:bg-gray-100">
                             <Pencil size={14} />
                           </button>
-                          <button type="button" onClick={() => void handleDelete(leave)} title="Remove leave" className="rounded-xl bg-white p-2 text-rose-500 shadow-sm hover:bg-rose-50">
+                          <button type="button" onClick={() => void handleDelete(leave)} title="Remove" className="rounded-xl bg-white p-2 text-rose-500 shadow-sm hover:bg-rose-50">
                             <Trash2 size={14} />
                           </button>
                         </div>

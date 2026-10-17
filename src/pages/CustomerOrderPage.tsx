@@ -18,7 +18,7 @@ import {
   type PublicChangeRequest,
 } from '@/lib/public-order-api';
 import { getApiBaseCandidates } from '@/lib/api';
-import { buildTimeSlots, describeSchedule, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, scheduleOf, slotInHours, SLOT_DAY_END, SLOT_DAY_START, todayISO, WEEKDAY_LONG, WEEKDAY_SHORT, weekdayOfISO, worksOnDate } from '@/lib/appointments';
+import { clinicEnd, clinicStart, dayOpen, describeSchedule, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, NO_EXTRA, scheduleOf, setClinicHours, slotOpen, todayISO, useTimeSlots, type ExtraDay, WEEKDAY_LONG, WEEKDAY_SHORT, weekdayOfISO } from '@/lib/appointments';
 
 // A plain numbered table ("5") still needs the "Table " prefix to read as
 // a table at all - a custom label already reads fine on its own. Only ever
@@ -227,7 +227,7 @@ function redirectToGateway(redirect: PaymentRedirect) {
 function ScheduleInfo({ product, compact }: { product: PublicMenuProduct; compact?: boolean }) {
   const schedule = scheduleOf(product);
   const everyDay = schedule.days.length === 0 || schedule.days.length === 7;
-  const hours = `${formatSlot(schedule.start || SLOT_DAY_START)} - ${formatSlot(schedule.end || SLOT_DAY_END)}`;
+  const hours = `${formatSlot(schedule.start || clinicStart())} - ${formatSlot(schedule.end || clinicEnd())}`;
   return (
     <div className={compact ? 'mt-1' : 'mt-1.5 space-y-1'}>
       <div className="flex flex-wrap gap-0.5" title={everyDay ? 'Available every day' : `Available: ${schedule.days.map((d) => WEEKDAY_LONG[d]).join(', ')}`}>
@@ -987,9 +987,12 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   const [leaveDay, setLeaveDay] = useState(false);
   const [leaveSlots, setLeaveSlots] = useState<Set<string>>(new Set());
   const [leaveDays, setLeaveDays] = useState<Array<{ date: string; fullDay: boolean; times: string[] }>>([]);
+  // Extra availability outside the routine (Dr Availability page).
+  const [extraDay, setExtraDay] = useState<ExtraDay>(NO_EXTRA);
+  const [extraDays, setExtraDays] = useState<Array<{ date: string; fullDay: boolean; times: string[] }>>([]);
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
-  const timeSlots = useMemo(() => buildTimeSlots(), []);
+  const timeSlots = useTimeSlots();
 
   const [activeOrderWarning, setActiveOrderWarning] = useState<{ id: string; orderType: string; table: string; dailyOrderNumber: number } | null>(null);
   const phoneCheckTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null);
@@ -1009,6 +1012,8 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
     (async () => {
       try {
         const result = await fetchPublicMenu(shopId);
+        // Slots follow the clinic hours set in Settings.
+        setClinicHours(result.clinicStart, result.clinicEnd, false);
         setMenu(result);
       } catch (err) {
         const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -1094,11 +1099,11 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   const doctorName = cartLines.find((line) => isDoctorProduct(line.product))?.product.name || cartLines[0]?.product.name || '';
   // Weekly schedule of the Dr/Service being booked (Manage Appointments).
   const bookedSchedule = scheduleOf(cartLines.find((line) => line.product.name === doctorName)?.product);
-  const notWorkingDay = !!doctorName && !worksOnDate(bookedSchedule, appointmentDate);
+  const notWorkingDay = !!doctorName && !dayOpen(bookedSchedule, appointmentDate, extraDay);
   const scheduleText = describeSchedule(bookedSchedule);
   useEffect(() => {
-    if (appointmentTime && (notWorkingDay || !slotInHours(bookedSchedule, appointmentTime))) setAppointmentTime('');
-  }, [notWorkingDay, bookedSchedule, appointmentTime]);
+    if (appointmentTime && (notWorkingDay || !slotOpen(bookedSchedule, appointmentDate, appointmentTime, extraDay))) setAppointmentTime('');
+  }, [notWorkingDay, bookedSchedule, appointmentDate, extraDay, appointmentTime]);
 
   useEffect(() => {
     if (!doctorName || !appointmentDate) {
@@ -1106,6 +1111,8 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
       setLeaveDay(false);
       setLeaveSlots(new Set());
       setLeaveDays([]);
+      setExtraDay(NO_EXTRA);
+      setExtraDays([]);
       return;
     }
     let cancelled = false;
@@ -1120,6 +1127,8 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
         setLeaveDay(fullDay);
         setLeaveSlots(off);
         setLeaveDays(info.leaveDays);
+        setExtraDay(info.extra ? { fullDay: !!info.extra.fullDay, times: new Set(info.extra.times || []) } : NO_EXTRA);
+        setExtraDays(info.extraDays);
         setAppointmentTime((current) => (current && (fullDay || set.has(current) || off.has(current)) ? '' : current));
       })
       .catch(() => {
@@ -1127,6 +1136,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
           setBookedSlots(new Set());
           setLeaveDay(false);
           setLeaveSlots(new Set());
+          setExtraDay(NO_EXTRA);
         }
       })
       .finally(() => {
@@ -1184,7 +1194,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
     customerName.trim().length >= 2 &&
     phoneDigits.length >= 10 &&
     (orderType !== 'Delivery' || customerAddress.trim().length >= 5) &&
-    (!doctorName || (!leaveDay && !notWorkingDay && !!appointmentTime && slotInHours(bookedSchedule, appointmentTime) && !bookedSlots.has(appointmentTime) && !leaveSlots.has(appointmentTime) && !isSlotInPast(appointmentDate, appointmentTime)));
+    (!doctorName || (!leaveDay && !notWorkingDay && !!appointmentTime && slotOpen(bookedSchedule, appointmentDate, appointmentTime, extraDay) && !bookedSlots.has(appointmentTime) && !leaveSlots.has(appointmentTime) && !isSlotInPast(appointmentDate, appointmentTime)));
 
   async function handlePlaceOrder() {
     if (!canSubmit || placing) return;
@@ -1458,6 +1468,16 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                     }).join(' · ')}
                   </p>
                 ) : null}
+                {extraDays.length > 0 ? (
+                  <p className="text-[11px] font-semibold text-emerald-700">
+                    {doctorName} is also available: {extraDays.slice(0, 5).map((d) => {
+                      const day = `${WEEKDAY_SHORT[weekdayOfISO(d.date)]} ${formatAppointmentDate(d.date).replace(/ \d{4}$/, '')}`;
+                      if (d.fullDay) return `${day} (full day)`;
+                      const sorted = [...d.times].sort();
+                      return `${day} (${formatSlot(sorted[0])} - ${formatSlot(sorted[sorted.length - 1])})`;
+                    }).join(' · ')}
+                  </p>
+                ) : null}
                 <p className="pt-1 text-xs font-black uppercase tracking-[0.14em] text-gray-400">Time Slot - {doctorName}</p>
                 {scheduleText ? <p className="text-[11px] font-bold text-[#007F90]">{doctorName} is available: {scheduleText}</p> : null}
                 {notWorkingDay ? (
@@ -1470,7 +1490,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                   </p>
                 ) : (
                 <div className="grid max-h-48 grid-cols-3 gap-1.5 overflow-y-auto pr-0.5 sm:grid-cols-4">
-                  {timeSlots.filter((slot) => slotInHours(bookedSchedule, slot)).map((slot) => {
+                  {timeSlots.filter((slot) => slotOpen(bookedSchedule, appointmentDate, slot, extraDay)).map((slot) => {
                     const onLeave = leaveSlots.has(slot);
                     const booked = bookedSlots.has(slot) || onLeave;
                     const past = isSlotInPast(appointmentDate, slot);

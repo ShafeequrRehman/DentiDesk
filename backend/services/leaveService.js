@@ -1,5 +1,6 @@
 const Leave = require("../models/Leave");
 const Product = require("../models/Product");
+const Shop = require("../models/Shop");
 
 const DAY_NAMES = ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"];
 
@@ -10,15 +11,37 @@ function weekdayOf(date) {
 
 function prettyTime(hhmm) {
   const [h, m] = String(hhmm).split(":").map(Number);
-  return `${h % 12 === 0 ? 12 : h % 12}:${String(m).padStart(2, "0")} ${h >= 12 ? "PM" : "AM"}`;
+  const hh = h % 24;
+  return `${hh % 12 === 0 ? 12 : hh % 12}:${String(m).padStart(2, "0")} ${hh >= 12 ? "PM" : "AM"}`;
 }
 
 // Weekly schedule check (Manage Appointments' work days / hours). Returns
 // a message when the Dr/Service doesn't work at that date/time, else null.
+const HHMM = /^\d{2}:\d{2}$/;
+
+// Clinic hours from Settings; end at/before start (e.g. "02:00") = midnight.
+function clinicHours(shop) {
+  const start = HHMM.test(shop?.clinicStart || "") ? shop.clinicStart : "09:00";
+  let end = HHMM.test(shop?.clinicEnd || "") ? shop.clinicEnd : "21:00";
+  if (end <= start) end = "24:00";
+  return { start, end };
+}
+
 async function findScheduleProblem(shopId, name, date, time) {
   if (!shopId || !name || !/^\d{4}-\d{2}-\d{2}$/.test(date || "")) return null;
-  const product = await Product.findOne({ shopId, name }).select("workDays workStart workEnd").lean();
+  const [product, shop, special] = await Promise.all([
+    Product.findOne({ shopId, name }).select("workDays workStart workEnd").lean(),
+    Shop.findById(shopId).select("clinicStart clinicEnd").lean(),
+    Leave.findOne({ shopId, name, date }).select("extraFullDay extraTimes").lean(),
+  ]);
+  // Extra availability set on the Dr Availability page beats the routine.
+  if (special?.extraFullDay) return null;
+  if (time && (special?.extraTimes || []).includes(time)) return null;
   if (!product) return null;
+  const clinic = clinicHours(shop);
+  if (time && HHMM.test(time) && (time < clinic.start || time >= clinic.end)) {
+    return `The clinic is open from ${prettyTime(clinic.start)} until ${prettyTime(clinic.end)}. Please pick another time.`;
+  }
   const days = Array.isArray(product.workDays) ? product.workDays.filter((d) => d >= 0 && d <= 6) : [];
   if (days.length > 0 && !days.includes(weekdayOf(date))) {
     const list = [...days].sort((a, b) => a - b).map((d) => DAY_NAMES[d]).join(", ");
@@ -40,6 +63,7 @@ async function findLeaveFor(shopId, name, date, time) {
   if (!shopId || !name || !date) return null;
   const leave = await Leave.findOne({ shopId, name, date }).lean();
   if (!leave) return null;
+  if (!leave.fullDay && !(leave.times || []).length) return null; // only extra availability
   if (leave.fullDay) return leave;
   if (time && (leave.times || []).includes(time)) return leave;
   return time ? null : leave;

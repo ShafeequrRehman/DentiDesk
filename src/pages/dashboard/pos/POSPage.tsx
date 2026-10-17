@@ -19,7 +19,7 @@ import { useLanguage } from '@/i18n';
 import CompleteOrderModal from '@/components/CompleteOrderModal';
 import { writeOrderReceiptToWindow } from '@/lib/order-receipt-print';
 import { isValidWhatsappNumber, sendAppointmentSlip } from '@/lib/whatsapp-slips';
-import { buildTimeSlots, describeSchedule, scheduleOf, slotInHours, worksOnDate, WEEKDAY_LONG, weekdayOfISO, describeUpcomingLeave, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo } from '@/lib/appointments';
+import { useTimeSlots, dayOpen, slotOpen, extraFor, describeSchedule, scheduleOf, WEEKDAY_LONG, weekdayOfISO, describeUpcomingLeave, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo } from '@/lib/appointments';
 
 
 // A "product group" is every Product record that shares the same name +
@@ -382,7 +382,7 @@ export default function POSPage() {
     return cart.find((item) => !item.specialType)?.name || '';
   }, [cart, products]);
 
-  const timeSlots = useMemo(() => buildTimeSlots(), []);
+  const timeSlots = useTimeSlots();
 
   useEffect(() => {
     if (!doctorName || !appointmentDate) {
@@ -425,7 +425,9 @@ export default function POSPage() {
 
   // Weekly schedule of the Dr/Service being booked (Manage Appointments).
   const bookedSchedule = useMemo(() => scheduleOf(products.find((p) => p.name === doctorName)), [products, doctorName]);
-  const notWorkingDay = !!doctorName && !worksOnDate(bookedSchedule, appointmentDate);
+  // Extra availability (Dr Availability page) for this date beats the routine.
+  const extraDay = useMemo(() => extraFor(leaveInfo, appointmentDate), [leaveInfo, appointmentDate]);
+  const notWorkingDay = !!doctorName && !dayOpen(bookedSchedule, appointmentDate, extraDay);
   const scheduleText = describeSchedule(bookedSchedule);
   const dayOnLeave = !!doctorName && leaveInfo.fullDays.has(appointmentDate);
   const leaveTimes = leaveInfo.partTimes.get(appointmentDate);
@@ -434,8 +436,8 @@ export default function POSPage() {
   // A picked time that turns out to be on leave is cleared.
   useEffect(() => {
     if (!appointmentTime) return;
-    if (dayOnLeave || notWorkingDay || leaveTimes?.has(appointmentTime) || (!!appointmentTime && !slotInHours(bookedSchedule, appointmentTime))) setAppointmentTime('');
-  }, [dayOnLeave, notWorkingDay, bookedSchedule, leaveTimes, appointmentTime]);
+    if (dayOnLeave || notWorkingDay || leaveTimes?.has(appointmentTime) || !slotOpen(bookedSchedule, appointmentDate, appointmentTime, extraDay)) setAppointmentTime('');
+  }, [dayOnLeave, notWorkingDay, bookedSchedule, extraDay, appointmentDate, leaveTimes, appointmentTime]);
 
   const productGroups = useMemo<ProductGroup[]>(() => {
     const map = new Map<string, ProductGroup>();
@@ -910,7 +912,7 @@ export default function POSPage() {
       if (!appointmentDate) return showValidationError(t('pos.appointmentDateRequired'));
       if (!appointmentTime) return showValidationError(t('pos.appointmentTimeRequired'));
       if (notWorkingDay) return showValidationError(`${doctorName} doesn't work on ${WEEKDAY_LONG[weekdayOfISO(appointmentDate)]}s (${scheduleText}). Pick another date.`);
-      if (!slotInHours(bookedSchedule, appointmentTime)) return showValidationError(`${doctorName} is available ${scheduleText}. Pick another time.`);
+      if (!slotOpen(bookedSchedule, appointmentDate, appointmentTime, extraDay)) return showValidationError(`${doctorName} is available ${scheduleText}. Pick another time.`);
       if (dayOnLeave) return showValidationError(`${doctorName} is on leave on ${formatAppointmentDate(appointmentDate)}. Pick another date.`);
       if (leaveTimes?.has(appointmentTime)) return showValidationError(`${doctorName} is on leave at ${formatSlot(appointmentTime)}. Pick another time.`);
       if (bookedSlots.has(appointmentTime)) return showValidationError(t('pos.appointmentSlotTaken'));
@@ -1609,8 +1611,13 @@ export default function POSPage() {
               ) : (
                 <div>
                   {scheduleText ? <p className="mb-1.5 text-[10px] font-bold text-[#007F90]">Available: {scheduleText}</p> : null}
+                  {extraDay.fullDay || extraDay.times.size > 0 ? (
+                    <p className="mb-1.5 text-[10px] font-bold text-emerald-700">
+                      Extra availability on this date{extraDay.fullDay ? ' - full day' : ''} (Dr Availability)
+                    </p>
+                  ) : null}
                   <div className="grid max-h-44 grid-cols-4 gap-1.5 overflow-y-auto pr-0.5">
-                    {timeSlots.filter((slot) => slotInHours(bookedSchedule, slot)).map((slot) => {
+                    {timeSlots.filter((slot) => slotOpen(bookedSchedule, appointmentDate, slot, extraDay)).map((slot) => {
                       const bookedBy = bookedSlots.get(slot);
                       const onLeave = !!leaveTimes?.has(slot);
                       const past = isSlotInPast(appointmentDate, slot);

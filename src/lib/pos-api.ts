@@ -665,6 +665,9 @@ export interface LeaveEntry {
   date: string;
   fullDay: boolean;
   times: string[];
+  // Extra availability outside the weekly routine.
+  extraFullDay?: boolean;
+  extraTimes?: string[];
   note?: string;
   createdBy?: string;
 }
@@ -678,7 +681,7 @@ export async function fetchLeaves(params: { name?: string; date?: string; from?:
   }
 }
 
-export async function saveLeave(payload: { name: string; date: string; fullDay: boolean; times: string[]; note?: string }) {
+export async function saveLeave(payload: { name: string; date: string; fullDay: boolean; times: string[]; extraFullDay?: boolean; extraTimes?: string[]; note?: string }) {
   try {
     const response = await api.put<LeaveEntry & { _id?: string; deleted?: boolean }>('/leaves', payload);
     return { ...response.data, id: response.data.id ?? response.data._id ?? '' };
@@ -1215,6 +1218,8 @@ export async function respondToOrderChangeRequest(id: string, action: 'approve' 
 // includes the key hash itself - see backend/controllers/
 // shopOwnerController.js exports.getOwnShop.
 export interface ShopProfile {
+  clinicStart?: string;
+  clinicEnd?: string;
   _id?: string;
   name?: string;
   // Already stored/returned by the backend (Shop.phone, spread straight
@@ -1253,7 +1258,7 @@ export async function fetchShopProfile() {
 // Shop Name/Shop Address fields in Settings (Store Profile) - phone/email
 // are also accepted server-side but nothing in this app's UI edits those
 // through this call yet.
-export async function updateShopProfile(payload: { name?: string; address?: string; receiptAutoPrint?: Partial<{ dineIn: boolean; takeAway: boolean; delivery: boolean }> }) {
+export async function updateShopProfile(payload: { name?: string; address?: string; clinicStart?: string; clinicEnd?: string; receiptAutoPrint?: Partial<{ dineIn: boolean; takeAway: boolean; delivery: boolean }> }) {
   try {
     const response = await api.patch<ShopProfile>('/shop/profile', payload);
     return response.data;

@@ -13,6 +13,11 @@ const shopSchema = new mongoose.Schema(
     phone: { type: String, default: "" },
     email: { type: String, default: "" },
     address: { type: String, default: "" },
+    // Clinic hours ("HH:MM") from Settings - the day the appointment time
+    // slots cover on the POS, the online page and Manage Appointments.
+    // Empty = 09:00 - 21:00.
+    clinicStart: { type: String, default: "" },
+    clinicEnd: { type: String, default: "" },
     status: {
       type: String,
       enum: ["active", "suspended"],

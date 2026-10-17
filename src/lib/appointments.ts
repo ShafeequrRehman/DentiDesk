@@ -6,16 +6,60 @@
 // yet. Once the Dr marks the checkup done, the slot is free again. The
 // backend enforces the same rule on save (see orderController.js's
 // findSlotConflict), so two tills can't book the same slot.
+import { useEffect, useState } from 'react';
 import { isDesktopApp } from '@/lib/api';
 import { fetchAppointments, fetchLeaves, type AppointmentQuery } from '@/lib/pos-api';
 import { loadOrdersFromLocalHub } from '@/lib/offline-order-helpers';
 import { buildReceiptShellHtml } from '@/lib/order-receipt-print';
 import type { SavedOrder } from '@/lib/pos-types';
 
-// Clinic hours and slot length. Change these three to fit the clinic.
+// Default clinic hours and slot length. The real hours come from Settings
+// (Business Start / End Time, saved on the server) - see setClinicHours.
 export const SLOT_DAY_START = '09:00';
 export const SLOT_DAY_END = '21:00';
 export const SLOT_MINUTES = 30;
+
+const HHMM = /^\d{2}:\d{2}$/;
+const CLINIC_HOURS_KEY = 'clinic_hours';
+const CLINIC_HOURS_EVENT = 'clinic-hours-updated';
+
+function readCachedHours(): { start: string; end: string } {
+  try {
+    const saved = JSON.parse(localStorage.getItem(CLINIC_HOURS_KEY) || 'null');
+    if (saved && HHMM.test(saved.start) && HHMM.test(saved.end)) return saved;
+  } catch {
+    // no cache / private window
+  }
+  return { start: SLOT_DAY_START, end: SLOT_DAY_END };
+}
+
+let clinicHoursNow = typeof window === 'undefined' ? { start: SLOT_DAY_START, end: SLOT_DAY_END } : readCachedHours();
+
+// Settings' Business Start/End Time. End at or before start (e.g. 02:00
+// at night) means the slots run until midnight.
+export function setClinicHours(start?: string, end?: string, remember = true) {
+  const s = start && HHMM.test(start) ? start : SLOT_DAY_START;
+  const e = end && HHMM.test(end) ? end : SLOT_DAY_END;
+  const next = { start: s, end: e };
+  if (next.start === clinicHoursNow.start && next.end === clinicHoursNow.end) return;
+  clinicHoursNow = next;
+  if (remember) {
+    try {
+      localStorage.setItem(CLINIC_HOURS_KEY, JSON.stringify(next));
+    } catch {
+      // ignore
+    }
+  }
+  if (typeof window !== 'undefined') window.dispatchEvent(new Event(CLINIC_HOURS_EVENT));
+}
+
+export function clinicStart() {
+  return clinicHoursNow.start;
+}
+
+export function clinicEnd() {
+  return clinicHoursNow.end <= clinicHoursNow.start ? '24:00' : clinicHoursNow.end;
+}
 
 function toMinutes(hhmm: string) {
   const [h, m] = hhmm.split(':').map(Number);
@@ -30,16 +74,28 @@ function fromMinutes(total: number) {
 
 export function buildTimeSlots(): string[] {
   const slots: string[] = [];
-  for (let t = toMinutes(SLOT_DAY_START); t < toMinutes(SLOT_DAY_END); t += SLOT_MINUTES) {
+  for (let t = toMinutes(clinicStart()); t < toMinutes(clinicEnd()); t += SLOT_MINUTES) {
     slots.push(fromMinutes(t));
   }
+  return slots;
+}
+
+// The day's time slots, refreshed when the clinic hours change.
+export function useTimeSlots() {
+  const [slots, setSlots] = useState(buildTimeSlots);
+  useEffect(() => {
+    const refresh = () => setSlots(buildTimeSlots());
+    window.addEventListener(CLINIC_HOURS_EVENT, refresh);
+    return () => window.removeEventListener(CLINIC_HOURS_EVENT, refresh);
+  }, []);
   return slots;
 }
 
 // "14:30" -> "2:30 PM"
 export function formatSlot(hhmm?: string) {
   if (!hhmm || !/^\d{2}:\d{2}$/.test(hhmm)) return '';
-  const [h, m] = hhmm.split(':').map(Number);
+  const [hRaw, m] = hhmm.split(':').map(Number);
+  const h = hRaw % 24;
   const suffix = h >= 12 ? 'PM' : 'AM';
   const hour12 = h % 12 === 0 ? 12 : h % 12;
   return `${hour12}:${String(m).padStart(2, '0')} ${suffix}`;
@@ -105,9 +161,29 @@ export function slotInHours(schedule: WorkSchedule, hhmm: string) {
 export function describeSchedule(schedule: WorkSchedule) {
   const days = schedule.days.length === 0 || schedule.days.length === 7 ? '' : schedule.days.map((d) => WEEKDAY_SHORT[d]).join(', ');
   const hours = schedule.start || schedule.end
-    ? `${formatSlot(schedule.start || SLOT_DAY_START)} - ${formatSlot(schedule.end || SLOT_DAY_END)}`
+    ? `${formatSlot(schedule.start || clinicStart())} - ${formatSlot(schedule.end || clinicEnd())}`
     : '';
   return [days, hours].filter(Boolean).join(' · ');
+}
+
+// Extra availability for one date (Dr Availability page) - beats the
+// weekly routine: the whole day, or just these slots.
+export interface ExtraDay {
+  fullDay: boolean;
+  times: Set<string>;
+}
+
+export const NO_EXTRA: ExtraDay = { fullDay: false, times: new Set() };
+
+// Can this Dr/Service be booked at all on this date?
+export function dayOpen(schedule: WorkSchedule, iso: string, extra: ExtraDay = NO_EXTRA) {
+  return extra.fullDay || extra.times.size > 0 || worksOnDate(schedule, iso);
+}
+
+// Is this slot inside the routine, or an extra slot for that date?
+export function slotOpen(schedule: WorkSchedule, iso: string, slot: string, extra: ExtraDay = NO_EXTRA) {
+  if (extra.fullDay || extra.times.has(slot)) return true;
+  return worksOnDate(schedule, iso) && slotInHours(schedule, slot);
 }
 
 // A Drs/Services item counts as a Dr when its category is something like
@@ -179,17 +255,26 @@ export interface LeaveInfo {
   fullDays: Set<string>;
   // date -> times off that date (part-day leave)
   partTimes: Map<string, Set<string>>;
+  // Extra availability outside the weekly routine.
+  extraFullDays: Set<string>;
+  extraTimes: Map<string, Set<string>>;
 }
 
-export const NO_LEAVE: LeaveInfo = { fullDays: new Set(), partTimes: new Map() };
+export const NO_LEAVE: LeaveInfo = { fullDays: new Set(), partTimes: new Map(), extraFullDays: new Set(), extraTimes: new Map() };
+
+export function extraFor(info: LeaveInfo, iso: string): ExtraDay {
+  return { fullDay: info.extraFullDays.has(iso), times: info.extraTimes.get(iso) || new Set() };
+}
 
 export async function loadLeaveInfo(name: string): Promise<LeaveInfo> {
   try {
     const list = (await fetchLeaves({ name, from: todayISO() })) || [];
-    const info: LeaveInfo = { fullDays: new Set(), partTimes: new Map() };
+    const info: LeaveInfo = { fullDays: new Set(), partTimes: new Map(), extraFullDays: new Set(), extraTimes: new Map() };
     list.forEach((leave) => {
       if (leave.fullDay) info.fullDays.add(leave.date);
       else if (leave.times?.length) info.partTimes.set(leave.date, new Set(leave.times));
+      if (leave.extraFullDay) info.extraFullDays.add(leave.date);
+      else if (leave.extraTimes?.length) info.extraTimes.set(leave.date, new Set(leave.extraTimes));
     });
     return info;
   } catch {

@@ -1,6 +1,6 @@
 
 import { useEffect, useMemo, useRef, useState } from "react";
-import { buildTimeSlots, formatSlot, SLOT_DAY_END, SLOT_DAY_START, WEEKDAY_SHORT } from '@/lib/appointments';
+import { clinicEnd, clinicStart, formatSlot, useTimeSlots, WEEKDAY_SHORT } from '@/lib/appointments';
 import { Plus, Package, Edit, Archive, X, Trash2, Search, ChevronDown, ChevronRight, Upload } from "lucide-react";
 import { createProduct, deleteProduct, fetchProducts, updateProduct } from "@/lib/pos-api";
 import { IngredientUnit, Product } from "@/lib/pos-types";
@@ -118,6 +118,8 @@ export function ProductManagementSection({
   const [workDays, setWorkDays] = useState<number[]>([]);
   const [workStart, setWorkStart] = useState("");
   const [workEnd, setWorkEnd] = useState("");
+  // Time choices follow the clinic hours set in Settings.
+  const clinicSlots = useTimeSlots();
   // How this product is counted/measured - reused from Ingredient's own
   // unit list (see backend/models/Product.js's own comment) so a newly
   // added product's auto-created Stock entry is tracked in the same unit.
@@ -487,8 +489,8 @@ export function ProductManagementSection({
                 onChange={(e) => setWorkStart(e.target.value)}
                 className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="">Clinic opening ({formatSlot(SLOT_DAY_START)})</option>
-                {buildTimeSlots().map((slot) => (
+                <option value="">Clinic opening ({formatSlot(clinicStart())})</option>
+                {clinicSlots.map((slot) => (
                   <option key={slot} value={slot}>{formatSlot(slot)}</option>
                 ))}
               </select>
@@ -500,8 +502,8 @@ export function ProductManagementSection({
                 onChange={(e) => setWorkEnd(e.target.value)}
                 className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500"
               >
-                <option value="">Clinic closing ({formatSlot(SLOT_DAY_END)})</option>
-                {[...buildTimeSlots().slice(1), SLOT_DAY_END].map((slot) => (
+                <option value="">Clinic closing ({formatSlot(clinicEnd())})</option>
+                {[...clinicSlots.slice(1), clinicEnd()].map((slot) => (
                   <option key={slot} value={slot} disabled={!!workStart && slot <= workStart}>{formatSlot(slot)}</option>
                 ))}
               </select>

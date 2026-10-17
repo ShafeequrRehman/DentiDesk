@@ -41,14 +41,20 @@ exports.saveLeave = async (req, res) => {
       ? []
       : [...new Set((Array.isArray(req.body?.times) ? req.body.times : []).map(String).filter((t) => TIME_RE.test(t)))].sort();
     const note = String(req.body?.note || "").trim().slice(0, 300);
+    // Extra availability (outside the weekly routine). Never together
+    // with full-day leave, and a slot is either leave or extra - not both.
+    const extraFullDay = !fullDay && req.body?.extraFullDay === true;
+    const extraTimes = fullDay || extraFullDay
+      ? []
+      : [...new Set((Array.isArray(req.body?.extraTimes) ? req.body.extraTimes : []).map(String).filter((t) => TIME_RE.test(t) && !times.includes(t)))].sort();
 
-    if (!fullDay && times.length === 0) {
+    if (!fullDay && times.length === 0 && !extraFullDay && extraTimes.length === 0) {
       await Leave.deleteOne({ ...scope, name, date });
-      return res.json({ name, date, fullDay: false, times: [], note: "", deleted: true });
+      return res.json({ name, date, fullDay: false, times: [], extraFullDay: false, extraTimes: [], note: "", deleted: true });
     }
     const leave = await Leave.findOneAndUpdate(
       { ...scope, name, date },
-      { $set: { fullDay, times, note, createdBy: req.user?.name || req.user?.email || "" }, $setOnInsert: { ...scope, name, date } },
+      { $set: { fullDay, times, extraFullDay, extraTimes, note, createdBy: req.user?.name || req.user?.email || "" }, $setOnInsert: { ...scope, name, date } },
       { new: true, upsert: true, runValidators: true },
     ).lean();
     res.json({ ...leave, id: String(leave._id) });

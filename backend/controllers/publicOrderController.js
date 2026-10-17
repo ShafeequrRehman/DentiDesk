@@ -176,6 +176,9 @@ exports.getMenu = async (req, res) => {
     res.json({
       shopName: req.shop.name,
       isOpen: Boolean(openSession),
+      // Clinic hours from Settings - the time slots cover this range.
+      clinicStart: req.shop.clinicStart || "",
+      clinicEnd: req.shop.clinicEnd || "",
       // Only tells the frontend WHICH online methods are actually usable
       // for this shop - never the credentials themselves (this endpoint is
       // public/unauthenticated).
@@ -305,14 +308,22 @@ exports.getBookedSlots = async (req, res) => {
     const [orders, leave, fullDays] = await Promise.all([
       Order.find(slotTakenQuery(req.shop._id, doctor, date)).select("appointmentTime").lean(),
       findLeaveFor(req.shop._id, doctor, date),
-      Leave.find({ shopId: req.shop._id, name: doctor, date: { $gte: todayKarachiISO() } }).sort({ date: 1 }).limit(60).select("date fullDay times").lean(),
+      Leave.find({ shopId: req.shop._id, name: doctor, date: { $gte: todayKarachiISO() } }).sort({ date: 1 }).limit(60).select("date fullDay times extraFullDay extraTimes").lean(),
     ]);
+    const special = fullDays.find((entry) => entry.date === date);
+    const leaveEntries = fullDays.filter((entry) => entry.fullDay || (entry.times || []).length);
+    const extraEntries = fullDays.filter((entry) => entry.extraFullDay || (entry.extraTimes || []).length);
     res.json({
       booked: [...new Set(orders.map((order) => order.appointmentTime).filter(Boolean))],
       // Dr/Service leave for this date - fullDay, or just these times.
       leave: leave ? { fullDay: !!leave.fullDay, times: leave.times || [] } : null,
       // Upcoming leave (from today), so the patient can see it up front.
-      leaveDays: fullDays.map((entry) => ({ date: entry.date, fullDay: !!entry.fullDay, times: entry.times || [] })),
+      leaveDays: leaveEntries.map((entry) => ({ date: entry.date, fullDay: !!entry.fullDay, times: entry.times || [] })),
+      // Extra availability outside the weekly routine (Dr Availability page).
+      extra: special && (special.extraFullDay || (special.extraTimes || []).length)
+        ? { fullDay: !!special.extraFullDay, times: special.extraTimes || [] }
+        : null,
+      extraDays: extraEntries.map((entry) => ({ date: entry.date, fullDay: !!entry.extraFullDay, times: entry.extraTimes || [] })),
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

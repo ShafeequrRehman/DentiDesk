@@ -11,7 +11,8 @@ import { clearAuthSession, getAuthRole, getAuthShop, hasPermission, hasAnyPermis
 import { DASHBOARD_PAGES } from '@/lib/dashboard-pages';
 import { useOfflineSync } from '@/lib/offline-sync';
 import { isDesktopApp, logoutRequest } from '@/lib/api';
-import { closeShopSession, openShopSession } from '@/lib/pos-api';
+import { closeShopSession, fetchShopProfile, openShopSession } from '@/lib/pos-api';
+import { setClinicHours } from '@/lib/appointments';
 import { useNetworkStatus } from '@/lib/network-status';
 import { ShopSessionProvider, useShopSession } from '@/lib/shop-session';
 import { useToast } from '@/lib/toast';
@@ -99,6 +100,15 @@ export default function DashboardShell() {
       next += 1;
     });
   }
+
+  // Clinic hours (Settings) decide the appointment time slots everywhere.
+  useEffect(() => {
+    void fetchShopProfile()
+      .then((profile) => {
+        if (profile?.clinicStart || profile?.clinicEnd) setClinicHours(profile.clinicStart, profile.clinicEnd);
+      })
+      .catch(() => undefined);
+  }, []);
 
   // Keyboard Shortcuts - Core Navigation: every DASHBOARD_PAGES entry that
   // carries a `hotkey` (F1-F10 - see that file's own comment on why it

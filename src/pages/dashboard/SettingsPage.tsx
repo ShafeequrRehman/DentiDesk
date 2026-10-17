@@ -13,6 +13,7 @@ import { CustomerOrderingSection } from '@/components/CustomerOrderingSection';
 import { ReceiptAutoPrintSection } from '@/components/ReceiptAutoPrintSection';
 import { getStoreSettings, saveStoreSettings, StoreSettings, CURRENCIES, TIMEZONES } from '@/lib/pos-settings';
 import { fetchPrinters, fetchShopProfile, updateShopProfile } from '@/lib/pos-api';
+import { setClinicHours } from '@/lib/appointments';
 import { updateCachedShopName } from '@/lib/auth';
 import { useToast } from '@/lib/toast';
 
@@ -46,6 +47,15 @@ export default function SettingsPage() {
       const profile = await fetchShopProfile();
       if (profile?.name) setShopName(profile.name);
       if (profile?.address !== undefined) setShopAddress(profile.address);
+      // Clinic hours live on the server (shared by every device and the
+      // online page) - show those here.
+      if (profile?.clinicStart || profile?.clinicEnd) {
+        setSettings((prev) => (prev ? {
+          ...prev,
+          businessStartTime: profile.clinicStart || prev.businessStartTime,
+          businessEndTime: profile.clinicEnd || prev.businessEndTime,
+        } : prev));
+      }
       setShopProfileLoading(false);
     })();
   }, []);
@@ -99,7 +109,13 @@ export default function SettingsPage() {
     }
 
     setSavingSettings(true);
-    const result = await updateShopProfile({ name: trimmedShopName, address: trimmedShopAddress });
+    const result = await updateShopProfile({
+      name: trimmedShopName,
+      address: trimmedShopAddress,
+      clinicStart: settings?.businessStartTime || '',
+      clinicEnd: settings?.businessEndTime || '',
+    });
+    if (result) setClinicHours(settings?.businessStartTime, settings?.businessEndTime);
     setSavingSettings(false);
     if (result) {
       setShopName(trimmedShopName);
@@ -362,6 +378,9 @@ export default function SettingsPage() {
                   className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 font-bold outline-none" 
                 />
               </div>
+              <p className="md:col-span-2 -mt-3 ml-1 text-[11px] font-bold text-slate-400">
+                Appointment time slots (POS, online page, Manage Appointments, Dr Availability) run between these hours. An end time after midnight counts as midnight.
+              </p>
             </div>
 
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">

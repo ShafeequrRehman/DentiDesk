@@ -32,6 +32,9 @@ export interface PublicMenuProduct {
 export interface PublicMenuResponse {
   shopName: string;
   isOpen: boolean;
+  // Clinic hours from Settings ("HH:MM"; empty = default 9 AM - 9 PM).
+  clinicStart?: string;
+  clinicEnd?: string;
   // Which online methods are actually usable for this shop - see
   // Shop.paymentGateway (blank/unconfigured until the Shop Owner enters
   // real merchant credentials in Settings). A method that's false here is
@@ -166,11 +169,14 @@ export interface PublicSlotInfo {
   leave: { fullDay: boolean; times: string[] } | null;
   // Upcoming leave days (from today): whole day, or some times.
   leaveDays: Array<{ date: string; fullDay: boolean; times: string[] }>;
+  // Extra availability outside the weekly routine (this date / upcoming).
+  extra: { fullDay: boolean; times: string[] } | null;
+  extraDays: Array<{ date: string; fullDay: boolean; times: string[] }>;
 }
 
 export async function fetchPublicBookedSlots(shopId: string, doctor: string, date: string): Promise<PublicSlotInfo> {
   const response = await api.get<Partial<PublicSlotInfo>>(`/public/${shopId}/booked-slots`, { params: { doctor, date } });
-  return { booked: response.data.booked || [], leave: response.data.leave || null, leaveDays: (response.data.leaveDays || []).map((entry) =>
+  return { booked: response.data.booked || [], leave: response.data.leave || null, extra: response.data.extra || null, extraDays: response.data.extraDays || [], leaveDays: (response.data.leaveDays || []).map((entry) =>
     typeof entry === 'string' ? { date: entry, fullDay: true, times: [] } : entry,
   ) };
 }
