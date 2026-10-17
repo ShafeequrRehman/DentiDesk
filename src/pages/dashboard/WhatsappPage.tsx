@@ -1,6 +1,6 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { fetchWhatsappStatus, fetchWhatsappQR, sendWhatsappMessage, fetchAllCustomers } from '@/lib/pos-api';
+import { fetchWhatsappStatus, fetchWhatsappQR, sendWhatsappMessage, fetchAllCustomers, resetWhatsapp } from '@/lib/pos-api';
 import { Customer } from '@/lib/pos-types';
 import { Send, Users, AlertCircle, CheckCircle2, Phone, MessageSquare, Loader2, RefreshCw } from 'lucide-react';
 import { useToast } from '@/lib/toast';
@@ -15,6 +15,8 @@ export default function WhatsAppManager() {
   const { toast } = useToast();
   const [status, setStatus] = useState<WhatsAppStatus>({ isConnected: false, hasQR: false, socketReady: false });
   const [qrCode, setQrCode] = useState<string | null>(null);
+  const [resetting, setResetting] = useState(false);
+  const [lastError, setLastError] = useState('');
   const [isLoading, setIsLoading] = useState(true);
   
   // Manual message state
@@ -35,6 +37,7 @@ export default function WhatsAppManager() {
       const res = await fetchWhatsappStatus();
       if (res) {
         setStatus(res);
+        setLastError((res as { lastError?: string }).lastError || '');
         if (!res.isConnected) {
           fetchQR();
         } else {
@@ -163,10 +166,32 @@ export default function WhatsAppManager() {
                   <img src={qrCode} alt="WhatsApp QR Code" className="w-full h-full object-contain" />
                 </div>
               ) : (
-                <div className="bg-gray-50 w-full max-w-[250px] aspect-square flex items-center justify-center rounded-lg border-2 border-dashed">
+                <div className="bg-gray-50 w-full max-w-[250px] aspect-square flex flex-col items-center justify-center gap-2 rounded-lg border-2 border-dashed p-4 text-center">
                   <Loader2 className="animate-spin text-gray-400" />
+                  <p className="text-xs font-semibold text-gray-500">Getting a QR code... this can take up to 30 seconds.</p>
+                  {lastError ? <p className="text-[11px] font-semibold text-rose-500">Last try failed (code {lastError}).</p> : null}
                 </div>
               )}
+              <button
+                type="button"
+                disabled={resetting}
+                onClick={async () => {
+                  setResetting(true);
+                  setQrCode(null);
+                  try {
+                    await resetWhatsapp();
+                    toast.success('Starting fresh - a new QR code will appear in a few seconds.');
+                    setTimeout(() => void checkStatus(), 4000);
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : 'Could not reset WhatsApp.');
+                  } finally {
+                    setResetting(false);
+                  }
+                }}
+                className="mt-3 flex items-center gap-2 rounded-lg border bg-white px-3 py-2 text-xs font-bold text-gray-700 shadow-sm hover:bg-gray-50 disabled:opacity-50"
+              >
+                <RefreshCw size={14} className={resetting ? 'animate-spin' : ''} /> {resetting ? 'Resetting...' : 'Get a new QR code'}
+              </button>
               
               <div className="text-sm text-gray-600 text-center mt-6">
                 <p className="font-semibold text-gray-900 mb-1">To connect:</p>

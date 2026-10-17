@@ -1330,6 +1330,16 @@ export async function fetchWhatsappStatus() {
   }
 }
 
+// Forget the saved WhatsApp session and start again with a fresh QR.
+export async function resetWhatsapp() {
+  try {
+    const response = await api.post<{ ok: boolean }>('/whatsapp/reset', {}, { baseURL: getSystemApiBaseUrl() });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 export async function fetchWhatsappQR() {
   try {
     const response = await api.get<{ qr: string; message?: string }>('/whatsapp/qr', {

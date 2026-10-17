@@ -70,6 +70,17 @@ router.get("/qr", requireAnyPermission("whatsapp.manage"), async (req, res) => {
   }
 });
 
+// RESET - forget this clinic's saved WhatsApp session and make a fresh QR.
+router.post("/reset", requireAnyPermission("whatsapp.manage"), async (req, res) => {
+  try {
+    const service = await getServiceForRequest(req);
+    await service.reset();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // SEND MESSAGE - text only, no file involved, unaffected by where the
 // backend runs.
 router.post("/send", canSendMessage, async (req, res) => {

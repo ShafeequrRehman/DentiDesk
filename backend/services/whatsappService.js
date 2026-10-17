@@ -64,6 +64,10 @@ class ShopWhatsAppSession {
     this.socketReady = false;
     this.initializing = null; // Promise while connecting, so concurrent callers share one attempt
     this.messageQueue = [];
+    // Why the last connection attempt closed (shown on the WhatsApp page),
+    // and how many closes in a row happened without ever showing a QR.
+    this.lastError = "";
+    this.failsWithoutQr = 0;
   }
 
   async _sendNow(phone, message) {
@@ -175,18 +179,27 @@ class ShopWhatsAppSession {
       const { makeWASocket, useMultiFileAuthState, DisconnectReason, fetchLatestBaileysVersion, Browsers } = await getBaileys();
 
       const { state, saveCreds } = await useMultiFileAuthState(this.authDir);
-      const { version } = await fetchLatestBaileysVersion();
+      // Latest WhatsApp Web version - but never let a slow/blocked GitHub
+      // lookup stop the QR from appearing (fall back to Baileys' built-in).
+      let version;
+      try {
+        const latest = await Promise.race([
+          fetchLatestBaileysVersion(),
+          new Promise((_, reject) => setTimeout(() => reject(new Error("version-timeout")), 8000)),
+        ]);
+        version = latest?.version;
+      } catch (error) {
+        console.warn(`[whatsapp:${this.shopId}] could not fetch latest WhatsApp version (${error.message}) - using default`);
+      }
 
       this.sock = makeWASocket({
-        version,
+        ...(version ? { version } : {}),
         auth: state,
         logger: pino({ level: "silent" }),
-        // Distinguishes shops in WhatsApp Linked Devices UI - was a fixed
-        // "Pos-desktop" name for every shop before, now includes the
-        // shopId so a shop owner can tell their session apart if they
-        // ever look at Linked Devices.
-        browser: Browsers.macOS(`POS-${this.shopId}`),
+        // A standard browser name - WhatsApp rejects some custom ones (405).
+        browser: Browsers.ubuntu("Chrome"),
         printQRInTerminal: false,
+        connectTimeoutMs: 30000,
       });
 
       console.log(`[whatsapp:${this.shopId}] socket initialized`);
@@ -197,12 +210,16 @@ class ShopWhatsAppSession {
         if (qr) {
           this.qrBase64 = await QRCode.toDataURL(qr);
           this.socketReady = false;
+          this.failsWithoutQr = 0;
+          this.lastError = "";
           console.log(`[whatsapp:${this.shopId}] QR generated`);
         }
 
         if (connection === "open") {
           this.socketReady = true;
           this.qrBase64 = null;
+          this.failsWithoutQr = 0;
+          this.lastError = "";
           console.log(`[whatsapp:${this.shopId}] connected`);
           await this._flushQueue();
         }
@@ -212,7 +229,19 @@ class ShopWhatsAppSession {
           const reasonCode = lastDisconnect?.error?.output?.statusCode || lastDisconnect?.error?.message || "unknown";
 
           this.socketReady = false;
+          this.qrBase64 = null;
+          this.lastError = String(reasonCode);
           console.log(`[whatsapp:${this.shopId}] disconnected:`, reasonCode);
+
+          // Stuck without a QR (e.g. 405 / bad saved session): after 2
+          // tries, start clean so a fresh QR can be generated.
+          if (!state.creds?.registered) this.failsWithoutQr += 1;
+          if (reasonCode !== DR.loggedOut && this.failsWithoutQr >= 2) {
+            console.log(`[whatsapp:${this.shopId}] no QR after ${this.failsWithoutQr} tries - clearing the saved session to get a fresh QR.`);
+            this.failsWithoutQr = 0;
+            fs.rmSync(this.authDir, { recursive: true, force: true });
+            fs.mkdirSync(this.authDir, { recursive: true });
+          }
 
           if (reasonCode === DR.loggedOut) {
             console.log(`[whatsapp:${this.shopId}] logged out - clearing this clinic's session only, generating a fresh QR next time.`);
@@ -249,7 +278,27 @@ class ShopWhatsAppSession {
       isConnected: this.socketReady,
       socketReady: this.socketReady,
       hasQR: !!this.qrBase64,
+      lastError: this.lastError,
     };
+  }
+
+  // "Get a new QR" on the WhatsApp page: forget the saved session and
+  // start over.
+  async reset() {
+    try {
+      this.sock?.end?.(new Error("reset"));
+    } catch {
+      // already closed
+    }
+    this.sock = null;
+    this.socketReady = false;
+    this.qrBase64 = null;
+    this.lastError = "";
+    this.failsWithoutQr = 0;
+    fs.rmSync(this.authDir, { recursive: true, force: true });
+    fs.mkdirSync(this.authDir, { recursive: true });
+    this.initializing = null;
+    return this.initialize();
   }
 }
 
