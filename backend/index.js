@@ -76,6 +76,17 @@ app.use(cors());
 // matches the Local Hub's own express.json limit (localHub/server.js) with
 // headroom.
 app.use(express.json({ limit: "8mb" }));
+
+// The web app calls some routes as /api/system/... (WhatsApp, documents)
+// and /api/pos/... - in development Vite's proxy rewrites those to /api/...
+// (see vite.config.ts). On the live server there is no Vite, so do the same
+// rewrite here; otherwise those calls fall through to the web page and
+// WhatsApp's status / QR / send never reach the backend.
+app.use((req, _res, next) => {
+  if (req.url.startsWith("/api/system/")) req.url = `/api/${req.url.slice("/api/system/".length)}`;
+  else if (req.url.startsWith("/api/pos/")) req.url = `/api/${req.url.slice("/api/pos/".length)}`;
+  next();
+});
 // See sanitizeInput.js - strips Mongo operator keys ($ne, $gt, etc.) out
 // of every request body/query/params before any route handler runs.
 app.use(sanitizeInput);
