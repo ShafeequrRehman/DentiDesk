@@ -148,7 +148,7 @@ export const ingredientStock = {
     amountPaidLabel: "ادا شدہ رقم",
     amountPaidTitle: "ابھی اس کمپنی کو دراصل کتنی رقم ادا کی جا رہی ہے۔ اگر کچھ ادا نہیں کیا جا رہا تو خالی چھوڑ دیں - پوری رقم باقی (Due) بن جائے گی۔",
     fullPayment: "مکمل ادائیگی",
-    dueAmountLabel: "باقی رقم (ادھار)",
+    dueAmountLabel: "باقی رقم (واجب)",
     confirmPurchase: "خریداری کی تصدیق کریں",
   },
 

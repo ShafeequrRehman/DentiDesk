@@ -151,7 +151,7 @@ export const ingredientStock = {
     amountPaidLabel: "Amount Paid",
     amountPaidTitle: "How much is actually being paid to this company right now. Leave blank if nothing is being paid - the full total becomes Due.",
     fullPayment: "Full Payment",
-    dueAmountLabel: "Due Amount (Udhaar)",
+    dueAmountLabel: "Due Amount",
     confirmPurchase: "Confirm Purchase",
   },
 

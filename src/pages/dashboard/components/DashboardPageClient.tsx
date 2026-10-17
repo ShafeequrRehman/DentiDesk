@@ -649,7 +649,7 @@ function AccountingOverview({
   // past corrections) actions, wired to one shared DashboardAdjustment key.
   const tileLabel: Record<DashboardAdjustmentKey, string> = {
     totalSaleToday: `Total Sale (${periodLabel})`,
-    customerUdharTotal: 'Patient Udhar',
+    customerUdharTotal: 'Patient Due',
     customerAdvanceTotal: 'Patient Advance',
     stockValue: 'Stock Value',
     vendorBalance: 'Vendor Balance',
@@ -657,7 +657,7 @@ function AccountingOverview({
     totalExpensesToday: `Total Expenses (${periodLabel})`,
     saleOnCash: `Sale on Cash (${periodLabel})`,
     saleOnBank: `Sale on Bank (${periodLabel})`,
-    saleOnCredit: `Sale on Udhar (${periodLabel})`,
+    saleOnCredit: `Sale on Due (${periodLabel})`,
     totalRecoveryToday: `Total Recovery (${periodLabel})`,
   } as Record<DashboardAdjustmentKey, string>;
   // Clear (to $0) - recorded in the tile's History, undoable there.
@@ -730,7 +730,7 @@ function AccountingOverview({
       ) : null}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <OverviewTile icon={<Target size={18} />} color="bg-orange-50 text-orange-500" label={`Total Sale (${periodLabel})`} value={money(summary?.totalSaleToday)} actions={actionsFor('totalSaleToday')} />
-        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label="Patient Udhar" value={money(summary?.customerUdharTotal)} valueColor="text-rose-600" actions={actionsFor('customerUdharTotal')} />
+        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label="Patient Due" value={money(summary?.customerUdharTotal)} valueColor="text-rose-600" actions={actionsFor('customerUdharTotal')} />
         <OverviewTile
           icon={<PiggyBank size={18} />}
           color="bg-emerald-50 text-emerald-500"
@@ -784,7 +784,7 @@ function AccountingOverview({
           actions={[{ icon: <List size={12} />, onClick: onOpenSaleOnCashDetail, label: 'Details' }, ...adjustOnlyFor('saleOnCash')]}
         />
         <OverviewTile icon={<Landmark size={18} />} color="bg-indigo-50 text-indigo-500" label={`Sale on Bank (${periodLabel})`} value={money(summary?.saleOnBank)} actions={actionsFor('saleOnBank')} />
-        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label={`Sale on Udhar (Credit · ${periodLabel})`} value={money(summary?.saleOnCredit)} valueColor="text-rose-600" actions={actionsFor('saleOnCredit')} />
+        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label={`Sale on Due (Credit · ${periodLabel})`} value={money(summary?.saleOnCredit)} valueColor="text-rose-600" actions={actionsFor('saleOnCredit')} />
         <OverviewTile
           icon={<CheckCircle2 size={18} />}
           color="bg-emerald-50 text-emerald-500"

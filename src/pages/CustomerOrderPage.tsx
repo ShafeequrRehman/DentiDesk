@@ -1286,7 +1286,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
         ))}
       </div>
 
-      <div className="grid grid-cols-2 gap-3 px-5 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 px-5 sm:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5">
         {visibleGroups.map((group) => {
           // A single-variation group behaves exactly like before (its own
           // quantity stepper, unambiguous which product it refers to). A
