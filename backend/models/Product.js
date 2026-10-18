@@ -23,6 +23,11 @@ const productSchema = new mongoose.Schema(
     workDays: { type: [Number], default: [] },
     workStart: { type: String, default: "" },
     workEnd: { type: String, default: "" },
+    // For a Service: the Drs (by name) who can do it. The patient / staff
+    // pick one of them, and the appointment is booked in THAT Dr's time
+    // slots (so a Dr busy on a service can't be double-booked).
+    // Empty = any Dr.
+    serviceDoctors: { type: [String], default: [] },
     isDeal: { type: Boolean, default: false },
     dealItems: { type: [String], default: [] },
     // Product Code / SKU: an optional string the staff can type on the POS

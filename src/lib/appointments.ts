@@ -194,6 +194,30 @@ export function isDoctorProduct(product: { name?: string; category?: string } | 
   return /^dr\.?\s/i.test(product.name || '');
 }
 
+type DrLike = { name: string; category?: string; workDays?: number[]; workStart?: string; workEnd?: string; serviceDoctors?: string[]; specialType?: unknown };
+
+// The Drs who can do this Service (Manage Appointments) - every Dr when
+// none are picked. One entry per Dr name.
+export function drsForService<T extends DrLike>(service: DrLike | null | undefined, catalog: T[]): T[] {
+  if (!service || isDoctorProduct(service)) return [];
+  const seen = new Set<string>();
+  const drs = catalog.filter((p) => {
+    if (!isDoctorProduct(p) || seen.has(p.name)) return false;
+    seen.add(p.name);
+    return true;
+  });
+  const allowed = service.serviceDoctors || [];
+  return allowed.length > 0 ? drs.filter((d) => allowed.includes(d.name)) : drs;
+}
+
+// Is this Dr in today? Routine day (Manage Appointments), not on full-day
+// leave, or marked extra-available today (Dr Availability).
+export function inToday(dr: DrLike, offToday: Set<string>, extraToday: Set<string>, iso = todayISO()) {
+  if (extraToday.has(dr.name)) return true;
+  if (offToday.has(dr.name)) return false;
+  return worksOnDate(scheduleOf(dr), iso);
+}
+
 export function isSlotHolding(order: Pick<SavedOrder, 'status' | 'checkupStatus' | 'appointmentTime'>) {
   return !!order.appointmentTime && order.status !== 'cancelled' && order.checkupStatus !== 'done';
 }
@@ -315,7 +339,12 @@ export async function loadBookedSlots(doctor: string, date: string): Promise<Map
   const booked = new Map<string, string>();
   list.forEach((order) => {
     if (isSlotHolding(order) && order.appointmentTime) {
-      booked.set(order.appointmentTime, order.customer?.name || 'Patient');
+      // "Ali · Root Canal" - who, and which service the Dr is busy on.
+      const services = (order.items || [])
+        .filter((item) => item.name !== doctor && !isDoctorProduct({ name: item.name }))
+        .map((item) => item.name);
+      const who = order.customer?.name || 'Patient';
+      booked.set(order.appointmentTime, services.length ? `${who} · ${services.join(', ')}` : who);
     }
   });
   return booked;

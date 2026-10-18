@@ -26,6 +26,7 @@ export interface PublicMenuProduct {
   workDays?: number[];
   workStart?: string;
   workEnd?: string;
+  serviceDoctors?: string[];
   isDeal: boolean;
 }
 
@@ -35,6 +36,9 @@ export interface PublicMenuResponse {
   // Clinic hours from Settings ("HH:MM"; empty = default 9 AM - 9 PM).
   clinicStart?: string;
   clinicEnd?: string;
+  // Drs on full-day leave / extra-available today.
+  offToday?: string[];
+  extraToday?: string[];
   // Money sign and slip footer set by the Super Admin.
   currency?: 'USD' | 'PKR';
   poweredBy?: string;
@@ -146,6 +150,8 @@ export interface PublicOrderPayload {
   location?: { lat: number; lng: number; accuracy?: number };
   // Required when the cart has a Dr - see publicOrderController.js.
   appointmentDate?: string; // YYYY-MM-DD
+  // For a Service: the Dr the patient picked (booked in that Dr's slots).
+  appointmentDoctor?: string;
   appointmentTime?: string; // HH:mm
 }
 

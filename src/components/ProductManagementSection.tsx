@@ -1,7 +1,7 @@
 
 import { cs, currencyCode } from '@/lib/currency';
 import { useEffect, useMemo, useRef, useState } from "react";
-import { clinicEnd, clinicStart, formatSlot, useTimeSlots, WEEKDAY_SHORT } from '@/lib/appointments';
+import { clinicEnd, clinicStart, formatSlot, isDoctorProduct, useTimeSlots, WEEKDAY_SHORT } from '@/lib/appointments';
 import { Plus, Package, Edit, Archive, X, Trash2, Search, ChevronDown, ChevronRight, Upload } from "lucide-react";
 import { createProduct, deleteProduct, fetchProducts, updateProduct } from "@/lib/pos-api";
 import { IngredientUnit, Product } from "@/lib/pos-types";
@@ -119,6 +119,17 @@ export function ProductManagementSection({
   const [workDays, setWorkDays] = useState<number[]>([]);
   const [workStart, setWorkStart] = useState("");
   const [workEnd, setWorkEnd] = useState("");
+  // For a Service: which Drs can do it (empty = any Dr).
+  const [serviceDoctors, setServiceDoctors] = useState<string[]>([]);
+  const [allDrNames, setAllDrNames] = useState<string[]>([]);
+  useEffect(() => {
+    void fetchProducts()
+      .then((result) => {
+        const names = [...new Set((result?.products || []).filter((p) => isDoctorProduct(p)).map((p) => p.name))].sort();
+        setAllDrNames(names);
+      })
+      .catch(() => undefined);
+  }, []);
   // Time choices follow the clinic hours set in Settings.
   const clinicSlots = useTimeSlots();
   // How this product is counted/measured - reused from Ingredient's own
@@ -186,6 +197,7 @@ export function ProductManagementSection({
     setWorkDays([]);
     setWorkStart("");
     setWorkEnd("");
+    setServiceDoctors([]);
     setUnit("pcs");
     setPreservedDealFields({ isDeal: false, dealItems: [], description: "" });
   }
@@ -201,6 +213,7 @@ export function ProductManagementSection({
       workDays,
       workStart,
       workEnd,
+      serviceDoctors: isDoctorProduct({ name, category }) ? [] : serviceDoctors,
       unit,
       // Preserved as-is from whatever was already on the product being
       // edited (or the "not a deal" defaults for a brand new product) -
@@ -277,6 +290,7 @@ export function ProductManagementSection({
     setWorkDays(product.workDays || []);
     setWorkStart(product.workStart || "");
     setWorkEnd(product.workEnd || "");
+    setServiceDoctors(product.serviceDoctors || []);
     setCategory(product.category);
     setCompany(product.company || "");
     setUnit(product.unit || "pcs");
@@ -453,6 +467,38 @@ export function ProductManagementSection({
             />
             <p className="text-[10px] font-bold text-slate-400 ml-1">{t("productManagement.fields.workAsHint")}</p>
           </div>
+          {/* For a Service: the Drs who can do it. On POS and the online page
+              the patient picks one of them, and the appointment is booked
+              in that Dr's own time slots. */}
+          {name.trim() && !isDoctorProduct({ name, category }) ? (
+            <div className="space-y-2">
+              <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Drs who do this service</label>
+              {allDrNames.length === 0 ? (
+                <p className="text-[11px] font-bold text-amber-600 ml-1">No Drs added yet - add your Drs first (category "Drs").</p>
+              ) : (
+                <div className="flex flex-wrap gap-1.5">
+                  {allDrNames.map((dr) => {
+                    const on = serviceDoctors.includes(dr);
+                    return (
+                      <button
+                        key={dr}
+                        type="button"
+                        onClick={() => setServiceDoctors((prev) => (on ? prev.filter((d) => d !== dr) : [...prev, dr]))}
+                        className={`rounded-xl px-3.5 py-2 text-xs font-black transition ${on ? "bg-indigo-600 text-white shadow" : "bg-white text-slate-500 ring-1 ring-slate-200 hover:bg-slate-50"}`}
+                      >
+                        {dr}
+                      </button>
+                    );
+                  })}
+                </div>
+              )}
+              <p className="text-[10px] font-bold text-slate-400 ml-1">
+                {serviceDoctors.length === 0
+                  ? "None picked = any Dr can do it. The appointment is booked in the picked Dr's time slots."
+                  : `Only ${serviceDoctors.join(", ")} can be picked for this service.`}
+              </p>
+            </div>
+          ) : null}
           {/* Weekly schedule - which days and hours this Dr/Service can be
               booked. POS and the online page only offer these. One-off
               leave is set on the Dr Availability page. */}

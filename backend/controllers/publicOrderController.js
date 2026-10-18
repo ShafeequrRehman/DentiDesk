@@ -168,9 +168,10 @@ exports.getManifest = (req, res) => {
 exports.getMenu = async (req, res) => {
   try {
     const shopId = req.shop._id;
-    const [products, openSession] = await Promise.all([
+    const [products, openSession, todaysLeave] = await Promise.all([
       Product.find({ shopId }).sort({ category: 1, name: 1 }).lean(),
       ShopSession.findOne({ shopId, status: "open" }).lean(),
+      Leave.find({ shopId, date: todayKarachiISO() }).select("name fullDay extraFullDay extraTimes").lean(),
     ]);
 
     const gateway = req.shop.paymentGateway || {};
@@ -178,6 +179,10 @@ exports.getMenu = async (req, res) => {
       shopName: req.shop.name,
       isOpen: Boolean(openSession),
       // Clinic hours from Settings - the time slots cover this range.
+      // Who is off / extra-available today (Dr Availability page), so
+      // the cards can say which Drs are in today.
+      offToday: todaysLeave.filter((entry) => entry.fullDay).map((entry) => entry.name),
+      extraToday: todaysLeave.filter((entry) => entry.extraFullDay || (entry.extraTimes || []).length).map((entry) => entry.name),
       // Money sign and slip footer set by the Super Admin.
       currency: normalizeCurrency(req.shop.currency),
       poweredBy: poweredByOf(req.shop),
@@ -208,6 +213,7 @@ exports.getMenu = async (req, res) => {
         workDays: Array.isArray(product.workDays) ? product.workDays : [],
         workStart: product.workStart || "",
         workEnd: product.workEnd || "",
+        serviceDoctors: product.serviceDoctors || [],
         isDeal: Boolean(product.isDeal),
       })),
     });
@@ -432,8 +438,22 @@ exports.createOrder = async (req, res) => {
     // The Dr in the cart - or, for a Service booked on its own, that Service
     // (Services have their own date + time slots, same as Drs).
     const productFor = (item) => byKey.get(`${item.name}::${item.variation}`) || byKey.get(item.name);
-    const doctorItem = items.find((item) => isDoctorProduct(productFor(item)))
+    let doctorItem = items.find((item) => isDoctorProduct(productFor(item)))
       || items.find((item) => !productFor(item)?.specialType);
+    // A Service is booked with the Dr the patient picked - in that Dr's
+    // slots - when the clinic has Drs for it.
+    const pickedDoctor = String(payload.appointmentDoctor || "").trim();
+    if (doctorItem && !isDoctorProduct(productFor(doctorItem)) && pickedDoctor) {
+      const drProduct = byKey.get(pickedDoctor);
+      if (!drProduct || !isDoctorProduct(drProduct)) {
+        return res.status(400).json({ message: `${pickedDoctor} is not available for booking - please pick another Dr.`, reason: "doctor_not_found" });
+      }
+      const allowed = productFor(doctorItem)?.serviceDoctors || [];
+      if (allowed.length > 0 && !allowed.includes(drProduct.name)) {
+        return res.status(400).json({ message: `${drProduct.name} doesn't do ${doctorItem.name} - please pick another Dr.`, reason: "doctor_not_allowed" });
+      }
+      doctorItem = { name: drProduct.name };
+    }
     if (doctorItem) {
       const appointmentDate = String(payload.appointmentDate || "").trim();
       const appointmentTime = String(payload.appointmentTime || "").trim();

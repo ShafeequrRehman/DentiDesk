@@ -19,7 +19,7 @@ import {
   type PublicChangeRequest,
 } from '@/lib/public-order-api';
 import { getApiBaseCandidates } from '@/lib/api';
-import { clinicEnd, clinicStart, dayOpen, describeSchedule, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, NO_EXTRA, scheduleOf, setClinicHours, slotOpen, todayISO, useTimeSlots, type ExtraDay, WEEKDAY_LONG, WEEKDAY_SHORT, weekdayOfISO } from '@/lib/appointments';
+import { clinicEnd, clinicStart, dayOpen, describeSchedule, drsForService, inToday, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, NO_EXTRA, scheduleOf, setClinicHours, slotOpen, todayISO, useTimeSlots, type ExtraDay, WEEKDAY_LONG, WEEKDAY_SHORT, weekdayOfISO } from '@/lib/appointments';
 
 // A plain numbered table ("5") still needs the "Table " prefix to read as
 // a table at all - a custom label already reads fine on its own. Only ever
@@ -1097,10 +1097,22 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   const cartLines = Array.from(cart.values());
   const cartCount = cartLines.reduce((sum, line) => sum + line.quantity, 0);
   const cartTotal = cartLines.reduce((sum, line) => sum + line.product.price * line.quantity, 0);
-  // The Dr in the cart, or - a Service booked on its own - that Service.
-  const doctorName = cartLines.find((line) => isDoctorProduct(line.product))?.product.name || cartLines[0]?.product.name || '';
+  // The Dr in the cart. For a Service, the patient picks the Dr who will
+  // do it (from the Drs set in Manage Appointments) and books in that Dr's
+  // own slots. A Service with no Drs in the clinic keeps its own slots.
+  const cartDrName = cartLines.find((line) => isDoctorProduct(line.product))?.product.name || '';
+  const cartService = !cartDrName ? cartLines[0]?.product || null : null;
+  const serviceDrs = useMemo(() => drsForService(cartService, products), [cartService, products]);
+  const [serviceDoctor, setServiceDoctor] = useState('');
+  useEffect(() => {
+    if (serviceDoctor && !serviceDrs.some((d) => d.name === serviceDoctor)) setServiceDoctor('');
+  }, [serviceDrs, serviceDoctor]);
+  const needsDoctorPick = !!cartService && serviceDrs.length > 0;
+  const doctorName = cartDrName || (cartService ? (needsDoctorPick ? serviceDoctor : cartService.name) : '');
+  const offToday = useMemo(() => new Set(menu?.offToday || []), [menu]);
+  const extraToday = useMemo(() => new Set(menu?.extraToday || []), [menu]);
   // Weekly schedule of the Dr/Service being booked (Manage Appointments).
-  const bookedSchedule = scheduleOf(cartLines.find((line) => line.product.name === doctorName)?.product);
+  const bookedSchedule = scheduleOf(products.find((p) => p.name === doctorName));
   const notWorkingDay = !!doctorName && !dayOpen(bookedSchedule, appointmentDate, extraDay);
   const scheduleText = describeSchedule(bookedSchedule);
   useEffect(() => {
@@ -1196,6 +1208,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
     customerName.trim().length >= 2 &&
     phoneDigits.length >= 10 &&
     (orderType !== 'Delivery' || customerAddress.trim().length >= 5) &&
+    (!needsDoctorPick || !!serviceDoctor) &&
     (!doctorName || (!leaveDay && !notWorkingDay && !!appointmentTime && slotOpen(bookedSchedule, appointmentDate, appointmentTime, extraDay) && !bookedSlots.has(appointmentTime) && !leaveSlots.has(appointmentTime) && !isSlotInPast(appointmentDate, appointmentTime)));
 
   async function handlePlaceOrder() {
@@ -1225,6 +1238,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
         items: cartLines.map((line) => ({ name: line.product.name, variation: line.product.variation, quantity: line.quantity })),
         location,
         ...(doctorName ? { appointmentDate, appointmentTime } : {}),
+        ...(needsDoctorPick && serviceDoctor ? { appointmentDoctor: serviceDoctor } : {}),
       });
 
       // Remembered immediately (not just once the status panel mounts) so
@@ -1374,7 +1388,21 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                   <span className="truncate">{group.variations.find((v) => v.workAs)?.workAs}</span>
                 </p>
               ) : null}
-              {!hasVariations || new Set(group.variations.map((v) => JSON.stringify(scheduleOf(v)))).size === 1 ? (
+              {(() => {
+                // A Service: which Drs do it, and who's in today.
+                const drs = drsForService(single, products);
+                if (drs.length === 0) return null;
+                const inNow = drs.filter((d) => inToday(d, offToday, extraToday)).map((d) => d.name);
+                return (
+                  <div className="mt-1 space-y-0.5">
+                    <p className="truncate text-[10px] font-bold text-gray-500" title={drs.map((d) => d.name).join(', ')}>By: {drs.map((d) => d.name).join(', ')}</p>
+                    <p className={`truncate text-[10px] font-black ${inNow.length ? 'text-emerald-600' : 'text-gray-400'}`}>
+                      {inNow.length ? `Today: ${inNow.join(', ')}` : 'No Dr in today'}
+                    </p>
+                  </div>
+                );
+              })()}
+              {drsForService(single, products).length > 0 ? null : !hasVariations || new Set(group.variations.map((v) => JSON.stringify(scheduleOf(v)))).size === 1 ? (
                 <ScheduleInfo product={single} />
               ) : (
                 <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-gray-500"><Clock size={11} className="text-[#007F90]" /> Days differ per option - tap Select</p>
@@ -1446,6 +1474,39 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
               <span>Total</span>
               <span>{cs()}{formatter.format(cartTotal)}</span>
             </div>
+
+            {needsDoctorPick ? (
+              <div className="mt-5 space-y-2">
+                <p className="text-xs font-black uppercase tracking-[0.14em] text-gray-400">Choose your Dr for {cartService?.name}</p>
+                <div className="space-y-1.5">
+                  {serviceDrs.map((dr) => {
+                    const selected = serviceDoctor === dr.name;
+                    const today = inToday(dr, offToday, extraToday);
+                    return (
+                      <button
+                        key={dr.name}
+                        type="button"
+                        onClick={() => {
+                          setServiceDoctor(dr.name);
+                          setAppointmentTime('');
+                        }}
+                        className={`flex w-full items-center justify-between gap-2 rounded-xl border px-3 py-2.5 text-left transition ${selected ? 'border-[#00B0C7] bg-[#EBFAFC] ring-1 ring-[#00B0C7]' : 'border-gray-200 bg-gray-50 hover:bg-white'}`}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-sm font-black text-gray-900">{dr.name}</span>
+                          {dr.workAs ? <span className="block truncate text-[11px] font-bold text-[#007F90]">{dr.workAs}</span> : null}
+                          <span className="block truncate text-[11px] font-semibold text-gray-500">{describeSchedule(scheduleOf(dr)) || 'Every day'}</span>
+                        </span>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${today ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'}`}>
+                          {today ? 'In today' : 'Off today'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {!serviceDoctor ? <p className="text-[11px] font-bold text-amber-700">Pick a Dr - the dates and times follow that Dr's availability.</p> : null}
+              </div>
+            ) : null}
 
             {doctorName ? (
               <div className="mt-5 space-y-2">

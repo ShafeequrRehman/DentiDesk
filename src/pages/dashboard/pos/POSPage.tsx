@@ -1,7 +1,7 @@
 import { cs, currencyCode } from '@/lib/currency';
 import { useEffect, useMemo, useRef, useState, type KeyboardEvent as ReactKeyboardEvent } from 'react';
 import { AlertCircle, CalendarDays, Clock, Banknote, Barcode, CreditCard, Grid, List, Loader2, Search, ShoppingBag, Trash2, UserPlus, Wallet } from 'lucide-react';
-import { ApiError, checkPendingOrder, createOrder, fetchCustomerSearch, fetchIngredients, fetchOrders, fetchProducts, fetchWaiters, isAuthenticated, updateCustomer, sendWhatsappMessage, openShopSession } from '@/lib/pos-api';
+import { ApiError, checkPendingOrder, createOrder, fetchCustomerSearch, fetchIngredients, fetchOrders, fetchProducts, fetchWaiters, isAuthenticated, updateCustomer, sendWhatsappMessage, openShopSession, fetchLeaves } from '@/lib/pos-api';
 import { CartItem, Customer, OrderFormData, OrderPayload, Product, Waiter } from '@/lib/pos-types';
 import { resolveProductImage } from '@/lib/food-images';
 import { getStoreSettings } from '@/lib/pos-settings';
@@ -19,7 +19,7 @@ import { isTypingTarget, useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { useLanguage } from '@/i18n';
 import CompleteOrderModal from '@/components/CompleteOrderModal';
 import { isValidWhatsappNumber, sendAppointmentSlip } from '@/lib/whatsapp-slips';
-import { useTimeSlots, dayOpen, slotOpen, extraFor, describeSchedule, scheduleOf, WEEKDAY_LONG, weekdayOfISO, describeUpcomingLeave, describeUpcomingExtra, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo } from '@/lib/appointments';
+import { drsForService, inToday, useTimeSlots, dayOpen, slotOpen, extraFor, describeSchedule, scheduleOf, WEEKDAY_LONG, weekdayOfISO, describeUpcomingLeave, describeUpcomingExtra, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo } from '@/lib/appointments';
 
 
 // A "product group" is every Product record that shares the same name +
@@ -372,15 +372,50 @@ export default function POSPage() {
     }
   }, []);
 
-  // Who the time slot is booked with: the Dr in the cart, or - for a
-  // Service booked on its own - that Service (it has its own slots too).
-  const doctorName = useMemo(() => {
+  // Who the time slot is booked with: the Dr in the cart. For a Service,
+  // staff pick the Dr who will do it (Manage Appointments decides which
+  // Drs can) and it's booked in THAT Dr's slots - so a Dr busy on a
+  // service can't also be booked for a check-up at the same time. A
+  // Service with no Drs in the clinic keeps its own slots.
+  const [serviceDoctor, setServiceDoctor] = useState('');
+  const cartDrName = useMemo(() => {
     for (const item of cart) {
       const product = products.find((p) => p.id === item.id);
       if (isDoctorProduct(product || { name: item.name })) return item.name;
     }
-    return cart.find((item) => !item.specialType)?.name || '';
+    return '';
   }, [cart, products]);
+  const cartService = useMemo(() => {
+    const item = cart.find((line) => !line.specialType);
+    if (!item || cartDrName) return null;
+    return products.find((p) => p.id === item.id) || products.find((p) => p.name === item.name) || null;
+  }, [cart, products, cartDrName]);
+  const serviceDrs = useMemo(() => drsForService(cartService, products), [cartService, products]);
+  useEffect(() => {
+    if (serviceDoctor && (!cartService || !serviceDrs.some((d) => d.name === serviceDoctor))) setServiceDoctor('');
+  }, [cartService, serviceDrs, serviceDoctor]);
+  const needsDoctorPick = !!cartService && serviceDrs.length > 0;
+  const doctorName = cartDrName || (cartService ? (needsDoctorPick ? serviceDoctor : cartService.name) : '');
+
+  // Who's in today (routine + Dr Availability) - shown on the cards.
+  const [todayLeave, setTodayLeave] = useState<{ off: Set<string>; extra: Set<string> }>({ off: new Set(), extra: new Set() });
+  useEffect(() => {
+    void fetchLeaves({ date: todayISO() })
+      .then((list) => {
+        setTodayLeave({
+          off: new Set((list || []).filter((l) => l.fullDay).map((l) => l.name)),
+          extra: new Set((list || []).filter((l) => l.extraFullDay || (l.extraTimes?.length || 0) > 0).map((l) => l.name)),
+        });
+      })
+      .catch(() => undefined);
+  }, [slotsRefreshKey]);
+  const drsInTodayFor = (product: Product | undefined) => {
+    if (!product) return null;
+    if (isDoctorProduct(product)) return { isDr: true, names: inToday(product, todayLeave.off, todayLeave.extra) ? [product.name] : [] };
+    const drs = drsForService(product, products);
+    if (drs.length === 0) return null;
+    return { isDr: false, names: drs.filter((d) => inToday(d, todayLeave.off, todayLeave.extra)).map((d) => d.name) };
+  };
 
   const timeSlots = useTimeSlots();
 
@@ -908,6 +943,8 @@ export default function POSPage() {
   function validateOrderForm() {
     if (cart.length === 0) return showValidationError(t('pos.addProductBeforeSaving'));
 
+    // A Service needs the Dr who will do it.
+    if (needsDoctorPick && !serviceDoctor) return showValidationError(`Pick the Dr for ${cartService?.name || 'this service'}.`);
     // A Dr appointment needs a date and a free time slot.
     if (doctorName) {
       if (!appointmentDate) return showValidationError(t('pos.appointmentDateRequired'));
@@ -1442,6 +1479,16 @@ export default function POSPage() {
                           <p className="truncate text-[9px] font-bold text-gray-400">
                             {hasVariations ? t('pos.sizesOptions', { count: group.variations.length }) : group.variations[0].variation}
                           </p>
+                          {(() => {
+                            const info = drsInTodayFor(group.variations[0]);
+                            if (!info) return null;
+                            const text = info.isDr
+                              ? info.names.length ? 'In today' : 'Off today'
+                              : info.names.length ? `Today: ${info.names.join(', ')}` : 'No Dr in today';
+                            return (
+                              <p className={`truncate text-[9px] font-black ${info.names.length ? 'text-emerald-600' : 'text-gray-400'}`} title={text}>{text}</p>
+                            );
+                          })()}
                         </div>
                       </div>
                       {viewMode === 'list' ? (
@@ -1573,6 +1620,38 @@ export default function POSPage() {
             <FormField label={t('pos.orderNoteLabel')}>
               <input name="note" value={orderFormData.note} onChange={handleFormChange} placeholder={t('pos.orderNotePlaceholder')} className="w-full rounded-xl border border-white/60 bg-white/50 px-3 py-2 text-sm shadow-inner outline-none" />
             </FormField>
+
+            {needsDoctorPick ? (
+              <FormField label={`Dr for ${cartService?.name}`}>
+                <div className="grid grid-cols-1 gap-1.5">
+                  {serviceDrs.map((dr) => {
+                    const selected = serviceDoctor === dr.name;
+                    const today = inToday(dr, todayLeave.off, todayLeave.extra);
+                    const routine = describeSchedule(scheduleOf(dr)) || 'Every day';
+                    return (
+                      <button
+                        key={dr.name}
+                        type="button"
+                        onClick={() => {
+                          setServiceDoctor(dr.name);
+                          setAppointmentTime('');
+                        }}
+                        className={`flex items-center justify-between gap-2 rounded-xl border px-3 py-2 text-left transition ${selected ? 'border-[#00B0C7] bg-[#EBFAFC] ring-1 ring-[#00B0C7]' : 'border-white/60 bg-white/50 hover:bg-white'}`}
+                      >
+                        <span className="min-w-0">
+                          <span className="block truncate text-xs font-black text-gray-900">{dr.name}</span>
+                          <span className="block truncate text-[10px] font-semibold text-gray-500">{routine}</span>
+                        </span>
+                        <span className={`shrink-0 rounded-full px-2 py-0.5 text-[9px] font-black ${today ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-100 text-gray-500'}`}>
+                          {today ? 'In today' : 'Off today'}
+                        </span>
+                      </button>
+                    );
+                  })}
+                </div>
+                {!serviceDoctor ? <p className="mt-1 text-[10px] font-bold text-amber-700">Pick a Dr first - the date and time follow that Dr's availability.</p> : null}
+              </FormField>
+            ) : null}
 
             <FormField label={t('pos.appointmentDateLabel')}>
               <div className="relative">
