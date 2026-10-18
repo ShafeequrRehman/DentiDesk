@@ -120,7 +120,7 @@ export interface CashTransaction {
   ref?: string;
   kind?: 'adjust' | 'clear' | 'undo';
   undone?: boolean;
-  type: 'sale' | 'due_recovery' | 'purchase' | 'due_given' | 'refund' | 'adjustment' | 'salary';
+  type: 'sale' | 'due_recovery' | 'purchase' | 'due_given' | 'refund' | 'adjustment' | 'salary' | 'expense';
   direction: 'in' | 'out';
   amount: number;
   note: string;
@@ -644,6 +644,11 @@ export interface Expense {
   // Expense.js's own comment on why this stays a separate, informational
   // link rather than an implicit salary deduction.
   employeeId?: { _id: string; name: string; username: string } | string | null;
+  // Paid from Cash in Hand or a bank ('' = older entries).
+  paymentSource?: '' | 'cash' | 'bank';
+  bankId?: string | null;
+  bankName?: string;
+  createdAt?: string;
 }
 
 export interface DayEndExpenseBreakdown {

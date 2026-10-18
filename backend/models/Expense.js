@@ -21,6 +21,10 @@ const expenseSchema = new mongoose.Schema(
     // shopOwnerController.js's payroll comment on why salary math only ever
     // reads from StaffPayment, never from Expense.
     employeeId: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null, index: true },
+    // Paid from Cash in Hand or a bank ("" = older entries, no money moved).
+    paymentSource: { type: String, enum: ["", "cash", "bank"], default: "" },
+    bankId: { type: mongoose.Schema.Types.ObjectId, ref: "Bank", default: null },
+    bankName: { type: String, default: "" },
   },
   { timestamps: true }
 );

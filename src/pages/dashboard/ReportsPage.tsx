@@ -3,8 +3,10 @@ import {
   BarChart3, TrendingUp, TrendingDown, Receipt, Wallet, ShoppingBag,
   Plus, Trash2, AlertCircle, UserRound, Boxes, Truck, ClipboardList, ChevronDown,
 } from 'lucide-react';
-import { fetchDayEndReport, fetchExpenses, createExpense, deleteExpense, fetchMySalesReport, fetchInventoryReport, fetchEmployeesLite } from '@/lib/pos-api';
-import { DayEndReport, Expense, InventoryReport, MySalesReport } from '@/lib/pos-types';
+import { fetchDayEndReport, fetchExpenses, createExpense, deleteExpense, fetchMySalesReport, fetchInventoryReport, fetchEmployeesLite, fetchBanks } from '@/lib/pos-api';
+import { Bank, DayEndReport, Expense, InventoryReport, MySalesReport } from '@/lib/pos-types';
+import { expensePaidFrom, printExpenseSlip } from '@/lib/expense-slip';
+import { Landmark as BankIcon, Printer as PrinterIcon, Wallet as WalletIcon } from 'lucide-react';
 import { useToast } from '@/lib/toast';
 import { hasPermission } from '@/lib/auth';
 import { useLanguage } from '@/i18n';
@@ -218,7 +220,19 @@ function DayEndReportView() {
   const [expenseCategory, setExpenseCategory] = useState('');
   const [expenseAmount, setExpenseAmount] = useState('');
   const [expenseNote, setExpenseNote] = useState('');
-  const [expenseEmployeeId, setExpenseEmployeeId] = useState('');
+  // Where the expense is paid from - the amount is minused from it.
+  const [expenseSource, setExpenseSource] = useState<'' | 'cash' | 'bank'>('');
+  const [expenseBankId, setExpenseBankId] = useState('');
+  const [banks, setBanks] = useState<Bank[]>([]);
+
+  useEffect(() => {
+    void fetchBanks()
+      .then((list) => {
+        setBanks(list || []);
+        if (list && list.length === 1) setExpenseBankId(list[0].id);
+      })
+      .catch(() => undefined);
+  }, []);
   const [isSavingExpense, setIsSavingExpense] = useState(false);
 
   // Employee Expenses filters - "which employee" and "which category" to
@@ -315,6 +329,22 @@ function DayEndReportView() {
       popup({ tone: 'error', title: t('reports.expense.missingInfoTitle'), message: t('reports.expense.enterAmountMessage') });
       return;
     }
+    if (!expenseSource) {
+      popup({ tone: 'error', title: t('reports.expense.missingInfoTitle'), message: 'Choose where it is paid from - Cash in Hand or Bank.' });
+      return;
+    }
+    const bank = banks.find((b) => b.id === expenseBankId);
+    if (expenseSource === 'bank' && !bank) {
+      popup({ tone: 'error', title: t('reports.expense.missingInfoTitle'), message: 'Pick the bank.' });
+      return;
+    }
+    if (bank && amount > bank.balance) {
+      popup({ tone: 'error', title: 'Not enough in the bank', message: `${bank.name} only has ${formatMoney(bank.balance)}.` });
+      return;
+    }
+    // Opened now (before any await) so the popup blocker allows the slip.
+    const slipWindow = window.open('', '_blank', 'width=420,height=640');
+    slipWindow?.document.write('<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;color:#888">Preparing slip...</body></html>');
     try {
       setIsSavingExpense(true);
       const created = await createExpense({
@@ -322,17 +352,25 @@ function DayEndReportView() {
         amount,
         date: rangeTo ? new Date(`${rangeTo}T12:00:00.000Z`).toISOString() : undefined,
         note: expenseNote.trim(),
-        employeeId: expenseEmployeeId || null,
+        employeeId: null,
+        paymentSource: expenseSource,
+        bankId: expenseSource === 'bank' ? expenseBankId : undefined,
       });
       if (created) {
         setExpenses((prev) => [created, ...prev]);
         setExpenseCategory('');
         setExpenseAmount('');
         setExpenseNote('');
-        setExpenseEmployeeId('');
+        printExpenseSlip(created, slipWindow);
+        if (expenseSource === 'bank') {
+          setBanks((prev) => prev.map((b) => (b.id === expenseBankId ? { ...b, balance: b.balance - amount } : b)));
+        }
         void loadReport();
+      } else if (slipWindow && !slipWindow.closed) {
+        slipWindow.close();
       }
     } catch (error) {
+      if (slipWindow && !slipWindow.closed) slipWindow.close();
       popup({ tone: 'error', title: t('reports.expense.logErrorTitle'), message: error instanceof Error ? error.message : t('reports.expense.logErrorMessage') });
     } finally {
       setIsSavingExpense(false);
@@ -340,7 +378,8 @@ function DayEndReportView() {
   }
 
   async function handleDeleteExpense(expense: Expense) {
-    const confirmed = await confirm(t('reports.expense.deleteConfirmMessage', { category: expense.category, amount: formatMoney(expense.amount) }), {
+    const backTo = expense.paymentSource ? ` ${formatMoney(expense.amount)} goes back to ${expensePaidFrom(expense)}.` : '';
+    const confirmed = await confirm(`${t('reports.expense.deleteConfirmMessage', { category: expense.category, amount: formatMoney(expense.amount) })}${backTo}`, {
       title: t('reports.expense.deleteConfirmTitle'),
       confirmText: t('common.delete'),
       tone: 'danger',
@@ -565,10 +604,17 @@ function DayEndReportView() {
                       {expense.category}
                       {emp ? <span className="ml-2 rtl:ml-0 rtl:mr-2 rounded-full bg-indigo-50 px-2 py-0.5 text-[9px] font-black uppercase text-indigo-600">{emp.name}</span> : null}
                     </p>
-                    <p className="text-[10px] font-bold text-slate-400">{new Date(expense.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}{expense.note ? ` · ${expense.note}` : ''}</p>
+                    <p className="text-[10px] font-bold text-slate-400">
+                      {new Date(expense.date).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' })}
+                      {expense.paymentSource ? ` · ${expensePaidFrom(expense)}` : ''}
+                      {expense.note ? ` · ${expense.note}` : ''}
+                    </p>
                   </div>
                   <div className="flex items-center gap-3 shrink-0">
                     <span className="text-sm font-black text-slate-900">{formatMoney(expense.amount)}</span>
+                    <button onClick={() => printExpenseSlip(expense)} title="Print slip" className="p-2 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-lg transition-colors">
+                      <PrinterIcon size={14} />
+                    </button>
                     <button onClick={() => void handleDeleteExpense(expense)} className="p-2 text-slate-300 hover:text-rose-600 hover:bg-rose-50 rounded-lg transition-colors">
                       <Trash2 size={14} />
                     </button>
@@ -595,18 +641,6 @@ function DayEndReportView() {
                 options={EXPENSE_CATEGORIES}
                 placeholder={t('common.category')}
               />
-              {/* Employee Expenses - optional. Left on "No specific
-                  employee" for every ordinary shop-wide expense; only
-                  matters for something like "Employee Meal" that should
-                  show up on one person's own Payroll history view too (see
-                  Expense.employeeId's own comment - purely informational
-                  there, never subtracted from their salary). */}
-              <InlineDropdown
-                value={expenseEmployeeId}
-                onChange={setExpenseEmployeeId}
-                placeholder={t('reports.noSpecificEmployee')}
-                options={[{ value: '', label: t('reports.noSpecificEmployee') }, ...employees.map((emp) => ({ value: emp._id, label: emp.name }))]}
-              />
               <input
                 type="number"
                 value={expenseAmount}
@@ -621,6 +655,44 @@ function DayEndReportView() {
                 placeholder={t('reports.notePlaceholder')}
                 className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
               />
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-widest text-slate-400 mb-2 ml-1">Pay from</p>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setExpenseSource('cash')}
+                    className={`flex items-center justify-center gap-2 rounded-2xl py-3 text-xs font-black ring-1 transition-all ${expenseSource === 'cash' ? 'bg-emerald-50 text-emerald-700 ring-emerald-500' : 'bg-slate-50 text-slate-500 ring-slate-200 hover:bg-slate-100'}`}
+                  >
+                    <WalletIcon size={15} /> Cash in Hand
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setExpenseSource('bank')}
+                    className={`flex items-center justify-center gap-2 rounded-2xl py-3 text-xs font-black ring-1 transition-all ${expenseSource === 'bank' ? 'bg-sky-50 text-sky-700 ring-sky-500' : 'bg-slate-50 text-slate-500 ring-slate-200 hover:bg-slate-100'}`}
+                  >
+                    <BankIcon size={15} /> Bank
+                  </button>
+                </div>
+                {expenseSource === 'bank' ? (
+                  banks.length === 0 ? (
+                    <p className="mt-2 text-[11px] font-bold text-amber-600 ml-1">No bank added yet - add one on the Bank page first.</p>
+                  ) : (
+                    <select
+                      value={expenseBankId}
+                      onChange={(e) => setExpenseBankId(e.target.value)}
+                      className="mt-2 w-full rounded-2xl border-none ring-1 ring-slate-200 bg-slate-50 px-4 py-3 text-sm font-bold outline-none focus:ring-2 focus:ring-sky-500"
+                    >
+                      <option value="">Select a bank</option>
+                      {banks.map((b) => (
+                        <option key={b.id} value={b.id}>{b.name} - {formatMoney(b.balance)}</option>
+                      ))}
+                    </select>
+                  )
+                ) : null}
+                <p className="mt-1.5 text-[10px] font-bold text-slate-400 ml-1">
+                  {expenseSource === 'cash' ? 'Minused from Cash in Hand and shown in its history.' : expenseSource === 'bank' ? 'Withdrawn from this bank and shown in its history.' : 'The amount is minused from where you pick. A slip prints after logging.'}
+                </p>
+              </div>
               <p className="text-[10px] font-bold text-slate-400 ml-1">{t('reports.dayEnd.loggedAgainst', { date: new Date(`${rangeTo}T12:00:00.000Z`).toLocaleDateString(undefined, { day: '2-digit', month: 'short', year: 'numeric' }) })}</p>
             </div>
 

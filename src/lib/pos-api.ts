@@ -871,7 +871,7 @@ export async function fetchExpenses(params?: { employeeId?: string }) {
   }
 }
 
-export async function createExpense(payload: { category: string; amount: number; date?: string; note?: string; employeeId?: string | null }) {
+export async function createExpense(payload: { category: string; amount: number; date?: string; note?: string; employeeId?: string | null; paymentSource?: 'cash' | 'bank'; bankId?: string }) {
   try {
     const response = await api.post<Expense & { _id?: string }>('/expenses', payload);
     return normalizeExpense(response.data);

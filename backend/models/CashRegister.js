@@ -27,7 +27,7 @@ const cashHistorySchema = new mongoose.Schema(
     // from the Dashboard.
     type: {
       type: String,
-      enum: ["sale", "due_recovery", "purchase", "due_given", "refund", "adjustment", "salary"],
+      enum: ["sale", "due_recovery", "purchase", "due_given", "refund", "adjustment", "salary", "expense"],
       required: true,
     },
     direction: { type: String, enum: ["in", "out"], required: true },
