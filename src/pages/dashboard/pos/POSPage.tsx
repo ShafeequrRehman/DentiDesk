@@ -17,7 +17,6 @@ import { Store } from 'lucide-react';
 import { isTypingTarget, useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { useLanguage } from '@/i18n';
 import CompleteOrderModal from '@/components/CompleteOrderModal';
-import { writeOrderReceiptToWindow } from '@/lib/order-receipt-print';
 import { isValidWhatsappNumber, sendAppointmentSlip } from '@/lib/whatsapp-slips';
 import { useTimeSlots, dayOpen, slotOpen, extraFor, describeSchedule, scheduleOf, WEEKDAY_LONG, weekdayOfISO, describeUpcomingLeave, describeUpcomingExtra, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo } from '@/lib/appointments';
 
@@ -964,10 +963,8 @@ export default function POSPage() {
     if (!validateOrderForm()) return;
     isSavingOrderRef.current = true;
     setIsSavingOrder(true);
-    // Save Appointment prints the appointment slip. Opened here, before the
-    // first await, so the browser's popup blocker allows it.
-    const bookingPrintWindow = window.open('', '_blank', 'width=420,height=650');
-    bookingPrintWindow?.document.write('<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;color:#888">Preparing slip...</body></html>');
+    // No slip is printed on Save Appointment - the slip prints when the
+    // payment is taken (Complete on the pending appointment).
 
     // Guards the background pending-bill toast below (see checkPendingOrder
     // call) from overwriting the real "Order saved" confirmation if that
@@ -1256,7 +1253,6 @@ export default function POSPage() {
       // receipt prints on demand from the Sales page. WhatsApp needs the
       // cloud and a real id, so it's skipped for offline appointments
       // (they notify once they sync).
-      if (bookingPrintWindow && !bookingPrintWindow.closed) writeOrderReceiptToWindow(bookingPrintWindow, savedOrder, 0);
       // The same slip goes to the patient on WhatsApp (as a PDF). Walk-ins
       // with no number are skipped; a wrong number says why.
       if (!isOfflineOrder) {
@@ -1272,7 +1268,6 @@ export default function POSPage() {
         }
       }
     } catch (error) {
-      if (bookingPrintWindow && !bookingPrintWindow.closed) bookingPrintWindow.close();
       popup({ tone: 'error', title: t("pos.orderNotSavedTitle"), message: error instanceof Error ? error.message : t('pos.orderSaveFailedFallback') });
     } finally {
       isSavingOrderRef.current = false;
