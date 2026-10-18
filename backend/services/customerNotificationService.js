@@ -1,4 +1,5 @@
 const { getWhatsAppServiceForShop } = require("./whatsappService");
+const { currencySign } = require("./currency");
 
 // Automated WhatsApp status updates sent straight to the CUSTOMER (not the
 // rider/staff) at two points in a customer-qr (QR/online) order's
@@ -32,12 +33,12 @@ function formatDate(date) {
   });
 }
 
-function formatItems(items) {
+function formatItems(items, C = "$") {
   const lines = (items || []).map((item) => {
     const qty = Number(item.quantity) || 0;
     const lineTotal = formatMoney((Number(item.price) || 0) * qty);
     const variation = item.variation ? ` (${item.variation})` : "";
-    return `- ${qty}x ${item.name}${variation} — $${lineTotal}`;
+    return `- ${qty}x ${item.name}${variation} — ${C}${lineTotal}`;
   });
   return lines.join("\n") || "-";
 }
@@ -69,6 +70,7 @@ function formatSlotDate(iso) {
 // Sent when the clinic presses "Mark Confirmed" on an online appointment.
 function buildAppointmentConfirmedMessage(order, shop) {
   const shopName = shop?.name || "";
+  const C = currencySign(shop);
   const forLabel = /^dr\.?\s/i.test(order.doctorName || "") ? "Dr" : "Service";
   return [
     `*Your appointment is confirmed* ✅`,
@@ -82,9 +84,9 @@ function buildAppointmentConfirmedMessage(order, shop) {
     order.appointmentDate ? `Date: ${formatSlotDate(order.appointmentDate)}` : null,
     order.appointmentTime ? `Time: ${formatSlotTime(order.appointmentTime)}` : null,
     `Services:`,
-    formatItems(order.items),
-    `Total: $${formatMoney(order.total)}`,
-    `Payment: ${Number(order.remainingAmount || 0) > 0 ? `$${formatMoney(order.remainingAmount)} to pay at the clinic` : "Paid"}`,
+    formatItems(order.items, C),
+    `Total: ${C}${formatMoney(order.total)}`,
+    `Payment: ${Number(order.remainingAmount || 0) > 0 ? `${C}${formatMoney(order.remainingAmount)} to pay at the clinic` : "Paid"}`,
     `------------------------`,
     `Please arrive 10 minutes before your time.`,
     `${shop?.phone || ""}`,
@@ -97,6 +99,7 @@ function buildAppointmentConfirmedMessage(order, shop) {
 
 function buildOrderPlacedMessage(order, shop) {
   const shopName = shop?.name || "";
+  const C = currencySign(shop);
   return [
     `Appointment Placed`,
     `Hello ${order.customer?.name || "there"}`,
@@ -107,12 +110,12 @@ function buildOrderPlacedMessage(order, shop) {
     `Appointment No: ${orderNumberOf(order)}`,
     `Date: ${formatDate(order.createdAt)}`,
     `Items:`,
-    formatItems(order.items),
-    `Subtotal: $${formatMoney(order.subtotal)}`,
-    `Other Charges: $${otherCharges(order)}`,
-    `Appointment Total: $${formatMoney(order.total)}`,
+    formatItems(order.items, C),
+    `Subtotal: ${C}${formatMoney(order.subtotal)}`,
+    `Other Charges: ${C}${otherCharges(order)}`,
+    `Appointment Total: ${C}${formatMoney(order.total)}`,
     `Payment Status: Pending`,
-    `Amount: $${formatMoney(order.paidAmount)}`,
+    `Amount: ${C}${formatMoney(order.paidAmount)}`,
     `------------------------`,
     `Appointment Status: Processing`,
     `We appreciate your trust in ${shopName} and will keep you updated about your appointment.`,
@@ -126,8 +129,9 @@ function buildOrderPlacedMessage(order, shop) {
 
 function buildOrderCompletedMessage(order, shop) {
   const shopName = shop?.name || "";
+  const C = currencySign(shop);
   const remaining = Number(order.remainingAmount || 0);
-  const paymentStatus = remaining > 0 ? `$${formatMoney(remaining)} Remaining` : `Fully Paid`;
+  const paymentStatus = remaining > 0 ? `${C}${formatMoney(remaining)} Remaining` : `Fully Paid`;
   return [
     `Appointment Completed`,
     `Hello ${order.customer?.name || "there"}`,
@@ -138,12 +142,12 @@ function buildOrderCompletedMessage(order, shop) {
     `Appointment No: ${orderNumberOf(order)}`,
     `Date: ${formatDate(order.createdAt)}`,
     `Items:`,
-    formatItems(order.items),
-    `Subtotal: $${formatMoney(order.subtotal)}`,
-    `Other Charges: $${otherCharges(order)}`,
-    `Total Amount: $${formatMoney(order.total)}`,
+    formatItems(order.items, C),
+    `Subtotal: ${C}${formatMoney(order.subtotal)}`,
+    `Other Charges: ${C}${otherCharges(order)}`,
+    `Total Amount: ${C}${formatMoney(order.total)}`,
     `Payment Details`,
-    `Paid Amount: $${formatMoney(order.paidAmount)}`,
+    `Paid Amount: ${C}${formatMoney(order.paidAmount)}`,
     paymentStatus,
     `------------------------`,
     `Appointment Status: Completed`,

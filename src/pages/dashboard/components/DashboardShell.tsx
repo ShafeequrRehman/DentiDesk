@@ -1,3 +1,4 @@
+import { cs } from '@/lib/currency';
 import React, { useEffect, useRef, useState } from 'react';
 import { Link, Outlet, useLocation, useNavigate } from 'react-router-dom';
 import {
@@ -13,6 +14,7 @@ import { useOfflineSync } from '@/lib/offline-sync';
 import { isDesktopApp, logoutRequest } from '@/lib/api';
 import { closeShopSession, fetchShopProfile, openShopSession } from '@/lib/pos-api';
 import { setClinicHours } from '@/lib/appointments';
+import { setClinicMoney } from '@/lib/currency';
 import { useNetworkStatus } from '@/lib/network-status';
 import { ShopSessionProvider, useShopSession } from '@/lib/shop-session';
 import { useToast } from '@/lib/toast';
@@ -102,10 +104,14 @@ export default function DashboardShell() {
   }
 
   // Clinic hours (Settings) decide the appointment time slots everywhere.
+  // The clinic's money sign ($ / Rs) and slip footer, set by the Super
+  // Admin - re-render once if they changed since the cached copy.
+  const [, setMoneyVersion] = useState(0);
   useEffect(() => {
     void fetchShopProfile()
       .then((profile) => {
         if (profile?.clinicStart || profile?.clinicEnd) setClinicHours(profile.clinicStart, profile.clinicEnd);
+        if (profile && setClinicMoney(profile.currency, profile.poweredBy)) setMoneyVersion((v) => v + 1);
       })
       .catch(() => undefined);
   }, []);
@@ -487,7 +493,7 @@ function ShopStatusControl() {
 
       if (result.needsConfirmation) {
         const orders = result.unresolvedOrders || [];
-        const preview = orders.slice(0, 8).map((o) => `#${o.dailyOrderNumber ?? o.id.slice(-4)} - ${o.status === 'pending' ? 'pending' : `$${o.remainingAmount} due`}`).join('\n');
+        const preview = orders.slice(0, 8).map((o) => `#${o.dailyOrderNumber ?? o.id.slice(-4)} - ${o.status === 'pending' ? 'pending' : `${cs()}${o.remainingAmount} due`}`).join('\n');
         const extra = orders.length > 8 ? `\n...and ${orders.length - 8} more` : '';
         setBusy(false);
         // Sequence bug fix: this used to `await confirm(...)` right here,
@@ -517,7 +523,7 @@ function ShopStatusControl() {
       await refresh();
       if (result.session) {
         const s = result.session.summary;
-        toast.success(`Clinic closed. ${s.orderCount} appointment${s.orderCount === 1 ? '' : 's'}, $${s.totalSales.toLocaleString()} total sales.`);
+        toast.success(`Clinic closed. ${s.orderCount} appointment${s.orderCount === 1 ? '' : 's'}, ${cs()}${s.totalSales.toLocaleString()} total sales.`);
       }
     } catch (error) {
       toast.error(error instanceof Error ? error.message : 'Failed to close clinic.');

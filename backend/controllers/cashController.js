@@ -1,4 +1,5 @@
 const CashRegister = require("../models/CashRegister");
+const { currencySignFor } = require("../services/currency");
 const User = require("../models/User");
 const { shopScope } = require("../middleware/attachShopScope");
 const { entryRef, findEntryIndex, signedAmount } = require("../services/historyRefs");
@@ -134,14 +135,15 @@ exports.clearCash = async (req, res) => {
     const { shopId } = shopScope(req);
     const register = await getOrCreateRegister(shopId);
     const amount = Math.round(Number(register.balance || 0) * 100) / 100;
-    if (amount === 0) return res.status(400).json({ message: "Cash in Hand is already $0." });
+    const C = await currencySignFor(shopId);
+    if (amount === 0) return res.status(400).json({ message: `Cash in Hand is already ${C}0.` });
     const direction = amount > 0 ? "out" : "in";
     register.balance = 0;
     register.history.push({
       type: "adjustment",
       direction,
       amount: Math.abs(amount),
-      note: `Cleared to $0 - was $${Math.round(amount).toLocaleString("en-US")}`,
+      note: `Cleared to ${C}0 - was ${C}${Math.round(amount).toLocaleString("en-US")}`,
       balanceAfter: 0,
       createdBy: await currentUserName(req),
       kind: "clear",

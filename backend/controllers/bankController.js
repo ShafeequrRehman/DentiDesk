@@ -1,4 +1,5 @@
 const Bank = require("../models/Bank");
+const { currencySignFor } = require("../services/currency");
 const User = require("../models/User");
 const { shopScope } = require("../middleware/attachShopScope");
 
@@ -105,7 +106,7 @@ exports.addTransaction = async (req, res) => {
       return res.status(404).json({ message: "Bank not found" });
     }
     if (type === "withdrawal" && amount > bank.balance) {
-      return res.status(400).json({ message: `Can't withdraw more than the $${bank.balance} available in this bank` });
+      return res.status(400).json({ message: `Can't withdraw more than the ${await currencySignFor(bank.shopId)}${bank.balance} available in this bank` });
     }
 
     bank.balance = type === "deposit" ? bank.balance + amount : bank.balance - amount;

@@ -1,3 +1,4 @@
+import { cs } from '@/lib/currency';
 import { createContext, useContext, useEffect, useState, type ReactNode } from "react";
 import { en } from "@/i18n/locales/en";
 import { ur } from "@/i18n/locales/ur";
@@ -41,6 +42,8 @@ function getByPath(source: unknown, path: string): unknown {
 
 function interpolate(template: string, vars?: Record<string, string | number>): string {
   if (!vars) return template;
+  // "${{amount}}" in the texts = the clinic's money sign (lib/currency.ts).
+  template = template.replace(/\$(?=\{\{)/g, () => cs());
   return template.replace(/\{\{(\w+)\}\}/g, (match, key: string) => (key in vars ? String(vars[key]) : match));
 }
 

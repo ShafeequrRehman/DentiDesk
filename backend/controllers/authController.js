@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const { normalizeCurrency, poweredByOf } = require("../services/currency");
 const User = require("../models/User");
 const Shop = require("../models/Shop");
 const License = require("../models/License");
@@ -217,7 +218,7 @@ exports.login = async (req, res) => {
       refreshToken,
       refreshTokenExpiresAt,
       user: safeUser(user),
-      shop: { id: shop._id, name: shop.name, status: shop.status, enabledPages: shop.enabledPages ?? null },
+      shop: { id: shop._id, name: shop.name, status: shop.status, enabledPages: shop.enabledPages ?? null, currency: normalizeCurrency(shop.currency), poweredBy: poweredByOf(shop) },
       license: { status: license.status, expiryDate: license.expiryDate },
       permissions,
       hideDashboard,

@@ -1,4 +1,5 @@
 
+import { cs } from '@/lib/currency';
 import React, { useState, useEffect } from 'react';
 import {
   fetchCustomerLedger,
@@ -321,7 +322,7 @@ export default function CustomerDuesPage() {
       }
       const fresh = await loadCustomers();
       if (payment?.bankId) await loadBanks();
-      toast.success(`$${result.appliedAmount} recorded.`);
+      toast.success(`${cs()}${result.appliedAmount} recorded.`);
       if (printWindow && !printWindow.closed) {
         const freshCustomer = fresh?.find((c) => c.phone === phone);
         const newestEntry = newestDuesEntry(freshCustomer?.duesHistory);
@@ -343,7 +344,7 @@ export default function CustomerDuesPage() {
             bankId: payment?.bankId,
           });
           setCustomers((previous) => previous.map((c) => (c.phone === phone ? patched : c)));
-          toast.success(`$${amount} saved offline - will sync automatically once online.`);
+          toast.success(`${cs()}${amount} saved offline - will sync automatically once online.`);
           if (printWindow && !printWindow.closed) {
             const newestEntry = newestDuesEntry(patched.duesHistory);
             if (newestEntry) {
@@ -377,7 +378,7 @@ export default function CustomerDuesPage() {
       return;
     }
 
-    const message = `Hello ${customer.name},\nThis is a gentle reminder that you have pending dues of $${customer.totalDue}. Please clear them at your earliest convenience.\nThank you!`;
+    const message = `Hello ${customer.name},\nThis is a gentle reminder that you have pending dues of ${cs()}${customer.totalDue}. Please clear them at your earliest convenience.\nThank you!`;
     const response = await sendWhatsappMessage(customer.phone, message);
     if (response?.success) {
       toast.success('Reminder sent successfully!');
@@ -780,7 +781,7 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
       // out (increasing what's owed), a 'settle' entry is money the shop
       // RECEIVED back (paying the balance down). Previously "added"/
       // "paid" here, which no longer matched those button names.
-      label: entry.type === 'add' ? `+ $${entry.amount} paid` : `- $${entry.amount} received`,
+      label: entry.type === 'add' ? `+ ${cs()}${entry.amount} paid` : `- ${cs()}${entry.amount} received`,
       // Bank-routed entries say so right in the History row - "took/gave
       // via <bank>" - not just on the Bank page's own history (see
       // customerController.js's updateCustomerDues/settleCustomerDues).
@@ -821,7 +822,7 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
         const isCancelled = order.status === 'cancelled';
         const paidStatus = isCancelled
           ? `Cancelled appointment for ${customer.name}`
-          : order.remainingAmount > 0 ? `$${order.remainingAmount} still due (paid $${order.paidAmount})` : 'Fully paid';
+          : order.remainingAmount > 0 ? `${cs()}${order.remainingAmount} still due (paid ${cs()}${order.paidAmount})` : 'Fully paid';
         // Electricity Bill / Cash special-product details - only ever set
         // on an order whose cart had the matching special item in it (see
         // POSPage.tsx's hasElectricityBillItem/hasCashItem). Appended onto
@@ -835,7 +836,7 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
         return {
           key: `order-${order.id}`,
           date: order.createdAt,
-          label: `${isCancelled ? 'Cancelled Appointment' : 'Appointment'} #${order.dailyOrderNumber ?? order.id.slice(-4)} - $${order.total}`,
+          label: `${isCancelled ? 'Cancelled Appointment' : 'Appointment'} #${order.dailyOrderNumber ?? order.id.slice(-4)} - ${cs()}${order.total}`,
           detail: specialDetails ? `${paidStatus} · ${specialDetails}` : paidStatus,
           tone: isCancelled ? 'text-slate-400 line-through' : order.remainingAmount > 0 ? 'text-amber-600' : 'text-slate-400',
           by: '',
@@ -869,7 +870,7 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
       const paidStatus = isCancelled
         ? `Cancelled purchase from ${customer.name}${purchase.cancelReason ? ` - ${purchase.cancelReason}` : ''}`
         : purchase.remainingAmount > 0
-          ? `$${purchase.remainingAmount} still owed to them (paid $${purchase.paidAmount})`
+          ? `${cs()}${purchase.remainingAmount} still owed to them (paid ${cs()}${purchase.paidAmount})`
           : 'Fully paid';
       return {
         key: `purchase-${purchase.id}`,
@@ -878,7 +879,7 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
         // Statement row like "$1350000 (Urea)" gives no idea how much
         // Urea that actually was (the shop owner's own point: the amount
         // alone doesn't say how many bags/kg it was).
-        label: `${isCancelled ? 'Cancelled Purchase' : 'Purchase'} ${purchase.purchaseOrderNumber} - $${purchase.totalAmount} (${purchase.quantity} ${purchase.unit} ${purchase.ingredientName})`,
+        label: `${isCancelled ? 'Cancelled Purchase' : 'Purchase'} ${purchase.purchaseOrderNumber} - ${cs()}${purchase.totalAmount} (${purchase.quantity} ${purchase.unit} ${purchase.ingredientName})`,
         detail: paidStatus,
         tone: isCancelled ? 'text-slate-400 line-through' : purchase.remainingAmount > 0 ? 'text-blue-600' : 'text-slate-400',
         by: isCancelled ? purchase.cancelledBy : '',
@@ -1149,9 +1150,9 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
   }
 
   function formatBalanceCell(balance: number) {
-    if (balance > 0) return `+$${balance}`;
-    if (balance < 0) return `-$${Math.abs(balance)}`;
-    return '$0';
+    if (balance > 0) return `+${cs()}${balance}`;
+    if (balance < 0) return `-${cs()}${Math.abs(balance)}`;
+    return `${cs()}0`;
   }
 
   async function buildDuesStatementDoc() {
@@ -1162,9 +1163,9 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
         title="Dues Statement"
         subtitle={`${customer.name}${hasRealPhone(customer.phone) ? ` · ${customer.phone}` : ''} · ${historyRangeLabel}`}
         stats={[
-          { label: 'Current Dues', value: `$${totalDue}` },
-          { label: 'From Unpaid Appointments', value: `$${fromOrders}` },
-          { label: 'Manual Adjustments', value: `$${fromLumpSum}` },
+          { label: 'Current Dues', value: `${cs()}${totalDue}` },
+          { label: 'From Unpaid Appointments', value: `${cs()}${fromOrders}` },
+          { label: 'Manual Adjustments', value: `${cs()}${fromLumpSum}` },
         ]}
         tables={[
           {
@@ -1189,11 +1190,11 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
               let payCell = '—';
               let addCell = '—';
               if (entry.duesEntry) {
-                if (entry.duesEntry.type === 'add') addCell = `$${entry.duesEntry.amount}`;
-                else payCell = `$${entry.duesEntry.amount}`;
+                if (entry.duesEntry.type === 'add') addCell = `${cs()}${entry.duesEntry.amount}`;
+                else payCell = `${cs()}${entry.duesEntry.amount}`;
               } else if (entry.orderAmounts) {
-                addCell = `$${entry.orderAmounts.total}`;
-                if (entry.orderAmounts.paid > 0) payCell = `$${entry.orderAmounts.paid}`;
+                addCell = `${cs()}${entry.orderAmounts.total}`;
+                if (entry.orderAmounts.paid > 0) payCell = `${cs()}${entry.orderAmounts.paid}`;
               }
               const balance = balanceByKey.get(entry.key) ?? 0;
               return [
@@ -1338,15 +1339,15 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
               a bare "-"/"+" prefix - "Due"/"Adv" per the owner's own
               request, since a lone sign alone wasn't clear enough. */}
           <p className={`text-2xl font-black ${netBalance > 0 ? 'text-red-600' : netBalance < 0 ? 'text-green-600' : 'text-slate-800'}`}>
-            {netBalance > 0 ? `Due $${netBalance}` : netBalance < 0 ? `Adv $${Math.abs(netBalance)}` : 'Settled'}
+            {netBalance > 0 ? `Due ${cs()}${netBalance}` : netBalance < 0 ? `Adv ${cs()}${Math.abs(netBalance)}` : 'Settled'}
           </p>
           {fromOrders > 0 || fromLumpSum > 0 ? (
             <p className="text-[11px] font-bold text-slate-400 mt-1">
-              ${totalDue} from sales{customer.totalPurchaseBalance ? ` - $${customer.totalPurchaseBalance} from purchases` : ''}
+              {cs()}{totalDue} from sales{customer.totalPurchaseBalance ? ` - ${cs()}${customer.totalPurchaseBalance} from purchases` : ''}
             </p>
           ) : customer.totalPurchaseBalance ? (
             <p className="text-[11px] font-bold text-slate-400 mt-1">
-              ${customer.totalPurchaseBalance} owed to them from purchases
+              {cs()}{customer.totalPurchaseBalance} owed to them from purchases
             </p>
           ) : null}
         </div>
@@ -1442,7 +1443,7 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
           >
             <option value="">Select bank...</option>
             {banks.map(b => (
-              <option key={b.id} value={b.id}>{b.name} (${b.balance.toLocaleString()})</option>
+              <option key={b.id} value={b.id}>{b.name} ({cs()}{b.balance.toLocaleString()})</option>
             ))}
           </select>
         ) : null}
@@ -1494,13 +1495,13 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
             }}
             disabled={saving || amountValue <= 0 || paymentIncomplete}
             className="flex-1 flex items-center justify-center gap-1.5 bg-green-100 hover:bg-green-200 text-green-700 disabled:opacity-50 disabled:cursor-not-allowed py-2 rounded-xl font-bold text-xs transition-colors"
-            title={amountValue > totalDue ? `More than the $${totalDue} owed - the extra becomes an advance` : 'Record a payment against everything owed'}
+            title={amountValue > totalDue ? `More than the ${cs()}${totalDue} owed - the extra becomes an advance` : 'Record a payment against everything owed'}
           >
             {saving ? <Loader2 size={14} className="animate-spin" /> : null} {saving ? 'Saving...' : '- Received Amount'}
           </button>
           <button
             onClick={async () => {
-              const confirmed = await confirm(`Record a full payment of $${totalDue} for this patient?`, { title: 'Clear dues', confirmText: 'Clear', tone: 'danger' });
+              const confirmed = await confirm(`Record a full payment of ${cs()}${totalDue} for this patient?`, { title: 'Clear dues', confirmText: 'Clear', tone: 'danger' });
               if (!confirmed) return;
               const printWindow = window.open('', '_blank', 'width=380,height=500');
               if (printWindow) {

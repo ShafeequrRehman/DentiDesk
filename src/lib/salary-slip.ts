@@ -1,5 +1,6 @@
 // Salary slip for one Payroll payment: printed on the receipt printer, or
 // sent to the staff member on WhatsApp as a PDF.
+import { cs } from '@/lib/currency';
 import { createElement } from 'react';
 import { sendWhatsappDocument } from '@/lib/pos-api';
 import { buildReceiptShellHtml } from '@/lib/order-receipt-print';
@@ -18,7 +19,7 @@ export interface SalarySlipInfo {
 }
 
 function money(value: number | undefined) {
-  return `$${Math.round(Number(value) || 0).toLocaleString()}`;
+  return `${cs()}${Math.round(Number(value) || 0).toLocaleString()}`;
 }
 
 function escapeHtml(value: string) {

@@ -1,4 +1,5 @@
 
+import { cs, currencyCode } from '@/lib/currency';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { clinicEnd, clinicStart, formatSlot, useTimeSlots, WEEKDAY_SHORT } from '@/lib/appointments';
 import { Plus, Package, Edit, Archive, X, Trash2, Search, ChevronDown, ChevronRight, Upload } from "lucide-react";
@@ -521,7 +522,7 @@ export function ProductManagementSection({
           <div className="space-y-2">
             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t("common.price")}</label>
             <div className="relative">
-              <span className="absolute left-4 rtl:left-auto rtl:right-4 top-1/2 -translate-y-1/2 text-slate-300 font-black text-[14px]">USD</span>
+              <span className="absolute left-4 rtl:left-auto rtl:right-4 top-1/2 -translate-y-1/2 text-slate-300 font-black text-[14px]">{currencyCode()}</span>
               <input
                 type="number"
                 value={price}
@@ -724,7 +725,7 @@ export function ProductManagementSection({
                   <div className="flex flex-wrap items-center justify-end gap-4 sm:shrink-0">
                     <div className="flex flex-col items-end">
                       <div className="text-[15px] font-black text-slate-900">
-                        {hasMultiple ? (minPrice === maxPrice ? `$${minPrice}` : `$${minPrice} - ${maxPrice}`) : `$${single.price}`}
+                        {hasMultiple ? (minPrice === maxPrice ? `${cs()}${minPrice}` : `${cs()}${minPrice} - ${maxPrice}`) : `${cs()}${single.price}`}
                       </div>
                       <div className="flex items-center gap-1 mt-1 text-[10px] font-bold text-slate-400 uppercase tracking-widest">
                         <Archive size={10} />
@@ -758,7 +759,7 @@ export function ProductManagementSection({
                           {v.variation && v.variation !== "Standard" ? v.variation : t("productManagement.directory.standardVariation")}
                         </div>
                         <div className="flex items-center gap-5">
-                          <div className="text-sm font-black text-slate-900">${v.price}</div>
+                          <div className="text-sm font-black text-slate-900">{cs()}{v.price}</div>
                           <div className="text-[10px] font-bold text-slate-400 uppercase tracking-widest w-24 text-right rtl:text-left">
                             {v.stock > 0 ? t("productManagement.directory.inStock", { count: v.stock }) : t("common.unlimited")}
                           </div>

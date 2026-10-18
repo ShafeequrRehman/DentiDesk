@@ -1,3 +1,4 @@
+import { cs, xlsxMoneyFormat } from '@/lib/currency';
 import { useEffect, useMemo, useRef, useState } from "react";
 import { Boxes, Plus, Edit, Trash2, Search, PackagePlus, ShoppingCart, AlertTriangle, X, Building2, Download, FileSpreadsheet, MessageCircle, History, XCircle, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
 import {
@@ -31,7 +32,7 @@ import { useBackspaceToClose } from "@/lib/keyboard-shortcuts";
 import { writePurchaseReceiptToWindow } from "@/lib/order-receipt-print";
 
 function formatMoney(amount: number) {
-  return `$${Math.round(amount).toLocaleString()}`;
+  return `${cs()}${Math.round(amount).toLocaleString()}`;
 }
 
 // Display-layer defensive rounding for currentStock. The backend now
@@ -907,7 +908,7 @@ export function IngredientStockSection({
           { value: i.name },
           { value: i.unit },
           { value: formatStockQty(i.currentStock), style: { align: 'Right' as const } },
-          { value: i.averageCost, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
+          { value: i.averageCost, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
         ]),
       ],
     };
@@ -935,10 +936,10 @@ export function IngredientStockSection({
           { value: formatPurchaseDateTime(purchaseDisplayDate(p)) },
           { value: `${p.ingredientName}${p.productDetails ? ` · ${p.productDetails}` : ''}` },
           { value: `${p.quantity}${p.unit}`, style: { align: 'Right' as const } },
-          { value: p.rate, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
-          { value: p.totalAmount, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
-          { value: p.paidAmount, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
-          { value: p.remainingAmount, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
+          { value: p.rate, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
+          { value: p.totalAmount, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
+          { value: p.paidAmount, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
+          { value: p.remainingAmount, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
         ]),
         // Financial Aggregations: the same prominent bolded totals row as
         // the PDF export's table footer - Total Purchased Amount (this
@@ -951,9 +952,9 @@ export function IngredientStockSection({
           { value: '' },
           { value: '' },
           { value: t('ingredientStock.export.totals'), style: { bold: true } },
-          { value: activeCompanySheetTotals.purchased, style: { bold: true, align: 'Right', format: '"$"#,##0.00' } },
-          { value: activeCompanySheetTotals.paid, style: { bold: true, align: 'Right', format: '"$"#,##0.00' } },
-          { value: activeCompanySheetTotals.due, style: { bold: true, align: 'Right', format: '"$"#,##0.00' } },
+          { value: activeCompanySheetTotals.purchased, style: { bold: true, align: 'Right', format: xlsxMoneyFormat() } },
+          { value: activeCompanySheetTotals.paid, style: { bold: true, align: 'Right', format: xlsxMoneyFormat() } },
+          { value: activeCompanySheetTotals.due, style: { bold: true, align: 'Right', format: xlsxMoneyFormat() } },
         ],
       ],
     };
@@ -1717,7 +1718,7 @@ export function IngredientStockSection({
                         >
                           <option value="">{banks.length === 0 ? 'No banks - add one on the Bank page' : 'Choose bank...'}</option>
                           {banks.map((bank) => (
-                            <option key={bank.id} value={bank.id}>{bank.name} (${Math.round(bank.balance).toLocaleString()})</option>
+                            <option key={bank.id} value={bank.id}>{bank.name} ({cs()}{Math.round(bank.balance).toLocaleString()})</option>
                           ))}
                         </select>
                       ) : null}

@@ -1,5 +1,6 @@
 // Expense slip (Reports > Log an Expense): printed on the receipt printer
 // when an expense is logged, and again from the entries list.
+import { cs } from '@/lib/currency';
 import { buildReceiptShellHtml } from '@/lib/order-receipt-print';
 import type { Expense } from '@/lib/pos-types';
 
@@ -24,7 +25,7 @@ function slipHtml(expense: Expense) {
     ${row('Paid from', expensePaidFrom(expense))}
     ${expense.note ? `<div class="dashed"></div><p><b>NOTE:</b> ${escapeHtml(expense.note)}</p>` : ''}
     <div class="dashed"></div>
-    <div class="row bold"><span>AMOUNT</span><span>$${Math.round(Number(expense.amount) || 0).toLocaleString()}</span></div>
+    <div class="row bold"><span>AMOUNT</span><span>${cs()}${Math.round(Number(expense.amount) || 0).toLocaleString()}</span></div>
     <div class="dashed"></div>
     <p style="margin-top:28px">Approved by: ____________________</p>
   `;

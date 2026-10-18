@@ -1,3 +1,4 @@
+import { cs, setClinicMoney } from '@/lib/currency';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Plus, X, CheckCircle2, AlertCircle, MapPin, Download, UtensilsCrossed, Share, RotateCcw, Edit3, Clock, Check, Bike, Phone } from 'lucide-react';
@@ -285,7 +286,7 @@ function VariationPickerSheet({ group, onSelect, onClose }: { group: ProductGrou
                 <p className="truncate text-sm font-black text-gray-900">{variation.variation || 'Standard'}</p>
                 <ScheduleInfo product={variation} compact />
               </div>
-              <span className="shrink-0 text-sm font-black text-gray-900">${formatter.format(variation.price)}</span>
+              <span className="shrink-0 text-sm font-black text-gray-900">{cs()}{formatter.format(variation.price)}</span>
             </button>
           ))}
         </div>
@@ -474,7 +475,7 @@ function ChangeRequestModal({
                         <div key={group.key} className="flex items-center justify-between rounded-xl bg-white/50 p-3 shadow-inner">
                           <div className="min-w-0">
                             <p className="truncate text-xs font-black text-gray-900">{product.name}{product.variation ? ` (${product.variation})` : ''}</p>
-                            <p className="text-[11px] text-gray-400">${formatter.format(product.price)}</p>
+                            <p className="text-[11px] text-gray-400">{cs()}{formatter.format(product.price)}</p>
                           </div>
                           <button type="button" onClick={() => setAddQty(product, qty > 0 ? 0 : 1)} className={`glass-pill flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-black transition hover:bg-white/70 ${qty > 0 ? 'text-rose-600' : 'text-gray-700'}`}>
                             {qty > 0 ? <><X size={13} /> Remove</> : <><Plus size={13} /> Add</>}
@@ -493,7 +494,7 @@ function ChangeRequestModal({
                       >
                         <div className="min-w-0">
                           <p className="truncate text-xs font-black text-gray-900">{group.name}</p>
-                          <p className="text-[11px] text-gray-400">{group.variations.length} sizes/options - from ${formatter.format(cheapest)}</p>
+                          <p className="text-[11px] text-gray-400">{group.variations.length} sizes/options - from {cs()}{formatter.format(cheapest)}</p>
                         </div>
                         <span className="glass-dark shrink-0 rounded-lg px-2.5 py-1.5 text-[10px] font-black">{groupQty > 0 ? `${groupQty} added` : 'Select'}</span>
                       </button>
@@ -528,7 +529,7 @@ function ChangeRequestModal({
                 <div key={key} className="flex items-center justify-between rounded-xl bg-white/50 p-3 shadow-inner">
                   <div className="min-w-0">
                     <p className="truncate text-xs font-black text-gray-900">{item.name}{item.variation ? ` (${item.variation})` : ''}</p>
-                    <p className="text-[11px] text-gray-400">${formatter.format(item.price)}</p>
+                    <p className="text-[11px] text-gray-400">{cs()}{formatter.format(item.price)}</p>
                   </div>
                   <button type="button" onClick={() => setRemoveQty(item, qty > 0 ? 0 : item.quantity)} className={`glass-pill flex shrink-0 items-center gap-1 rounded-full px-3 py-1.5 text-xs font-black transition hover:bg-white/70 ${qty > 0 ? 'text-rose-600' : 'text-gray-700'}`}>
                     {qty > 0 ? <><Check size={13} /> Will remove</> : <><X size={13} /> Remove</>}
@@ -695,7 +696,7 @@ function OrderStatusPanel({
           {status.items.map((item, index) => (
             <div key={`${item.name}-${index}`} className="flex justify-between gap-3">
               <span className="text-gray-600">{item.quantity}x {item.name}{item.variation ? ` (${item.variation})` : ''}</span>
-              <span className="shrink-0 font-black text-gray-900">${formatter.format(item.price * item.quantity)}</span>
+              <span className="shrink-0 font-black text-gray-900">{cs()}{formatter.format(item.price * item.quantity)}</span>
             </div>
           ))}
         </div>
@@ -703,11 +704,11 @@ function OrderStatusPanel({
         <div className="mt-3 space-y-2 rounded-[20px] bg-white/50 p-4 text-left text-sm shadow-inner">
           {status.table ? <div className="flex justify-between"><span className="text-gray-500">Table</span><span className="font-black">{formatTableLabel(status.table)}</span></div> : null}
           {status.address ? <div className="flex justify-between gap-3"><span className="shrink-0 text-gray-500">Address</span><span className="text-right font-black">{status.address}</span></div> : null}
-          <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="font-black">${formatter.format(status.subtotal)}</span></div>
+          <div className="flex justify-between"><span className="text-gray-500">Subtotal</span><span className="font-black">{cs()}{formatter.format(status.subtotal)}</span></div>
           {status.otherCharges > 0 ? (
-            <div className="flex justify-between"><span className="text-gray-500">Other Charges</span><span className="font-black">${formatter.format(status.otherCharges)}</span></div>
+            <div className="flex justify-between"><span className="text-gray-500">Other Charges</span><span className="font-black">{cs()}{formatter.format(status.otherCharges)}</span></div>
           ) : null}
-          <div className="flex justify-between"><span className="text-gray-500">Total</span><span className="font-black">${formatter.format(status.total)}</span></div>
+          <div className="flex justify-between"><span className="text-gray-500">Total</span><span className="font-black">{cs()}{formatter.format(status.total)}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Payment Method</span><span className="font-black">{status.paymentMethod}</span></div>
           <div className="flex justify-between"><span className="text-gray-500">Payment Status</span><span className="font-black capitalize">{status.paymentStatus.replace('_', ' ')}</span></div>
         </div>
@@ -1014,6 +1015,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
         const result = await fetchPublicMenu(shopId);
         // Slots follow the clinic hours set in Settings.
         setClinicHours(result.clinicStart, result.clinicEnd, false);
+        setClinicMoney(result.currency, result.poweredBy, false);
         setMenu(result);
       } catch (err) {
         const message = (err as { response?: { data?: { message?: string } } })?.response?.data?.message;
@@ -1378,7 +1380,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                 <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-gray-500"><Clock size={11} className="text-[#007F90]" /> Days differ per option - tap Select</p>
               )}
               <p className="text-[11px] text-gray-400">{hasVariations ? `${group.variations.length} sizes/options` : single.variation}</p>
-              <p className="mt-1 text-sm font-black text-gray-900">{hasVariations ? `From $${formatter.format(cheapest)}` : `$${formatter.format(single.price)}`}</p>
+              <p className="mt-1 text-sm font-black text-gray-900">{hasVariations ? `From ${cs()}${formatter.format(cheapest)}` : `${cs()}${formatter.format(single.price)}`}</p>
               {hasVariations ? (
                 <button type="button" onClick={() => handleGroupTap(group)} className="mt-2 w-full rounded-xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] py-2 text-xs font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(0,110,125,0.4)] transition hover:brightness-105">
                   {groupCartCount > 0 ? `${groupCartCount} in cart - Select` : 'Select'}
@@ -1414,7 +1416,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
           className="glass-dark fixed bottom-4 left-1/2 flex w-[92%] max-w-md -translate-x-1/2 items-center justify-between rounded-2xl px-5 py-4 transition hover:brightness-110"
         >
           <span className="flex items-center gap-2 text-sm font-black"><ShoppingCart size={18} /> {cartCount} item{cartCount === 1 ? '' : 's'}</span>
-          <span className="text-sm font-black">${formatter.format(cartTotal)} · Checkout</span>
+          <span className="text-sm font-black">{cs()}{formatter.format(cartTotal)} · Checkout</span>
         </button>
       ) : null}
 
@@ -1431,7 +1433,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                 <div key={cartKey(line.product)} className="flex items-center justify-between rounded-xl bg-gray-50 p-3 ring-1 ring-gray-100">
                   <div>
                     <p className="text-sm font-black text-gray-900">{line.product.name}</p>
-                    <p className="text-xs text-gray-400">${formatter.format(line.product.price)}</p>
+                    <p className="text-xs text-gray-400">{cs()}{formatter.format(line.product.price)}</p>
                   </div>
                   <button type="button" onClick={() => changeQuantity(line.product, -line.quantity)} className="flex items-center gap-1 rounded-full bg-rose-50 px-3 py-1.5 text-xs font-black text-rose-600 transition hover:bg-rose-100">
                     <X size={13} /> Remove
@@ -1442,7 +1444,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
 
             <div className="mt-4 flex justify-between border-t border-gray-100 pt-4 text-sm font-black">
               <span>Total</span>
-              <span>${formatter.format(cartTotal)}</span>
+              <span>{cs()}{formatter.format(cartTotal)}</span>
             </div>
 
             {doctorName ? (
@@ -1577,7 +1579,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                 disabled={!canSubmit || placing || Boolean(activeOrderWarning)}
                 className="w-full rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] py-4 text-sm font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,110,125,0.4)] transition hover:brightness-105 hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-50"
               >
-                {placing ? (orderType === 'Delivery' ? 'Getting Your Location...' : 'Placing Appointment...') : `Place Appointment · $${formatter.format(cartTotal)}`}
+                {placing ? (orderType === 'Delivery' ? 'Getting Your Location...' : 'Placing Appointment...') : `Place Appointment · ${cs()}${formatter.format(cartTotal)}`}
               </button>
             </div>
           </div>

@@ -6,6 +6,7 @@
 // paid amount (so a half-paid 4,500 appointment counts 2,250 collected).
 // Clicking a Dr/service opens its history (every appointment, patient,
 // time slot, payment method, Online/Clinic) with a PDF download.
+import { cs } from '@/lib/currency';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { CalendarDays, Download, Loader2, Stethoscope, Wrench, X } from 'lucide-react';
 import { fetchOrders, fetchProducts } from '@/lib/pos-api';
@@ -40,7 +41,7 @@ interface EarnerStat {
 }
 
 function money(amount: number) {
-  return `$${Math.round(amount || 0).toLocaleString()}`;
+  return `${cs()}${Math.round(amount || 0).toLocaleString()}`;
 }
 
 function startOfDay(iso: string) {

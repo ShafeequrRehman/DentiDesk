@@ -1,4 +1,5 @@
 const bcrypt = require("bcryptjs");
+const { normalizeCurrency, forgetCurrency } = require("../services/currency");
 const mongoose = require("mongoose");
 const User = require("../models/User");
 const Shop = require("../models/Shop");
@@ -104,7 +105,7 @@ exports.createShop = async (req, res) => {
   const session = await mongoose.startSession();
   try {
     const {
-      shopName, phone, email, address, notes,
+      shopName, phone, email, address, notes, currency, poweredBy,
       ownerUsername, ownerPassword, ownerName, ownerEmail, ownerPhone,
       planId, licenseMonths, licenseStatus, cancelOrderKey,
     } = req.body;
@@ -132,7 +133,7 @@ exports.createShop = async (req, res) => {
     const cancelOrderKeyHash = await bcrypt.hash(String(cancelOrderKey), 10);
 
     await session.withTransaction(async () => {
-      const shopDocs = await Shop.create([{ name: shopName, phone, email, address, notes, planId: plan ? plan._id : undefined, cancelOrderKeyHash }], { session });
+      const shopDocs = await Shop.create([{ name: shopName, phone, email, address, notes, currency: normalizeCurrency(currency), poweredBy: String(poweredBy || "").trim(), planId: plan ? plan._id : undefined, cancelOrderKeyHash }], { session });
       createdShop = shopDocs[0];
 
       const hashedPassword = await bcrypt.hash(ownerPassword, 10);
@@ -197,9 +198,14 @@ exports.createShop = async (req, res) => {
 // PATCH /api/superadmin/shops/:id - edit shop profile fields
 exports.updateShop = async (req, res) => {
   try {
-    const { name, phone, email, address, notes, planId } = req.body;
+    const { name, phone, email, address, notes, planId, currency, poweredBy } = req.body;
     const shop = await Shop.findById(req.params.id);
     if (!shop) return res.status(404).json({ message: "Clinic not found" });
+    if (currency !== undefined) {
+      shop.currency = normalizeCurrency(currency);
+      forgetCurrency(shop._id);
+    }
+    if (poweredBy !== undefined) shop.poweredBy = String(poweredBy || "").trim();
 
     if (name !== undefined) shop.name = name;
     if (phone !== undefined) shop.phone = phone;

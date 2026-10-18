@@ -1,3 +1,4 @@
+import { cs } from '@/lib/currency';
 import { useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import {
   BarChart3, TrendingUp, TrendingDown, Receipt, Wallet, ShoppingBag,
@@ -12,7 +13,7 @@ import { hasPermission } from '@/lib/auth';
 import { useLanguage } from '@/i18n';
 
 function formatMoney(amount: number) {
-  return `$${Math.round(amount).toLocaleString()}`;
+  return `${cs()}${Math.round(amount).toLocaleString()}`;
 }
 
 // en-CA formats as YYYY-MM-DD in the browser's LOCAL time zone (unlike

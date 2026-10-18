@@ -1,11 +1,12 @@
 
+import { cs } from '@/lib/currency';
 import { useEffect, useMemo, useState } from 'react';
 import { Store, AlertCircle, Clock, RefreshCcw } from 'lucide-react';
 import { fetchShopSessionHistory } from '@/lib/pos-api';
 import { ShopSession } from '@/lib/pos-types';
 
 function formatMoney(amount: number) {
-  return `$${Math.round(amount).toLocaleString()}`;
+  return `${cs()}${Math.round(amount).toLocaleString()}`;
 }
 
 function formatDateTime(value: string | null) {

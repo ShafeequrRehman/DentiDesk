@@ -1,4 +1,6 @@
 const bcrypt = require("bcryptjs");
+const { currencySignFor } = require("../services/currency");
+const { normalizeCurrency, poweredByOf } = require("../services/currency");
 const User = require("../models/User");
 const Role = require("../models/Role");
 const Shop = require("../models/Shop");
@@ -317,7 +319,7 @@ exports.recordPayment = async (req, res) => {
       bank = bankId ? await Bank.findOne({ _id: bankId, shopId: req.user.shopId }) : null;
       if (!bank) return res.status(400).json({ message: "Pick the bank the salary is paid from.", reason: "validation_error" });
       if (kind !== "deduction" && value > bank.balance) {
-        return res.status(400).json({ message: `${bank.name} only has $${bank.balance.toLocaleString()} - not enough for $${value.toLocaleString()}.`, reason: "validation_error" });
+        return res.status(400).json({ message: `${bank.name} only has ${await currencySignFor(bank.shopId)}${bank.balance.toLocaleString()} - not enough for ${await currencySignFor(bank.shopId)}${value.toLocaleString()}.`, reason: "validation_error" });
       }
     }
 
@@ -498,6 +500,8 @@ exports.getOwnShop = async (req, res) => {
     const { cancelOrderKeyHash, pageVisibilityKeyHash, paymentGateway, ...shopWithoutKeyHashes } = shop;
     res.json({
       ...shopWithoutKeyHashes,
+      currency: normalizeCurrency(shop.currency),
+      poweredBy: poweredByOf(shop),
       hasCancelOrderKey: Boolean(cancelOrderKeyHash),
       hasPageVisibilityKey: Boolean(pageVisibilityKeyHash),
     });

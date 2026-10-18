@@ -12,6 +12,7 @@
 // action, same saveOrderEditOffline split offline) is what frees that
 // table back up - and, used from POSPage right after Save, is what lets an
 // order collect its payment immediately instead of sitting pending.
+import { cs } from '@/lib/currency';
 import { useEffect, useState } from 'react';
 import { WifiOff, XCircle } from 'lucide-react';
 import { useLanguage } from '@/i18n';
@@ -267,10 +268,10 @@ export default function CompleteOrderModal({
         ) : null}
 
         <div className="mt-4 rounded-[20px] bg-[#F8F9FB] p-4 text-sm">
-          <DetailRow label={t('record.completeOrder.orderTotal')} value={`$${order.total}`} />
-          <DetailRow label={t('record.completeOrder.alreadyPaid')} value={`$${order.paidAmount ?? 0}`} />
-          {customerDue > 0 ? <DetailRow label={t('record.completeOrder.otherOutstandingDues')} value={`$${customerDue}`} /> : null}
-          <DetailRow label={t('record.completeOrder.payableNow')} value={`$${payable}`} strong />
+          <DetailRow label={t('record.completeOrder.orderTotal')} value={`${cs()}${order.total}`} />
+          <DetailRow label={t('record.completeOrder.alreadyPaid')} value={`${cs()}${order.paidAmount ?? 0}`} />
+          {customerDue > 0 ? <DetailRow label={t('record.completeOrder.otherOutstandingDues')} value={`${cs()}${customerDue}`} /> : null}
+          <DetailRow label={t('record.completeOrder.payableNow')} value={`${cs()}${payable}`} strong />
         </div>
 
         {/* Cash vs Bank - decides whether this payment lands in the

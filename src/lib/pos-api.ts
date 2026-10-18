@@ -1220,6 +1220,8 @@ export async function respondToOrderChangeRequest(id: string, action: 'approve' 
 // includes the key hash itself - see backend/controllers/
 // shopOwnerController.js exports.getOwnShop.
 export interface ShopProfile {
+  currency?: 'USD' | 'PKR';
+  poweredBy?: string;
   clinicStart?: string;
   clinicEnd?: string;
   _id?: string;

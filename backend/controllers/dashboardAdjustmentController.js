@@ -1,4 +1,5 @@
 const DashboardAdjustment = require("../models/DashboardAdjustment");
+const { currencySignFor } = require("../services/currency");
 const User = require("../models/User");
 const { shopScope } = require("../middleware/attachShopScope");
 const { entryRef, findEntryIndex, signedAmount } = require("../services/historyRefs");
@@ -109,8 +110,8 @@ exports.adjust = async (req, res) => {
   }
 };
 
-function money(value) {
-  return `$${Math.round(Number(value) || 0).toLocaleString("en-US")}`;
+function money(value, C = "$") {
+  return `${C}${Math.round(Number(value) || 0).toLocaleString("en-US")}`;
 }
 
 // POST /api/dashboard-adjustments/:key/clear  body: { amount, label }
@@ -128,11 +129,12 @@ exports.clear = async (req, res) => {
     const label = String(req.body.label || "").trim().slice(0, 60);
     const { shopId } = shopScope(req);
     const doc = await getOrCreate(shopId, key);
+    const C = await currencySignFor(shopId);
     doc.total -= amount;
     doc.history.push({
       direction: "out",
       amount,
-      note: `Cleared to $0${label ? ` (${label})` : ""} - was ${money(amount)}`,
+      note: `Cleared to ${C}0${label ? ` (${label})` : ""} - was ${money(amount, C)}`,
       totalAfter: doc.total,
       createdBy: await currentUserName(req),
       kind: "clear",

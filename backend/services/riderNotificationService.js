@@ -1,4 +1,5 @@
 const { getWhatsAppServiceForShop } = require("./whatsappService");
+const { currencySign } = require("./currency");
 
 // Sends a Delivery order's customer/address details + a Google Maps link
 // over WhatsApp, using the shop's own already-connected WhatsApp session
@@ -26,7 +27,7 @@ function buildRiderMessage(order, shop) {
     `Customer: ${order.customer?.name || "-"}`,
     `Phone: ${order.customer?.phone || "-"}`,
     `Address: ${order.customer?.address || order.address || "-"}`,
-    `Total: $${Number(order.total || 0).toFixed(0)}`,
+    `Total: ${currencySign(shop)}${Number(order.total || 0).toFixed(0)}`,
   ];
   if (mapsLink) lines.push(`Location: ${mapsLink}`);
   return lines.join("\n");

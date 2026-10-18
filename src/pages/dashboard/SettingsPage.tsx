@@ -1,4 +1,5 @@
 
+import { currencyCode } from '@/lib/currency';
 import React, { ChangeEvent, useMemo, useRef, useState, useEffect } from 'react';
 import {
   Settings, Bell, Lock, Database,
@@ -11,7 +12,7 @@ import { ReceiptManagementSection } from '@/components/ReceiptManagementSection'
 import { SidebarPagesSection } from '@/components/SidebarPagesSection';
 import { CustomerOrderingSection } from '@/components/CustomerOrderingSection';
 import { ReceiptAutoPrintSection } from '@/components/ReceiptAutoPrintSection';
-import { getStoreSettings, saveStoreSettings, StoreSettings, CURRENCIES, TIMEZONES } from '@/lib/pos-settings';
+import { getStoreSettings, saveStoreSettings, StoreSettings, TIMEZONES } from '@/lib/pos-settings';
 import { fetchPrinters, fetchShopProfile, updateShopProfile } from '@/lib/pos-api';
 import { setClinicHours } from '@/lib/appointments';
 import { updateCachedShopName } from '@/lib/auth';
@@ -386,13 +387,11 @@ export default function SettingsPage() {
             <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
               <div className="space-y-2">
                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Currency</label>
-                <select 
-                  value={settings.currency}
-                  onChange={e => handleSettingChange('currency', e.target.value)}
-                  className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold outline-none appearance-none"
-                >
-                  {CURRENCIES.map(c => <option key={c} value={c}>{c}</option>)}
-                </select>
+                {/* Set per clinic by the Super Admin (USD $ / PKR Rs). */}
+                <div className="w-full p-4 bg-slate-100 rounded-2xl font-bold text-slate-600">
+                  {currencyCode() === 'PKR' ? 'PKR (Rs)' : 'USD ($)'}
+                </div>
+                <p className="text-[10px] font-bold text-slate-400 ml-1">Set by your administrator.</p>
               </div>
               <div className="space-y-2">
                 <label className="text-xs font-black text-slate-400 uppercase tracking-widest ml-1">Timezone</label>

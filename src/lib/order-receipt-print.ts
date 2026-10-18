@@ -16,6 +16,7 @@
 // of the same underlying fields for the "reprint an old order later"
 // case, not the primary at-checkout receipt path (which keeps using
 // ThermalReceipt/PrintOrderPage as before, unchanged).
+import { cs, poweredByLine } from '@/lib/currency';
 import { SavedOrder, DuesHistoryEntry } from '@/lib/pos-types';
 import { getStoreSettings } from '@/lib/pos-settings';
 import { PRINT_LOGO_STORAGE_KEY } from '@/lib/print-logo';
@@ -69,7 +70,7 @@ export function buildReceiptShellHtml(title: string, bodyHtml: string, titleSub?
       ${bodyHtml}
       <div class="center" style="margin-top:16px">
         ${settings.receiptFooterMessage ? `<p style="font-weight:800">${settings.receiptFooterMessage}</p>` : ''}
-        <p>Powered by www.sunrisereach.com</p>
+        ${poweredByLine() ? `<p>${poweredByLine()}</p>` : ''}
       </div>
     </div>
     </body></html>`;
@@ -120,7 +121,7 @@ function buildOrderReceiptBodyHtml(order: SavedOrder) {
   const itemRows = order.items.map((item) => {
     const itemTotal = (item.price * item.quantity).toFixed(2);
     return `
-      <div class="row"><span>${item.quantity}x ${item.name.toUpperCase()} @ $${item.price.toFixed(2)}</span><span>$${itemTotal}</span></div>
+      <div class="row"><span>${item.quantity}x ${item.name.toUpperCase()} @ ${cs()}${item.price.toFixed(2)}</span><span>${cs()}${itemTotal}</span></div>
       ${item.variation ? `<p style="margin-left:12px;font-size:10px;color:#444">- ${item.variation}</p>` : ''}
     `;
   }).join('');
@@ -144,15 +145,15 @@ function buildOrderReceiptBodyHtml(order: SavedOrder) {
     <p>Items:</p>
     ${itemRows}
     <div class="dashed"></div>
-    <div class="row"><span>Items Total:</span><span>$${itemsTotal.toFixed(2)}</span></div>
-    ${discountAmount > 0 ? `<div class="row"><span>Discount:</span><span>-$${discountAmount.toFixed(2)}</span></div>` : ''}
-    <div class="row bold"><span>TOTAL:</span><span>$${billTotal.toFixed(2)}</span></div>
+    <div class="row"><span>Items Total:</span><span>${cs()}${itemsTotal.toFixed(2)}</span></div>
+    ${discountAmount > 0 ? `<div class="row"><span>Discount:</span><span>-${cs()}${discountAmount.toFixed(2)}</span></div>` : ''}
+    <div class="row bold"><span>TOTAL:</span><span>${cs()}${billTotal.toFixed(2)}</span></div>
     <p style="margin-top:8px">PAYMENT MODE: ${paymentModeLabel(order)}</p>
     ${cashReceived > 0 ? `
-      <div class="row bold"><span>TOTAL BILL:</span><span>$${billTotal.toFixed(2)}</span></div>
-      <div class="row"><span>CASH TENDERED/RECEIVED:</span><span>$${cashReceived.toFixed(2)}</span></div>
-      <div class="row bold"><span>CHANGE RETURNED:</span><span>$${changeReturned.toFixed(2)}</span></div>
-    ` : amountTendered !== undefined ? `<p>AMOUNT TENDERED: $${amountTendered.toFixed(2)}</p>` : ''}
+      <div class="row bold"><span>TOTAL BILL:</span><span>${cs()}${billTotal.toFixed(2)}</span></div>
+      <div class="row"><span>CASH TENDERED/RECEIVED:</span><span>${cs()}${cashReceived.toFixed(2)}</span></div>
+      <div class="row bold"><span>CHANGE RETURNED:</span><span>${cs()}${changeReturned.toFixed(2)}</span></div>
+    ` : amountTendered !== undefined ? `<p>AMOUNT TENDERED: ${cs()}${amountTendered.toFixed(2)}</p>` : ''}
   `;
 }
 
@@ -184,7 +185,7 @@ export function writeDuesEntryReceiptToWindow(printWindow: Window, customerName:
     <p>DATE: ${date}</p>
     <p>PATIENT: ${customerName.toUpperCase()}</p>
     <div class="dashed"></div>
-    <div class="row bold"><span>${actionLabel}:</span><span>$${entry.amount}</span></div>
+    <div class="row bold"><span>${actionLabel}:</span><span>${cs()}${entry.amount}</span></div>
     <p>VIA: ${paymentMethodLabel}</p>
     <div class="dashed"></div>
     <p>NOTE: ${entry.note || 'No note'}</p>
@@ -224,9 +225,9 @@ export function writePurchaseReceiptToWindow(printWindow: Window, purchase: Purc
     <div class="dashed"></div>
     <div class="row"><span>INGREDIENT:</span><span>${purchase.ingredientName}</span></div>
     <div class="row"><span>QUANTITY:</span><span>${purchase.quantity} ${purchase.unit}</span></div>
-    <div class="row"><span>PAID:</span><span>$${purchase.paidAmount ?? 0}</span></div>
+    <div class="row"><span>PAID:</span><span>${cs()}${purchase.paidAmount ?? 0}</span></div>
     <div class="dashed"></div>
-    <div class="row bold"><span>TOTAL:</span><span>$${purchase.totalAmount}</span></div>
+    <div class="row bold"><span>TOTAL:</span><span>${cs()}${purchase.totalAmount}</span></div>
   `;
   printWindow.document.open();
   printWindow.document.write(buildReceiptShellHtml('Purchase Receipt', bodyHtml));

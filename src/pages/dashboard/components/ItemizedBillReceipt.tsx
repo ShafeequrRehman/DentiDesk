@@ -1,3 +1,4 @@
+import { poweredByLine } from '@/lib/currency';
 import { useEffect, useState } from 'react';
 import { SavedOrder } from '@/lib/pos-types';
 import { getStoreSettings, defaultSettings } from '@/lib/pos-settings';
@@ -234,7 +235,7 @@ export default function ItemizedBillReceipt({
       {/* Footer */}
       <div className="text-center mt-4 mb-2">
         {settings.receiptFooterMessage && <p className="font-bold">{settings.receiptFooterMessage}</p>}
-        <p>Powered by www.sunrisereach.com</p>
+        {poweredByLine() ? <p>{poweredByLine()}</p> : null}
       </div>
     </div>
   );

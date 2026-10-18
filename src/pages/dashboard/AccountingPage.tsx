@@ -1,3 +1,4 @@
+import { cs } from '@/lib/currency';
 import { useEffect, useMemo, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import {
@@ -35,7 +36,7 @@ function toDateKey(date: Date) {
 }
 
 function formatMoney(amount: number) {
-  return `$${Math.round(amount).toLocaleString()}`;
+  return `${cs()}${Math.round(amount).toLocaleString()}`;
 }
 
 type Preset = 'daily' | 'monthly' | 'yearly' | 'custom';

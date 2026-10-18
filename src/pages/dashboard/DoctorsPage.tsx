@@ -8,6 +8,7 @@
 // POS screen again, with an option to print the prescription.
 //
 // Services tab: every other Drs/Services item, with its price.
+import { cs } from '@/lib/currency';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { Building2, CalendarDays, CheckCircle2, Globe, Wallet, ClipboardList, Clock, Phone, Printer, RefreshCcw, RotateCcw, Search, Stethoscope, Undo2, UserRound, X, MessageCircle } from 'lucide-react';
 import { fetchProducts, saveCheckup } from '@/lib/pos-api';
@@ -47,7 +48,7 @@ interface DoctorCard {
 }
 
 function money(amount: number) {
-  return `$${Math.round(amount || 0).toLocaleString()}`;
+  return `${cs()}${Math.round(amount || 0).toLocaleString()}`;
 }
 
 async function loadCatalog(): Promise<Product[]> {

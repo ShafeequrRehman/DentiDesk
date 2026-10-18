@@ -1,3 +1,4 @@
+import { cs } from '@/lib/currency';
 import { Link, useLocation, useNavigate, useParams } from 'react-router-dom';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ArrowLeft, Plus, Save, Search, Trash2 } from 'lucide-react';
@@ -424,7 +425,7 @@ export default function EditOrderPage() {
                             <p className="text-[11px] text-gray-500">{customer.phone}</p>
                             <p className="text-[10px] text-gray-400">{customer.address}</p>
                           </div>
-                          {customer.previousDues > 0 ? <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-600">Due ${customer.previousDues}</span> : null}
+                          {customer.previousDues > 0 ? <span className="rounded-full bg-rose-50 px-2.5 py-1 text-[10px] font-bold text-rose-600">Due {cs()}{customer.previousDues}</span> : null}
                         </div>
                       </button>
                     )) : null}
@@ -462,7 +463,7 @@ export default function EditOrderPage() {
                     <p className="font-bold text-gray-900">{product.name}</p>
                     <p className="text-xs text-gray-400">{product.variation}</p>
                   </div>
-                  <span className="text-sm font-black text-gray-900">${product.price}</span>
+                  <span className="text-sm font-black text-gray-900">{cs()}{product.price}</span>
                 </button>
               ))}
               </div>

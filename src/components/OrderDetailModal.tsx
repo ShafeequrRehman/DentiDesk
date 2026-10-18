@@ -1,3 +1,4 @@
+import { cs } from '@/lib/currency';
 import { useLanguage } from '@/i18n';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { formatAppointmentDate, formatSlot } from '@/lib/appointments';
@@ -115,8 +116,8 @@ export default function OrderDetailModal({
               </>
             ) : null}
             <DetailBox label={t('record.orderDetail.paymentMethod')} value={order.paymentMethod} />
-            <DetailBox label={t('record.paid')} value={`$${order.paidAmount ?? 0}`} />
-            <DetailBox label={t('record.remaining')} value={`$${order.remainingAmount ?? 0}`} />
+            <DetailBox label={t('record.paid')} value={`${cs()}${order.paidAmount ?? 0}`} />
+            <DetailBox label={t('record.remaining')} value={`${cs()}${order.remainingAmount ?? 0}`} />
           </div>
 
           {order.status === 'cancelled' ? (
@@ -140,7 +141,7 @@ export default function OrderDetailModal({
                   </div>
                   <div className="min-w-0 flex-1"><p className="truncate font-bold text-gray-900">{item.name}</p><p className="text-xs text-gray-400">{item.variation}</p></div>
                   <div className="shrink-0 text-right rtl:text-left">
-                    <p className="text-sm font-black text-gray-900">${item.price * item.quantity}</p>
+                    <p className="text-sm font-black text-gray-900">{cs()}{item.price * item.quantity}</p>
                     <p className="text-xs text-gray-400">{t('record.orderDetail.qtyLabel', { qty: item.quantity })}</p>
                   </div>
                 </div>
@@ -149,12 +150,12 @@ export default function OrderDetailModal({
           </div>
 
           <div className="rounded-[20px] bg-white/50 p-4 text-sm shadow-inner">
-            <DetailRow label={t('record.orderDetail.subtotal')} value={`$${order.subtotal}`} />
-            <DetailRow label={t('record.orderDetail.tax')} value={`$${order.tax}`} />
+            <DetailRow label={t('record.orderDetail.subtotal')} value={`${cs()}${order.subtotal}`} />
+            <DetailRow label={t('record.orderDetail.tax')} value={`${cs()}${order.tax}`} />
             {order.discount && order.discount.amount > 0 ? (
-              <DetailRow label={order.discount.type === 'percent' ? t('record.discount.percentLabel', { value: order.discount.value }) : t('record.discount.label')} value={`-$${order.discount.amount}`} />
+              <DetailRow label={order.discount.type === 'percent' ? t('record.discount.percentLabel', { value: order.discount.value }) : t('record.discount.label')} value={`-${cs()}${order.discount.amount}`} />
             ) : null}
-            <DetailRow label={t('common.total')} value={`$${order.total}`} strong />
+            <DetailRow label={t('common.total')} value={`${cs()}${order.total}`} strong />
           </div>
 
           {order.note ? <DetailBox label={t('record.orderDetail.note')} value={order.note} /> : null}

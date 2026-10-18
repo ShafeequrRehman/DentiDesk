@@ -1,3 +1,4 @@
+import { cs, xlsxMoneyFormat } from '@/lib/currency';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import {
   Truck, PackagePlus, Clock, ChevronRight, Search, Filter, AlertCircle,
@@ -17,7 +18,7 @@ import { downloadExcelWorkbook, type ExcelCell, type ExcelSheet } from '@/lib/ex
 import { useLanguage } from '@/i18n';
 
 function formatMoney(amount: number) {
-  return `$${Math.round(amount).toLocaleString()}`;
+  return `${cs()}${Math.round(amount).toLocaleString()}`;
 }
 
 // en-CA formats as YYYY-MM-DD in the browser's LOCAL time zone - matches
@@ -363,10 +364,10 @@ export default function PurchasePage() {
             { value: `${item.ingredientName}${item.productDetails ? ` · ${item.productDetails}` : ''}` },
             { value: `${item.quantity}${item.unit}`, style: { align: 'Right' as const } },
             { value: item.status === 'received' ? t('purchase.status.received') : t('purchase.status.pending') },
-            { value: item.rate, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
-            { value: item.totalAmount, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
-            { value: item.paidAmount, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
-            { value: item.remainingAmount, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
+            { value: item.rate, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
+            { value: item.totalAmount, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
+            { value: item.paidAmount, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
+            { value: item.remainingAmount, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
           ]);
         }
       }
@@ -374,9 +375,9 @@ export default function PurchasePage() {
         { value: '' }, { value: '' }, { value: '' }, { value: '' },
         { value: t('purchase.totalsLabel'), style: { bold: true } },
         { value: '' },
-        { value: purchased, style: { bold: true, align: 'Right', format: '"$"#,##0.00' } },
-        { value: paid, style: { bold: true, align: 'Right', format: '"$"#,##0.00' } },
-        { value: due, style: { bold: true, align: 'Right', format: '"$"#,##0.00' } },
+        { value: purchased, style: { bold: true, align: 'Right', format: xlsxMoneyFormat() } },
+        { value: paid, style: { bold: true, align: 'Right', format: xlsxMoneyFormat() } },
+        { value: due, style: { bold: true, align: 'Right', format: xlsxMoneyFormat() } },
       ]);
       rows.push(blankRow());
     }
@@ -1660,17 +1661,17 @@ function SupplierDashboard({
           { value: formatPurchaseDateTime(item.receivedAt || g.purchaseDate) },
           { value: `${item.ingredientName}${item.productDetails ? ` · ${item.productDetails}` : ''}` },
           { value: `${item.quantity}${item.unit}`, style: { align: 'Right' as const } },
-          { value: item.rate, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
-          { value: item.totalAmount, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
-          { value: item.paidAmount, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
-          { value: item.remainingAmount, style: { align: 'Right' as const, format: '"$"#,##0.00' } },
+          { value: item.rate, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
+          { value: item.totalAmount, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
+          { value: item.paidAmount, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
+          { value: item.remainingAmount, style: { align: 'Right' as const, format: xlsxMoneyFormat() } },
         ])),
         [
           { value: '' }, { value: '' }, { value: '' }, { value: '' },
           { value: t('purchase.totalsLabel'), style: { bold: true } },
-          { value: completedTotals.purchased, style: { bold: true, align: 'Right', format: '"$"#,##0.00' } },
-          { value: completedTotals.paid, style: { bold: true, align: 'Right', format: '"$"#,##0.00' } },
-          { value: completedTotals.due, style: { bold: true, align: 'Right', format: '"$"#,##0.00' } },
+          { value: completedTotals.purchased, style: { bold: true, align: 'Right', format: xlsxMoneyFormat() } },
+          { value: completedTotals.paid, style: { bold: true, align: 'Right', format: xlsxMoneyFormat() } },
+          { value: completedTotals.due, style: { bold: true, align: 'Right', format: xlsxMoneyFormat() } },
         ],
       ],
     };

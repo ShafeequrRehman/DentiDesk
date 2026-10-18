@@ -208,6 +208,7 @@ function ModalShell({ title, onClose, children }: { title: string; onClose: () =
 function CreateShopModal({ plans, onClose, onCreated }: { plans: PlanSummary[]; onClose: () => void; onCreated: () => void }) {
   const [form, setForm] = useState({
     shopName: "", phone: "", email: "", address: "",
+    currency: "USD", poweredBy: "",
     ownerUsername: "", ownerPassword: "", ownerName: "", ownerEmail: "", ownerPhone: "",
     cancelOrderKey: "",
     planId: "", licenseMonths: "12",
@@ -260,6 +261,25 @@ function CreateShopModal({ plans, onClose, onCreated }: { plans: PlanSummary[]; 
         </div>
         <Field label="Address" value={form.address} onChange={(v) => update("address", v)} />
 
+        <div className="pt-2 text-xs font-semibold uppercase text-gray-500">Price &amp; Slips</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs text-gray-400">Price Unit</label>
+            <select
+              value={form.currency}
+              onChange={(e) => update("currency", e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2"
+            >
+              <option value="USD">USD ($)</option>
+              <option value="PKR">PKR (Rs)</option>
+            </select>
+          </div>
+          <Field label="Powered by" value={form.poweredBy} onChange={(v) => update("poweredBy", v)} />
+        </div>
+        <p className="-mt-2 text-xs text-gray-500">
+          Price unit shows as {form.currency === "PKR" ? "Rs / PKR" : "$ / USD"} everywhere in this clinic. "Powered by" is printed under every slip - leave empty to print nothing after the thank-you text.
+        </p>
+
         <div className="pt-2 text-xs font-semibold uppercase text-gray-500">Clinic Owner Account</div>
         <div className="grid grid-cols-2 gap-3">
           <Field label="Owner Username" value={form.ownerUsername} onChange={(v) => update("ownerUsername", v)} />
@@ -310,6 +330,8 @@ function EditShopModal({ shop, plans, onClose, onSaved }: { shop: ShopSummary; p
     phone: shop.phone || "",
     email: shop.email || "",
     address: shop.address || "",
+    currency: shop.currency === "PKR" ? "PKR" : "USD",
+    poweredBy: shop.poweredBy === null || shop.poweredBy === undefined ? "www.sunrisereach.com" : shop.poweredBy,
     notes: shop.notes || "",
     planId: shop.planId?._id || "",
     ownerName: shop.owner?.name || "",
@@ -339,6 +361,8 @@ function EditShopModal({ shop, plans, onClose, onSaved }: { shop: ShopSummary; p
           phone: form.phone,
           email: form.email,
           address: form.address,
+          currency: form.currency,
+          poweredBy: form.poweredBy,
           notes: form.notes,
           planId: form.planId || null,
         }),
@@ -376,6 +400,26 @@ function EditShopModal({ shop, plans, onClose, onSaved }: { shop: ShopSummary; p
         </div>
         <Field label="Address" value={form.address} onChange={(v) => update("address", v)} />
         <Field label="Notes" value={form.notes} onChange={(v) => update("notes", v)} />
+
+        <div className="pt-2 text-xs font-semibold uppercase text-gray-500">Price &amp; Slips</div>
+        <div className="grid grid-cols-2 gap-3">
+          <div>
+            <label className="mb-1 block text-xs text-gray-400">Price Unit</label>
+            <select
+              value={form.currency}
+              onChange={(e) => update("currency", e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-black/30 px-3 py-2"
+            >
+              <option value="USD">USD ($)</option>
+              <option value="PKR">PKR (Rs)</option>
+            </select>
+          </div>
+          <Field label="Powered by" value={form.poweredBy} onChange={(v) => update("poweredBy", v)} />
+        </div>
+        <p className="-mt-2 text-xs text-gray-500">
+          Price unit shows as {form.currency === "PKR" ? "Rs / PKR" : "$ / USD"} everywhere in this clinic. "Powered by" is printed under every slip - leave empty to print nothing after the thank-you text.
+        </p>
+
 
         <div className="pt-2 text-xs font-semibold uppercase text-gray-500">Plan &amp; License</div>
         <div className="grid grid-cols-2 gap-3">

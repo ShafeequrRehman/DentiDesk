@@ -28,6 +28,9 @@ export interface SessionUser {
 export interface SessionShop {
   id?: string;
   name?: string;
+  // Set by the Super Admin - see lib/currency.ts.
+  currency?: 'USD' | 'PKR';
+  poweredBy?: string;
   status?: "active" | "suspended";
   // Super Admin-controlled sidebar page visibility (see
   // lib/dashboard-pages.ts) - null/undefined means no restriction is
@@ -226,6 +229,13 @@ export function setAuthSession(payload: LoginSessionPayload) {
   }
   if (payload.shop) {
     storeBoth(AUTH_SHOP_KEY, JSON.stringify(payload.shop));
+    // New login - the clinic's money sign / slip footer come from it
+    // (lib/currency.ts re-reads them).
+    try {
+      localStorage.removeItem('clinic_money');
+    } catch {
+      // ignore
+    }
   } else {
     clearBoth(AUTH_SHOP_KEY);
   }

@@ -35,6 +35,9 @@ export interface PublicMenuResponse {
   // Clinic hours from Settings ("HH:MM"; empty = default 9 AM - 9 PM).
   clinicStart?: string;
   clinicEnd?: string;
+  // Money sign and slip footer set by the Super Admin.
+  currency?: 'USD' | 'PKR';
+  poweredBy?: string;
   // Which online methods are actually usable for this shop - see
   // Shop.paymentGateway (blank/unconfigured until the Shop Owner enters
   // real merchant credentials in Settings). A method that's false here is

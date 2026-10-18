@@ -1,3 +1,4 @@
+import { cs } from '@/lib/currency';
 import { useEffect, useState } from 'react';
 import { Moon, XCircle, Printer, MessageCircle, Lock } from 'lucide-react';
 import { fetchDayEndReport, fetchShopProfile, sendWhatsappDocument } from '@/lib/pos-api';
@@ -7,7 +8,7 @@ import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { ReportPdfDocument, downloadPdfDocument, pdfDocumentToBase64, type PdfStat, type PdfTable } from '@/lib/pdf-export';
 
 function formatMoney(amount: number) {
-  return `$${Math.round(amount).toLocaleString()}`;
+  return `${cs()}${Math.round(amount).toLocaleString()}`;
 }
 
 // Day-End Shop Closing Summary Sheet - opened by ShopStatusControl's

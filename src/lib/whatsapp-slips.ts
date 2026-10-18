@@ -5,6 +5,7 @@
 // number first" error instead of a send that silently goes nowhere; the
 // backend (whatsappRoutes.js /send-document) also refuses when WhatsApp
 // isn't linked or the number isn't on WhatsApp.
+import { cs } from '@/lib/currency';
 import { createElement } from 'react';
 import { sendWhatsappDocument } from '@/lib/pos-api';
 import type { SavedOrder } from '@/lib/pos-types';
@@ -27,7 +28,7 @@ export function slipPhoneProblem(order: Pick<SavedOrder, 'customer'>) {
 }
 
 function money(value: number | undefined) {
-  return `$${Math.round(Number(value) || 0).toLocaleString()}`;
+  return `${cs()}${Math.round(Number(value) || 0).toLocaleString()}`;
 }
 
 function appointmentNo(order: SavedOrder) {

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { currencySignFor } = require("../services/currency");
 const Order = require("../models/Order");
 const Expense = require("../models/Expense");
 const IngredientPurchase = require("../models/IngredientPurchase");
@@ -946,6 +947,7 @@ exports.getLedgerTransactions = async (req, res) => {
   try {
     const { shopId } = shopScope(req);
     const shopObjectId = new mongoose.Types.ObjectId(shopId);
+    const ledgerSign = await currencySignFor(shopId);
     const { start, end } = resolveRange(req.query);
 
     const [orders, purchases, expenses, customers] = await Promise.all([
@@ -992,7 +994,7 @@ exports.getLedgerTransactions = async (req, res) => {
         detail: [
           order.customer?.name || "Walk-in Patient",
           order.paymentMethod || "Cash",
-          isCredit ? `$${order.remainingAmount} still due` : "Fully paid",
+          isCredit ? `${ledgerSign}${order.remainingAmount} still due` : "Fully paid",
         ].filter(Boolean).join(" · "),
         refId: String(order._id),
         paidAmount: Number(order.paidAmount || 0),

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { currencySignFor } = require("../services/currency");
 const IngredientPurchase = require("../models/IngredientPurchase");
 const Ingredient = require("../models/Ingredient");
 const Shop = require("../models/Shop");
@@ -515,7 +516,7 @@ exports.recordPayment = async (req, res) => {
   }
 
   if (amount > purchase.remainingAmount) {
-    return res.status(400).json({ error: `Cannot pay more than the remaining due ($${purchase.remainingAmount}).` });
+    return res.status(400).json({ error: `Cannot pay more than the remaining due (${await currencySignFor(purchase.shopId)}${purchase.remainingAmount}).` });
   }
 
   purchase.paidAmount = Number(purchase.paidAmount || 0) + amount;

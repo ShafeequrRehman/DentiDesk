@@ -1,4 +1,5 @@
 
+import { cs } from '@/lib/currency';
 import { useEffect, useMemo, useState } from 'react';
 import { BookText, ChevronDown, ChevronUp, Phone, Search, AlertCircle, RefreshCcw, Download, X, Users, Truck } from 'lucide-react';
 import { fetchCustomerLedger, fetchCompanyLedger } from '@/lib/pos-api';
@@ -14,7 +15,7 @@ import { CompanyLedgerEntry, LedgerCustomer } from '@/lib/pos-types';
 // "Download PDF" keeps that dependency out of the startup graph entirely.
 
 function formatMoney(amount: number) {
-  return `$${Math.round(amount).toLocaleString()}`;
+  return `${cs()}${Math.round(amount).toLocaleString()}`;
 }
 
 function formatDate(value: string | null) {

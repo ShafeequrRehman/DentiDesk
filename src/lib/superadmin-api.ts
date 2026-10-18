@@ -11,6 +11,10 @@ export interface ShopSummary {
   phone?: string;
   email?: string;
   address?: string;
+  // Money sign all over the clinic, and the line under every slip
+  // (null = older clinic, still prints the default line).
+  currency?: "USD" | "PKR";
+  poweredBy?: string | null;
   status: "active" | "suspended";
   notes?: string;
   planId?: { _id: string; name: string; price?: number; durationMonths?: number } | null;

@@ -1,4 +1,5 @@
 
+import { cs } from '@/lib/currency';
 import { useEffect, useMemo, useState } from 'react';
 import { Navigate } from 'react-router-dom';
 import {
@@ -192,11 +193,11 @@ function DashboardPageClientInner() {
   // when) and can be undone or deleted from there.
   async function handleClearTile(key: DashboardAdjustmentKey, value: number, label: string) {
     if (!(value > 0)) {
-      popup({ tone: 'info', title: 'Already $0', message: `${label} is already $0.` });
+      popup({ tone: 'info', title: `Already ${cs()}0`, message: `${label} is already ${cs()}0.` });
       return;
     }
-    const ok = await confirm(`Clear ${label} ($${Math.round(value).toLocaleString()}) to $0? This is saved in its history - you can undo it from there.`, {
-      title: 'Clear to $0',
+    const ok = await confirm(`Clear ${label} (${cs()}${Math.round(value).toLocaleString()}) to ${cs()}0? This is saved in its history - you can undo it from there.`, {
+      title: `Clear to ${cs()}0`,
       confirmText: 'Clear',
       tone: 'danger',
     });
@@ -204,7 +205,7 @@ function DashboardPageClientInner() {
     try {
       await clearDashboardTile(key, value, label);
       await loadSummary();
-      popup({ tone: 'success', title: 'Cleared', message: `${label} is now $0. Open its History to undo.` });
+      popup({ tone: 'success', title: 'Cleared', message: `${label} is now ${cs()}0. Open its History to undo.` });
     } catch (error) {
       popup({ tone: 'error', title: "Couldn't clear", message: error instanceof Error ? error.message : 'Failed to clear.' });
     }
@@ -213,11 +214,11 @@ function DashboardPageClientInner() {
   async function handleClearCash() {
     const value = Number(summary?.cashInHand || 0);
     if (value === 0) {
-      popup({ tone: 'info', title: 'Already $0', message: 'Cash in Hand is already $0.' });
+      popup({ tone: 'info', title: `Already ${cs()}0`, message: `Cash in Hand is already ${cs()}0.` });
       return;
     }
-    const ok = await confirm(`Clear Cash in Hand ($${Math.round(value).toLocaleString()}) to $0? This is saved in its history - you can undo it from there.`, {
-      title: 'Clear to $0',
+    const ok = await confirm(`Clear Cash in Hand (${cs()}${Math.round(value).toLocaleString()}) to ${cs()}0? This is saved in its history - you can undo it from there.`, {
+      title: `Clear to ${cs()}0`,
       confirmText: 'Clear',
       tone: 'danger',
     });
@@ -225,7 +226,7 @@ function DashboardPageClientInner() {
     try {
       await clearCash();
       await loadSummary();
-      popup({ tone: 'success', title: 'Cleared', message: 'Cash in Hand is now $0. Open its History to undo.' });
+      popup({ tone: 'success', title: 'Cleared', message: `Cash in Hand is now ${cs()}0. Open its History to undo.` });
     } catch (error) {
       popup({ tone: 'error', title: "Couldn't clear", message: error instanceof Error ? error.message : 'Failed to clear.' });
     }
@@ -426,7 +427,7 @@ function DashboardPageClientInner() {
                 "$1,245,690", so it just showed "$1,245..." with no way
                 to see the rest. Side-by-side again from tablet width up. */}
             <div className="mb-8 grid grid-cols-1 gap-4 sm:grid-cols-2">
-              <StatCard title={`$${formatter.format(stats.totalRevenue)}`} subtitle="Total Revenue" trend="Live" color="bg-orange-50 text-orange-400" icon={<Target size={20} />} />
+              <StatCard title={`${cs()}${formatter.format(stats.totalRevenue)}`} subtitle="Total Revenue" trend="Live" color="bg-orange-50 text-orange-400" icon={<Target size={20} />} />
               <StatCard title={formatter.format(stats.totalOrders)} subtitle="Total Appointments" trend="Live" color="bg-purple-50 text-purple-400" icon={<Users size={20} />} />
             </div>
 
@@ -442,7 +443,7 @@ function DashboardPageClientInner() {
                   <p className="text-[10px] font-bold uppercase text-gray-400">Stored Database Patients</p>
                 </div>
                 <div className="text-right">
-                  <span className="text-xl font-bold">${formatter.format(stats.businessSales)}</span>
+                  <span className="text-xl font-bold">{cs()}{formatter.format(stats.businessSales)}</span>
                   <p className="text-[10px] font-bold uppercase text-gray-400">Active Business Day</p>
                 </div>
               </div>
@@ -467,9 +468,9 @@ function DashboardPageClientInner() {
             {/* Same reasoning as the StatCard row above - 3-across left
                 almost no width per figure on a phone. */}
             <div className="mt-8 grid grid-cols-1 gap-3 sm:grid-cols-3 sm:gap-4">
-              <MiniStat label="Business Day Sales" value={`$${formatter.format(stats.businessSales)}`} />
+              <MiniStat label="Business Day Sales" value={`${cs()}${formatter.format(stats.businessSales)}`} />
               <MiniStat label="Transactions" value={formatter.format(stats.totalOrders)} />
-              <MiniStat label="Avg. Appointment" value={`$${formatter.format(stats.avgValue)}`} valueColor="text-green-500" />
+              <MiniStat label="Avg. Appointment" value={`${cs()}${formatter.format(stats.avgValue)}`} valueColor="text-green-500" />
             </div>
           </div>
 
@@ -528,7 +529,7 @@ function DashboardPageClientInner() {
               if (updated) {
                 setSummary((prev: DashboardSummary | null) => (prev ? { ...prev, cashInHand: updated.balance } : prev));
                 setShowAdjustCash(false);
-                popup({ tone: 'success', title: 'Cash in Hand updated', message: `New balance: $${updated.balance.toLocaleString()}` });
+                popup({ tone: 'success', title: 'Cash in Hand updated', message: `New balance: ${cs()}${updated.balance.toLocaleString()}` });
               }
             } catch (error) {
               popup({ tone: 'error', title: "Couldn't update Cash in Hand", message: error instanceof Error ? error.message : 'Failed to save.' });
@@ -549,7 +550,7 @@ function DashboardPageClientInner() {
               if (result) {
                 setSummary((prev: DashboardSummary | null) => (prev ? { ...prev, [adjustTileKey]: result.total } : prev));
                 setAdjustTileKey(null);
-                popup({ tone: 'success', title: 'Updated', message: `New value: $${result.total.toLocaleString()}` });
+                popup({ tone: 'success', title: 'Updated', message: `New value: ${cs()}${result.total.toLocaleString()}` });
               }
             } catch (error) {
               popup({ tone: 'error', title: "Couldn't save correction", message: error instanceof Error ? error.message : 'Failed to save.' });
@@ -632,7 +633,7 @@ function AccountingOverview({
   onOpenVendorBalanceDetail: () => void;
   onOpenSaleOnCashDetail: () => void;
 }) {
-  const money = (value: number | undefined) => `$${formatter.format(value ?? 0)}`;
+  const money = (value: number | undefined) => `${cs()}${formatter.format(value ?? 0)}`;
   // Every "(Today)"-suffixed tile's label follows whichever range is
   // currently picked, so switching to This Month/Custom doesn't leave a
   // stale "(Today)" next to a figure that's no longer today's.
@@ -663,7 +664,7 @@ function AccountingOverview({
   // Clear (to $0) - recorded in the tile's History, undoable there.
   const clearFor = (key: DashboardAdjustmentKey) =>
     canAdjustCash
-      ? [{ icon: <Eraser size={12} />, onClick: () => onClearTile(key, Number((summary as unknown as Record<string, number> | null)?.[key] || 0), tileLabel[key] || 'This figure'), label: 'Clear to $0' }]
+      ? [{ icon: <Eraser size={12} />, onClick: () => onClearTile(key, Number((summary as unknown as Record<string, number> | null)?.[key] || 0), tileLabel[key] || 'This figure'), label: `Clear to ${cs()}0` }]
       : [];
   const actionsFor = (key: DashboardAdjustmentKey) =>
     canAdjustCash
@@ -752,7 +753,7 @@ function AccountingOverview({
             { icon: <HistoryIcon size={12} />, onClick: onOpenCashHistory, label: 'History' },
             ...(canAdjustCash
               ? [
-                  { icon: <Eraser size={12} />, onClick: onClearCash, label: 'Clear to $0' },
+                  { icon: <Eraser size={12} />, onClick: onClearCash, label: `Clear to ${cs()}0` },
                   { icon: <Pencil size={12} />, onClick: onAdjustCash, label: 'Adjust' },
                 ]
               : []),
@@ -1037,9 +1038,9 @@ function HistoryModalShell({
           title={pdfTitle || title}
           subtitle={rangeLabel}
           stats={[
-            { label: 'Total In', value: `$${totalIn.toLocaleString()}` },
-            { label: 'Total Out', value: `$${totalOut.toLocaleString()}` },
-            { label: 'Net', value: `$${(totalIn - totalOut).toLocaleString()}` },
+            { label: 'Total In', value: `${cs()}${totalIn.toLocaleString()}` },
+            { label: 'Total Out', value: `${cs()}${totalOut.toLocaleString()}` },
+            { label: 'Net', value: `${cs()}${(totalIn - totalOut).toLocaleString()}` },
           ]}
           tables={[
             {
@@ -1066,11 +1067,11 @@ function HistoryModalShell({
                 row.direction === 'in' ? 'In' : 'Out',
                 row.note || '—',
                 row.createdBy || '—',
-                row.direction === 'in' ? `$${row.amount.toLocaleString()}` : '—',
-                row.direction === 'out' ? `$${row.amount.toLocaleString()}` : '—',
-                row.balanceAfter === undefined ? '—' : `$${row.balanceAfter.toLocaleString()}`,
+                row.direction === 'in' ? `${cs()}${row.amount.toLocaleString()}` : '—',
+                row.direction === 'out' ? `${cs()}${row.amount.toLocaleString()}` : '—',
+                row.balanceAfter === undefined ? '—' : `${cs()}${row.balanceAfter.toLocaleString()}`,
               ]),
-              footer: ['', '', '', 'Total', `$${totalIn.toLocaleString()}`, `$${totalOut.toLocaleString()}`, ''],
+              footer: ['', '', '', 'Total', `${cs()}${totalIn.toLocaleString()}`, `${cs()}${totalOut.toLocaleString()}`, ''],
               emptyMessage: 'No transactions in this range.',
             },
           ]}
@@ -1136,7 +1137,7 @@ function HistoryModalShell({
               <div key={row.ref || index} className={`flex items-center justify-between gap-2 rounded-2xl p-3 ${row.undone ? 'bg-gray-50 opacity-70' : row.kind === 'clear' ? 'bg-amber-50' : 'bg-[#F8F9FB]'}`}>
                 <div className="min-w-0">
                   <p className={`flex flex-wrap items-center gap-1.5 text-sm font-black ${row.undone ? 'text-gray-400 line-through' : row.direction === 'in' ? 'text-emerald-600' : 'text-rose-600'}`}>
-                    {row.direction === 'in' ? '+' : '-'}${row.amount.toLocaleString()}
+                    {row.direction === 'in' ? '+' : '-'}{cs()}{row.amount.toLocaleString()}
                     {row.kind === 'clear' ? <span className="rounded-full bg-amber-200 px-2 py-0.5 text-[9px] font-black uppercase text-amber-800 no-underline">Cleared</span> : null}
                     {row.kind === 'undo' ? <span className="rounded-full bg-sky-100 px-2 py-0.5 text-[9px] font-black uppercase text-sky-700">Undo</span> : null}
                     {row.undone ? <span className="rounded-full bg-gray-200 px-2 py-0.5 text-[9px] font-black uppercase text-gray-600">Undone</span> : null}
@@ -1152,7 +1153,7 @@ function HistoryModalShell({
                     {row.createdBy ? ` · ${row.createdBy}` : ''}
                   </p>
                   {row.balanceAfter !== undefined ? (
-                    <p className="text-[10px] font-bold text-gray-300">Balance after: ${row.balanceAfter.toLocaleString()}</p>
+                    <p className="text-[10px] font-bold text-gray-300">Balance after: {cs()}{row.balanceAfter.toLocaleString()}</p>
                   ) : null}
                 </div>
                 {row.canChange && row.ref && (onUndo || onDelete) ? (
@@ -1231,12 +1232,12 @@ function CashHistoryModal({ onClose, onChanged, canChange }: { onClose: () => vo
       }))}
       onUndo={async (row) => {
         if (!row.ref) return;
-        const ok = await confirm(`Undo this ${row.kind === 'clear' ? 'clear' : 'correction'} of $${row.amount.toLocaleString()}? Cash in Hand goes back by the same amount.`, { title: 'Undo', confirmText: 'Undo' });
+        const ok = await confirm(`Undo this ${row.kind === 'clear' ? 'clear' : 'correction'} of ${cs()}${row.amount.toLocaleString()}? Cash in Hand goes back by the same amount.`, { title: 'Undo', confirmText: 'Undo' });
         if (ok) void run(() => undoCashEntry(row.ref!), 'Undone - Cash in Hand updated.');
       }}
       onDelete={async (row) => {
         if (!row.ref) return;
-        const ok = await confirm(`Delete this entry ($${row.amount.toLocaleString()}) from the history? Its effect on Cash in Hand is removed too.`, { title: 'Delete history entry', confirmText: 'Delete', tone: 'danger' });
+        const ok = await confirm(`Delete this entry (${cs()}${row.amount.toLocaleString()}) from the history? Its effect on Cash in Hand is removed too.`, { title: 'Delete history entry', confirmText: 'Delete', tone: 'danger' });
         if (ok) void run(() => deleteCashEntry(row.ref!), 'Entry deleted.');
       }}
     />
@@ -1285,7 +1286,7 @@ function TileHistoryModal({ tileKey, onClose, onChanged, canChange }: { tileKey:
       rows={history.map((entry) => ({ ...entry, balanceAfter: entry.totalAfter, canChange }))}
       onUndo={async (row) => {
         if (!row.ref) return;
-        const ok = await confirm(`Undo this ${row.kind === 'clear' ? 'clear' : 'correction'} of $${row.amount.toLocaleString()}? The figure goes back to what it was.`, { title: 'Undo', confirmText: 'Undo' });
+        const ok = await confirm(`Undo this ${row.kind === 'clear' ? 'clear' : 'correction'} of ${cs()}${row.amount.toLocaleString()}? The figure goes back to what it was.`, { title: 'Undo', confirmText: 'Undo' });
         if (ok) void run(() => undoDashboardAdjustment(tileKey, row.ref!), 'Undone - the figure is back.');
       }}
       onDelete={async (row) => {
@@ -1293,7 +1294,7 @@ function TileHistoryModal({ tileKey, onClose, onChanged, canChange }: { tileKey:
         const ok = await confirm(
           row.undone
             ? 'Delete this undone entry from the history?'
-            : `Delete this entry ($${row.amount.toLocaleString()}) from the history? Its effect on the figure is removed too.`,
+            : `Delete this entry (${cs()}${row.amount.toLocaleString()}) from the history? Its effect on the figure is removed too.`,
           { title: 'Delete history entry', confirmText: 'Delete', tone: 'danger' },
         );
         if (ok) void run(() => deleteDashboardAdjustment(tileKey, row.ref!), 'Entry deleted.');
@@ -1427,7 +1428,7 @@ function CustomerAdvancesModal({
           title="Patient Advances"
           subtitle={`As of ${asOfDate}`}
           stats={[
-            { label: 'Total Advance', value: `$${total.toLocaleString()}` },
+            { label: 'Total Advance', value: `${cs()}${total.toLocaleString()}` },
             { label: 'Patients', value: String(advances.length) },
           ]}
           tables={[
@@ -1439,8 +1440,8 @@ function CustomerAdvancesModal({
                 { label: 'Phone', width: 1.4 },
                 { label: 'Advance', width: 1, align: 'right' },
               ],
-              rows: advances.map((c) => [asOfDate, c.name, c.phone || '\u2014', `$${c.amount.toLocaleString()}`]),
-              footer: ['', '', 'Total', `$${total.toLocaleString()}`],
+              rows: advances.map((c) => [asOfDate, c.name, c.phone || '\u2014', `${cs()}${c.amount.toLocaleString()}`]),
+              footer: ['', '', 'Total', `${cs()}${total.toLocaleString()}`],
               emptyMessage: 'No patient currently has an advance.',
             },
           ]}
@@ -1466,7 +1467,7 @@ function CustomerAdvancesModal({
         </div>
 
         <div className="mt-3 flex items-center justify-between">
-          <p className="text-sm font-black text-emerald-600">Total: ${total.toLocaleString()}</p>
+          <p className="text-sm font-black text-emerald-600">Total: {cs()}{total.toLocaleString()}</p>
           <button
             type="button"
             onClick={() => void handleDownloadPdf()}
@@ -1488,7 +1489,7 @@ function CustomerAdvancesModal({
                   {customer.phone ? <p className="text-[10px] font-bold text-gray-500">{customer.phone}</p> : null}
                   <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">As of {asOfDate}</p>
                 </div>
-                <p className="text-sm font-black text-emerald-600">${customer.amount.toLocaleString()}</p>
+                <p className="text-sm font-black text-emerald-600">{cs()}{customer.amount.toLocaleString()}</p>
               </div>
             ))
           )}
@@ -1545,7 +1546,7 @@ function StockValueDetailModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <p className="mt-3 text-sm font-black text-violet-600">Total: ${total.toLocaleString()}</p>
+        <p className="mt-3 text-sm font-black text-violet-600">Total: {cs()}{total.toLocaleString()}</p>
 
         <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
           {isLoading ? (
@@ -1560,10 +1561,10 @@ function StockValueDetailModal({ onClose }: { onClose: () => void }) {
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-gray-800">{item.name}</p>
                   <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                    {item.quantity.toLocaleString()} {item.unit} × ${item.rate.toLocaleString()}
+                    {item.quantity.toLocaleString()} {item.unit} × {cs()}{item.rate.toLocaleString()}
                   </p>
                 </div>
-                <p className="text-sm font-black text-violet-600">${item.value.toLocaleString()}</p>
+                <p className="text-sm font-black text-violet-600">{cs()}{item.value.toLocaleString()}</p>
               </div>
             ))
           )}
@@ -1619,7 +1620,7 @@ function VendorBalanceDetailModal({ onClose }: { onClose: () => void }) {
           </button>
         </div>
 
-        <p className="mt-3 text-sm font-black text-amber-700">Total: ${total.toLocaleString()}</p>
+        <p className="mt-3 text-sm font-black text-amber-700">Total: {cs()}{total.toLocaleString()}</p>
 
         <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
           {isLoading ? (
@@ -1632,7 +1633,7 @@ function VendorBalanceDetailModal({ onClose }: { onClose: () => void }) {
             rows.map((vendor, index) => (
               <div key={`${vendor.name}-${index}`} className="flex items-center justify-between rounded-2xl bg-[#F8F9FB] p-3">
                 <p className="truncate text-sm font-bold text-gray-800">{vendor.name}</p>
-                <p className="text-sm font-black text-amber-700">${vendor.balance.toLocaleString()}</p>
+                <p className="text-sm font-black text-amber-700">{cs()}{vendor.balance.toLocaleString()}</p>
               </div>
             ))
           )}
@@ -1698,7 +1699,7 @@ function SaleOnCashDetailModal({
           </button>
         </div>
 
-        <p className="mt-3 text-sm font-black text-blue-600">Total: ${total.toLocaleString()}</p>
+        <p className="mt-3 text-sm font-black text-blue-600">Total: {cs()}{total.toLocaleString()}</p>
 
         <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
           {isLoading ? (
@@ -1718,7 +1719,7 @@ function SaleOnCashDetailModal({
                     {order.paymentMethod} · {new Date(order.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-                <p className="text-sm font-black text-blue-600">${order.amount.toLocaleString()}</p>
+                <p className="text-sm font-black text-blue-600">{cs()}{order.amount.toLocaleString()}</p>
               </div>
             ))
           )}
@@ -1796,7 +1797,7 @@ function RecoveryHistoryModal({ onClose }: { onClose: () => void }) {
         <ReportPdfDocument
           title="Recovery History"
           subtitle={rangeLabel}
-          stats={[{ label: 'Total Recovery', value: `$${total.toLocaleString()}` }]}
+          stats={[{ label: 'Total Recovery', value: `${cs()}${total.toLocaleString()}` }]}
           tables={[
             {
               title: 'History',
@@ -1812,9 +1813,9 @@ function RecoveryHistoryModal({ onClose }: { onClose: () => void }) {
                 row.paymentMethod === 'bank' ? row.bankName || 'Bank' : 'Cash',
                 `${row.customerName}${row.note ? ` - ${row.note}` : ''}`,
                 row.createdBy || '\u2014',
-                `$${row.amount.toLocaleString()}`,
+                `${cs()}${row.amount.toLocaleString()}`,
               ]),
-              footer: ['', '', '', 'Total', `$${total.toLocaleString()}`],
+              footer: ['', '', '', 'Total', `${cs()}${total.toLocaleString()}`],
               emptyMessage: 'No recovery in this range.',
             },
           ]}
@@ -1868,7 +1869,7 @@ function RecoveryHistoryModal({ onClose }: { onClose: () => void }) {
           </div>
         ) : null}
 
-        <p className="mt-3 text-sm font-black text-emerald-600">Total: ${total.toLocaleString()}</p>
+        <p className="mt-3 text-sm font-black text-emerald-600">Total: {cs()}{total.toLocaleString()}</p>
 
         <div className="mt-2 flex-1 space-y-2 overflow-y-auto pr-1">
           {loading ? (
@@ -1884,7 +1885,7 @@ function RecoveryHistoryModal({ onClose }: { onClose: () => void }) {
                     {new Date(row.createdAt).toLocaleString()} · {row.paymentMethod === 'bank' ? row.bankName || 'Bank' : 'Cash'}
                   </p>
                 </div>
-                <p className="text-sm font-black text-emerald-600">${row.amount.toLocaleString()}</p>
+                <p className="text-sm font-black text-emerald-600">{cs()}{row.amount.toLocaleString()}</p>
               </div>
             ))
           )}

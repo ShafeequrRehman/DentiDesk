@@ -1,4 +1,5 @@
 const Product = require("../models/Product");
+const { normalizeCurrency, poweredByOf } = require("../services/currency");
 const Order = require("../models/Order");
 const Customer = require("../models/Customer");
 const ShopSession = require("../models/ShopSession");
@@ -177,6 +178,9 @@ exports.getMenu = async (req, res) => {
       shopName: req.shop.name,
       isOpen: Boolean(openSession),
       // Clinic hours from Settings - the time slots cover this range.
+      // Money sign and slip footer set by the Super Admin.
+      currency: normalizeCurrency(req.shop.currency),
+      poweredBy: poweredByOf(req.shop),
       clinicStart: req.shop.clinicStart || "",
       clinicEnd: req.shop.clinicEnd || "",
       // Only tells the frontend WHICH online methods are actually usable

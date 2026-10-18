@@ -1,3 +1,4 @@
+import { cs } from '@/lib/currency';
 import React, { useEffect, useState } from 'react';
 import {
   Users2, UserCircle2, Star, History, UserPlus,
@@ -116,7 +117,7 @@ function CustomerView() {
                       {c.tier}
                     </span>
                   </td>
-                  <td className="px-8 py-6 text-sm font-black text-slate-900">${c.spent.toFixed(2)}</td>
+                  <td className="px-8 py-6 text-sm font-black text-slate-900">{cs()}{c.spent.toFixed(2)}</td>
                   <td className="px-8 py-6 text-teal-600 font-black text-sm flex items-center gap-1">
                     <Star size={14} fill="currentColor"/> {c.points}
                   </td>

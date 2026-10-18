@@ -1,4 +1,5 @@
 const Expense = require("../models/Expense");
+const { currencySignFor } = require("../services/currency");
 const User = require("../models/User");
 const Bank = require("../models/Bank");
 const { shopScope } = require("../middleware/attachShopScope");
@@ -81,7 +82,7 @@ exports.createExpense = async (req, res) => {
     bank = body.bankId ? await Bank.findOne({ _id: body.bankId, shopId: req.user.shopId }) : null;
     if (!bank) return res.status(400).json({ error: "Pick the bank this expense is paid from." });
     if (amount > bank.balance) {
-      return res.status(400).json({ error: `${bank.name} only has $${bank.balance.toLocaleString()} - not enough for $${amount.toLocaleString()}.` });
+      return res.status(400).json({ error: `${bank.name} only has ${await currencySignFor(bank.shopId)}${bank.balance.toLocaleString()} - not enough for ${await currencySignFor(bank.shopId)}${amount.toLocaleString()}.` });
     }
   }
 

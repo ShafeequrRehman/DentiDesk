@@ -16,6 +16,11 @@ const shopSchema = new mongoose.Schema(
     // Clinic hours ("HH:MM") from Settings - the day the appointment time
     // slots cover on the POS, the online page and Manage Appointments.
     // Empty = 09:00 - 21:00.
+    // Set by the Super Admin: money shown as USD ($) or PKR (Rs) all over
+    // this clinic, and the "Powered by" line under every slip (null =
+    // old clinic, keeps the default line; "" = print nothing).
+    currency: { type: String, enum: ["USD", "PKR"], default: "USD" },
+    poweredBy: { type: String, default: null },
     clinicStart: { type: String, default: "" },
     clinicEnd: { type: String, default: "" },
     status: {

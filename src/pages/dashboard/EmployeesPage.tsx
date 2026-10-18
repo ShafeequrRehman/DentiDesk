@@ -1,3 +1,4 @@
+import { cs } from '@/lib/currency';
 import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { useBackspaceToClose } from "@/lib/keyboard-shortcuts";
 import { Plus, KeyRound, Trash2, X, ShieldCheck, ShieldPlus, RefreshCcw, Pencil, WifiOff, Eye } from "lucide-react";
@@ -367,7 +368,7 @@ function StaffDetailsModal({
     ["Address", employee.address || "—"],
     ...(employee.vehicleNumber ? ([["Vehicle / Bike Number", employee.vehicleNumber]] as Array<[string, string]>) : []),
     ["Reference", employee.reference || "—"],
-    ["Monthly Salary", employee.monthlySalary ? `$${employee.monthlySalary.toLocaleString()}` : "—"],
+    ["Monthly Salary", employee.monthlySalary ? `${cs()}${employee.monthlySalary.toLocaleString()}` : "—"],
     ["Comment", employee.comment || "—"],
   ];
 
