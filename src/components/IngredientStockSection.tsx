@@ -164,6 +164,9 @@ export function IngredientStockSection({
   const [unit, setUnit] = useState<IngredientUnit>("g");
   const [currentStock, setCurrentStock] = useState("");
   const [lowStockThreshold, setLowStockThreshold] = useState("");
+  // Cost per unit ($) - Stock Value = stock x cost, so it drops exactly
+  // as stock is used.
+  const [unitCost, setUnitCost] = useState("");
 
   const [searchQuery, setSearchQuery] = useState("");
   // Directory list paginates like Customer Dues/Record/POS - 30 shown,
@@ -380,6 +383,7 @@ export function IngredientStockSection({
     setUnit("g");
     setCurrentStock("");
     setLowStockThreshold("");
+    setUnitCost("");
     setIsProductDropdownOpen(false);
   }
 
@@ -471,6 +475,8 @@ export function IngredientStockSection({
         unit,
         currentStock: currentStock ? Number(currentStock) : 0,
         lowStockThreshold: lowStockThreshold ? Number(lowStockThreshold) : 0,
+        // Only sent when filled in - an empty box keeps the cost from purchases.
+        ...(unitCost.trim() !== "" ? { averageCost: Math.max(Number(unitCost) || 0, 0) } : {}),
       };
       if (editingId) {
         const updated = await updateIngredient(editingId, payload);
@@ -500,6 +506,7 @@ export function IngredientStockSection({
     setUnit(ingredient.unit);
     setCurrentStock(ingredient.currentStock ? String(ingredient.currentStock) : "");
     setLowStockThreshold(ingredient.lowStockThreshold ? String(ingredient.lowStockThreshold) : "");
+    setUnitCost(ingredient.averageCost ? String(ingredient.averageCost) : "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -1213,7 +1220,7 @@ export function IngredientStockSection({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
           <div className="space-y-2">
             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('ingredientStock.form.unitLabel')}</label>
             <select
@@ -1245,6 +1252,23 @@ export function IngredientStockSection({
               placeholder={t('ingredientStock.form.optionalPlaceholder')}
               className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
             />
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Cost per {unit} ($)</label>
+            <input
+              type="number"
+              min={0}
+              step="any"
+              value={unitCost}
+              onChange={(e) => setUnitCost(e.target.value)}
+              placeholder="e.g. 0.50"
+              className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+            />
+            <p className="text-[10px] font-bold text-slate-400 ml-1">
+              {Number(unitCost) > 0 && Number(currentStock) > 0
+                ? `Stock value: ${formatMoney(Number(unitCost) * Number(currentStock))}`
+                : 'Counts in Dashboard Stock Value. Purchases update it automatically.'}
+            </p>
           </div>
         </div>
 
@@ -1505,7 +1529,11 @@ export function IngredientStockSection({
                     {ingredient.averageCost > 0 ? (
                       <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mt-1">
                         {t('ingredientStock.directory.avgCostSuffix', { cost: formatMoney(ingredient.averageCost), unit: ingredient.unit })}
+                        {' · '}
+                        <span className="text-emerald-600">Value {formatMoney(ingredient.currentStock * ingredient.averageCost)}</span>
                       </p>
+                    ) : ingredient.currentStock > 0 ? (
+                      <p className="text-[10px] uppercase font-bold text-amber-500 tracking-widest mt-1">No cost set - not counted in Stock Value (edit to add cost)</p>
                     ) : null}
                   </div>
                   <div className="flex flex-wrap items-center gap-3 sm:shrink-0">

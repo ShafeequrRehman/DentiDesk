@@ -591,6 +591,8 @@ export interface IngredientInput {
   categoryId?: string | null;
   currentStock?: number;
   lowStockThreshold?: number;
+  // Cost per unit ($) - Stock Value on the Dashboard = stock x this.
+  averageCost?: number;
 }
 
 export async function createIngredient(payload: IngredientInput) {

@@ -92,7 +92,7 @@ exports.getIngredient = async (req, res) => {
 
 exports.createIngredient = async (req, res) => {
   try {
-    const { name, unit, categoryId, currentStock, lowStockThreshold } = req.body || {};
+    const { name, unit, categoryId, currentStock, lowStockThreshold, averageCost } = req.body || {};
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: "Ingredient name is required." });
     }
@@ -105,6 +105,9 @@ exports.createIngredient = async (req, res) => {
       categoryId: categoryId || null,
       currentStock: Math.max(Number(currentStock) || 0, 0),
       lowStockThreshold: Math.max(Number(lowStockThreshold) || 0, 0),
+      // Cost per unit for stock added without a purchase, so the
+      // Dashboard's Stock Value (stock x cost) counts it too.
+      averageCost: Math.max(Number(averageCost) || 0, 0),
       shopId: req.user.shopId,
     });
     res.status(201).json(ingredient);
@@ -132,6 +135,9 @@ exports.updateIngredient = async (req, res) => {
   }
   if (updates.lowStockThreshold !== undefined) {
     updates.lowStockThreshold = Math.max(Number(updates.lowStockThreshold) || 0, 0);
+  }
+  if (updates.averageCost !== undefined) {
+    updates.averageCost = Math.max(Number(updates.averageCost) || 0, 0);
   }
   // Bug fix (recipe/ingredient unit drift - see stockService.js's
   // deductStockForItems for the full story): a Recipe line's unit is only
