@@ -120,7 +120,7 @@ export interface CashTransaction {
   ref?: string;
   kind?: 'adjust' | 'clear' | 'undo';
   undone?: boolean;
-  type: 'sale' | 'due_recovery' | 'purchase' | 'due_given' | 'refund' | 'adjustment';
+  type: 'sale' | 'due_recovery' | 'purchase' | 'due_given' | 'refund' | 'adjustment' | 'salary';
   direction: 'in' | 'out';
   amount: number;
   note: string;

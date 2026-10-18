@@ -36,6 +36,7 @@ export interface PayrollRow {
   employeeId: string;
   name: string;
   username: string;
+  phone?: string;
   designation: string;
   isActive: boolean;
   monthlySalary: number;
@@ -48,6 +49,11 @@ export interface PayrollSummary {
   totalMonthlySalary: number;
   totalPaidThisMonth: number;
   totalRemaining: number;
+  // Paid this month through Cash in Hand / banks, and staff counts.
+  paidCash?: number;
+  paidBank?: number;
+  staffCount?: number;
+  settledCount?: number;
 }
 
 export interface PayrollResponse {
@@ -58,10 +64,13 @@ export interface PayrollResponse {
 
 export interface StaffPayment {
   _id: string;
-  employeeId: { _id: string; name: string; username: string } | string;
+  employeeId: { _id: string; name: string; username: string; phone?: string; designation?: string } | string;
   amount: number;
   type: "salary" | "advance" | "bonus" | "deduction";
   note: string;
+  paymentSource?: "" | "cash" | "bank";
+  bankId?: string | null;
+  bankName?: string;
   date: string;
   createdAt?: string;
 }
@@ -107,7 +116,7 @@ export const shopApi = {
     api.get<PayrollResponse>("/shop/payroll", { params: month ? { month } : undefined }).then((r) => r.data),
   listPayments: (params?: { employeeId?: string; month?: string }) =>
     api.get<StaffPayment[]>("/shop/payroll/payments", { params }).then((r) => r.data),
-  recordPayment: (payload: { employeeId: string; amount: number; type: string; note?: string; date?: string }) =>
+  recordPayment: (payload: { employeeId: string; amount: number; type: string; note?: string; date?: string; paymentSource?: "cash" | "bank" | ""; bankId?: string }) =>
     api.post<StaffPayment>("/shop/payroll/payments", payload).then((r) => r.data),
   deletePayment: (id: string) => api.delete(`/shop/payroll/payments/${id}`).then((r) => r.data),
 };

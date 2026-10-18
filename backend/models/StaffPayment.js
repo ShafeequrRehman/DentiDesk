@@ -19,6 +19,12 @@ const staffPaymentSchema = new mongoose.Schema(
       default: "salary",
     },
     note: { type: String, default: "" },
+    // Where the money came from (or went back to, for a deduction):
+    // "cash" = Cash in Hand, "bank" = that bank's balance. "" = older
+    // records saved before this existed (no money movement).
+    paymentSource: { type: String, enum: ["", "cash", "bank"], default: "" },
+    bankId: { type: mongoose.Schema.Types.ObjectId, ref: "Bank", default: null },
+    bankName: { type: String, default: "" },
     date: { type: Date, default: Date.now },
     recordedBy: { type: mongoose.Schema.Types.ObjectId, ref: "User", default: null },
   },

@@ -4,10 +4,12 @@ import {
   Banknote, Landmark, Calendar,
   AlertCircle, CheckCircle2, ChevronLeft, ChevronRight,
   Calculator, History, X, RefreshCcw, UtensilsCrossed,
+  Printer, MessageCircle, Trash2, Wallet, Users,
 } from 'lucide-react';
 import { shopApi, type PayrollResponse, type PayrollRow, type StaffPayment } from '@/lib/shop-api';
-import { fetchExpenses, createExpense } from '@/lib/pos-api';
-import type { Expense } from '@/lib/pos-types';
+import { fetchExpenses, createExpense, fetchBanks } from '@/lib/pos-api';
+import type { Bank, Expense } from '@/lib/pos-types';
+import { paidFromLabel, printSalarySlip, sendSalarySlipWhatsapp, type SalarySlipInfo } from '@/lib/salary-slip';
 import { useToast } from '@/lib/toast';
 
 // Real payroll, built on top of Manage Staff's monthlySalary field plus a
@@ -29,6 +31,66 @@ function shiftMonth(monthKey: string, delta: number) {
   const [year, month] = monthKey.split('-').map(Number);
   const d = new Date(year, month - 1 + delta, 1);
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}`;
+}
+
+// Slip details for one payment, using the staff member's row this month.
+function slipInfo(payment: StaffPayment, rows: PayrollRow[]): SalarySlipInfo {
+  const emp = typeof payment.employeeId === 'object' ? payment.employeeId : null;
+  const id = emp?._id || (typeof payment.employeeId === 'string' ? payment.employeeId : '');
+  const row = rows.find((r) => r.employeeId === id);
+  return {
+    payment,
+    name: emp?.name || row?.name || 'Staff member',
+    phone: emp?.phone || row?.phone || '',
+    designation: emp?.designation || row?.designation || '',
+    monthlySalary: row?.monthlySalary,
+    paidThisMonth: row?.paidThisMonth,
+    remaining: row?.remaining,
+  };
+}
+
+// Print / WhatsApp / delete buttons for one payment row.
+function PaymentActions({ payment, rows, onDeleted }: { payment: StaffPayment; rows: PayrollRow[]; onDeleted?: () => void }) {
+  const { toast, confirm } = useToast();
+  const [sending, setSending] = useState(false);
+  async function sendWhatsapp() {
+    setSending(true);
+    try {
+      await sendSalarySlipWhatsapp(slipInfo(payment, rows));
+      toast.success('Salary slip sent on WhatsApp.');
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not send the slip.');
+    } finally {
+      setSending(false);
+    }
+  }
+  async function remove() {
+    const where = payment.paymentSource ? ` The $${payment.amount.toLocaleString()} goes back to ${paidFromLabel(payment)}.` : '';
+    const ok = await confirm(`Delete this ${payment.type} record?${where}`, { title: 'Delete payment', confirmText: 'Delete', tone: 'danger' });
+    if (!ok) return;
+    try {
+      await shopApi.deletePayment(payment._id);
+      toast.success('Payment deleted.');
+      onDeleted?.();
+    } catch (error: any) {
+      toast.error(error?.response?.data?.message || 'Could not delete the payment.');
+    }
+  }
+  return (
+    <div className="flex items-center justify-end gap-1.5">
+      <button type="button" title="Print slip" onClick={() => { if (!printSalarySlip(slipInfo(payment, rows))) toast.error('Allow pop-ups to print.'); }} className="rounded-xl bg-slate-100 p-2 text-slate-600 hover:bg-slate-200">
+        <Printer size={14} />
+      </button>
+      <button type="button" title="Send slip on WhatsApp" disabled={sending} onClick={() => void sendWhatsapp()} className="rounded-xl bg-emerald-50 p-2 text-emerald-600 hover:bg-emerald-100 disabled:opacity-50">
+        {sending ? <RefreshCcw size={14} className="animate-spin" /> : <MessageCircle size={14} />}
+      </button>
+      {onDeleted ? (
+        <button type="button" title="Delete" onClick={() => void remove()} className="rounded-xl bg-rose-50 p-2 text-rose-500 hover:bg-rose-100">
+          <Trash2 size={14} />
+        </button>
+      ) : null}
+    </div>
+  );
 }
 
 export default function PayrollPage() {
@@ -95,24 +157,32 @@ export default function PayrollPage() {
       </div>
 
       {/* Payroll Summary Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 gap-6 sm:grid-cols-2 xl:grid-cols-4">
         <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Total Monthly Payroll</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Total Monthly Salaries</p>
           <h2 className="text-3xl font-black text-slate-900">${(data?.summary.totalMonthlySalary || 0).toLocaleString()}</h2>
-          <p className="text-slate-400 text-xs font-bold mt-2 italic">Sum of every staff member's monthly salary</p>
+          <p className="text-slate-400 text-xs font-bold mt-2 flex items-center gap-1"><Users size={13} /> {rows.length} staff member{rows.length === 1 ? '' : 's'} - grows as you add staff</p>
         </div>
 
         <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">
-          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Paid So Far This Month</p>
-          <h2 className="text-3xl font-black text-slate-900">${(data?.summary.totalPaidThisMonth || 0).toLocaleString()}</h2>
-          <p className="text-slate-400 text-xs font-bold mt-2 italic">Salary + advances, minus deductions</p>
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Given This Month</p>
+          <h2 className="text-3xl font-black text-emerald-600">${(data?.summary.totalPaidThisMonth || 0).toLocaleString()}</h2>
+          <p className="text-slate-400 text-xs font-bold mt-2">
+            Cash ${(data?.summary.paidCash || 0).toLocaleString()} · Bank ${(data?.summary.paidBank || 0).toLocaleString()}
+          </p>
+        </div>
+
+        <div className="bg-white p-8 rounded-[32px] border border-slate-100 shadow-sm">
+          <p className="text-[10px] font-black uppercase tracking-[0.2em] text-slate-400 mb-2">Fully Paid Staff</p>
+          <h2 className="text-3xl font-black text-slate-900">{data?.summary.settledCount || 0} / {rows.length}</h2>
+          <p className="text-slate-400 text-xs font-bold mt-2 italic">Got their whole salary this month</p>
         </div>
 
         <div className="bg-purple-900 p-8 rounded-[32px] text-white shadow-xl shadow-purple-100">
           <p className="text-[10px] font-black uppercase tracking-[0.2em] text-purple-300 mb-2">Remaining To Pay</p>
           <h2 className="text-3xl font-black">${(data?.summary.totalRemaining || 0).toLocaleString()}</h2>
-          <p className="text-purple-400 text-xs font-bold mt-2 flex items-center gap-1">
-            <AlertCircle size={14} /> Across {rows.length} staff member{rows.length === 1 ? '' : 's'}
+          <p className="text-purple-300 text-xs font-bold mt-2 flex items-center gap-1">
+            <AlertCircle size={14} /> Still owed to {rows.filter((r) => r.remaining > 0).length} staff member{rows.filter((r) => r.remaining > 0).length === 1 ? '' : 's'}
           </p>
         </div>
       </div>
@@ -179,7 +249,7 @@ export default function PayrollPage() {
                           onClick={() => setPayTarget(row)}
                           className="flex items-center gap-2 rounded-full bg-purple-600 px-4 py-2 text-xs font-black text-white hover:bg-purple-700"
                         >
-                          <Calculator size={14} /> Record Payment
+                          <Calculator size={14} /> Pay Salary
                         </button>
                       </div>
                     </td>
@@ -211,13 +281,15 @@ export default function PayrollPage() {
                 <th className="px-8 py-5">Staff Member</th>
                 <th className="px-8 py-5">Type</th>
                 <th className="px-8 py-5">Amount</th>
+                <th className="px-8 py-5">Paid From</th>
                 <th className="px-8 py-5">Note</th>
                 <th className="px-8 py-5">Date</th>
+                <th className="px-8 py-5"></th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-50">
               {history.length === 0 ? (
-                <tr><td colSpan={5} className="px-8 py-8 text-center text-slate-400 font-bold">No payments recorded this month yet.</td></tr>
+                <tr><td colSpan={7} className="px-8 py-8 text-center text-slate-400 font-bold">No payments recorded this month yet.</td></tr>
               ) : (
                 visibleHistory.map((p) => {
                   const emp = typeof p.employeeId === 'object' ? p.employeeId : null;
@@ -228,8 +300,15 @@ export default function PayrollPage() {
                         <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[10px] font-black uppercase text-slate-600">{p.type}</span>
                       </td>
                       <td className="px-8 py-4 text-sm font-black text-slate-900">${p.amount.toLocaleString()}</td>
+                      <td className="px-8 py-4">
+                        <span className={`inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-[10px] font-black ${p.paymentSource === 'bank' ? 'bg-sky-50 text-sky-700' : p.paymentSource === 'cash' ? 'bg-emerald-50 text-emerald-700' : 'bg-slate-100 text-slate-400'}`}>
+                          {p.paymentSource === 'bank' ? <Landmark size={11} /> : p.paymentSource === 'cash' ? <Wallet size={11} /> : null}
+                          {paidFromLabel(p)}
+                        </span>
+                      </td>
                       <td className="px-8 py-4 text-sm text-slate-500">{p.note || '—'}</td>
-                      <td className="px-8 py-4 text-xs font-bold text-slate-400">{new Date(p.date).toLocaleDateString()}</td>
+                      <td className="px-8 py-4 text-xs font-bold text-slate-400">{new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
+                      <td className="px-8 py-4"><PaymentActions payment={p} rows={rows} onDeleted={load} /></td>
                     </tr>
                   );
                 })
@@ -249,6 +328,7 @@ export default function PayrollPage() {
       {historyTarget ? (
         <EmployeeHistoryModal
           row={historyTarget}
+          rows={rows}
           month={month}
           onClose={() => setHistoryTarget(null)}
           onLoggedMeal={() => toast.success('Meal expense logged.')}
@@ -270,21 +350,62 @@ function RecordPaymentModal({ row, onClose, onSaved }: { row: PayrollRow; onClos
   const [amount, setAmount] = useState(row.remaining > 0 ? String(row.remaining) : '');
   const [type, setType] = useState<'salary' | 'advance' | 'bonus' | 'deduction'>('salary');
   const [note, setNote] = useState('');
+  const [source, setSource] = useState<'' | 'cash' | 'bank'>('');
+  const [banks, setBanks] = useState<Bank[]>([]);
+  const [bankId, setBankId] = useState('');
+  const [date, setDate] = useState(() => {
+    const now = new Date();
+    return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+  });
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
+  // After saving: the payment, so its slip can be printed / sent.
+  const [saved, setSaved] = useState<StaffPayment | null>(null);
+  const [sending, setSending] = useState(false);
+  const { toast } = useToast();
+
+  useEffect(() => {
+    void fetchBanks().then((list) => {
+      setBanks(list || []);
+      if (list && list.length === 1) setBankId(list[0].id);
+    }).catch(() => undefined);
+  }, []);
+
+  const selectedBank = banks.find((b) => b.id === bankId) || null;
+  const value = Number(amount) || 0;
+  const remainingAfter = type === 'salary' || type === 'advance' ? row.remaining - value : type === 'deduction' ? row.remaining + value : row.remaining;
 
   const submit = async () => {
-    const value = Number(amount);
     if (!value || value <= 0) {
       setError('Enter a valid amount.');
+      return;
+    }
+    if (!source && type !== 'deduction') {
+      setError('Choose where the money comes from - Cash in Hand or Bank.');
+      return;
+    }
+    if (source === 'bank' && !bankId) {
+      setError('Pick the bank.');
+      return;
+    }
+    if (source === 'bank' && selectedBank && type !== 'deduction' && value > selectedBank.balance) {
+      setError(`${selectedBank.name} only has $${selectedBank.balance.toLocaleString()}.`);
       return;
     }
     setSubmitting(true);
     setError('');
     try {
-      await shopApi.recordPayment({ employeeId: row.employeeId, amount: value, type, note });
+      const payment = await shopApi.recordPayment({
+        employeeId: row.employeeId,
+        amount: value,
+        type,
+        note,
+        date: new Date(`${date}T12:00:00`).toISOString(),
+        paymentSource: source,
+        bankId: source === 'bank' ? bankId : undefined,
+      });
       onSaved();
-      onClose();
+      setSaved(payment);
     } catch (err: any) {
       setError(err?.response?.data?.message || 'Failed to record payment');
     } finally {
@@ -295,12 +416,68 @@ function RecordPaymentModal({ row, onClose, onSaved }: { row: PayrollRow; onClos
   // Universal Popup-Close Hotkey - see useBackspaceToClose's own comment.
   useBackspaceToClose(onClose);
 
+  if (saved) {
+    const info: SalarySlipInfo = {
+      payment: saved,
+      name: row.name,
+      phone: row.phone,
+      designation: row.designation,
+      monthlySalary: row.monthlySalary,
+      paidThisMonth: row.paidThisMonth + (saved.type === 'salary' || saved.type === 'advance' ? saved.amount : saved.type === 'deduction' ? -saved.amount : 0),
+      remaining: remainingAfter,
+    };
+    return (
+      <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
+        <div className="w-full max-w-md rounded-[28px] bg-white p-6 text-center shadow-2xl">
+          <CheckCircle2 size={48} className="mx-auto text-emerald-500" />
+          <h2 className="mt-3 text-xl font-black text-slate-900">${saved.amount.toLocaleString()} {saved.type} recorded</h2>
+          <p className="mt-1 text-sm font-bold text-slate-500">
+            {row.name} · {saved.type === 'deduction' ? 'returned to' : 'paid from'} {paidFromLabel(saved)}
+          </p>
+          <p className="mt-1 text-xs font-bold text-slate-400">
+            {remainingAfter > 0 ? `$${remainingAfter.toLocaleString()} still left this month` : remainingAfter < 0 ? `Overpaid by $${Math.abs(remainingAfter).toLocaleString()}` : 'Salary fully paid this month'}
+          </p>
+          <div className="mt-6 grid grid-cols-2 gap-3">
+            <button
+              type="button"
+              onClick={() => { if (!printSalarySlip(info)) toast.error('Allow pop-ups to print.'); }}
+              className="flex items-center justify-center gap-2 rounded-xl bg-slate-900 py-3 text-sm font-black text-white hover:bg-slate-800"
+            >
+              <Printer size={16} /> Print Slip
+            </button>
+            <button
+              type="button"
+              disabled={sending}
+              onClick={async () => {
+                setSending(true);
+                try {
+                  await sendSalarySlipWhatsapp(info);
+                  toast.success('Salary slip sent on WhatsApp.');
+                } catch (err) {
+                  toast.error(err instanceof Error ? err.message : 'Could not send the slip.');
+                } finally {
+                  setSending(false);
+                }
+              }}
+              className="flex items-center justify-center gap-2 rounded-xl bg-emerald-500 py-3 text-sm font-black text-white hover:bg-emerald-600 disabled:opacity-60"
+            >
+              {sending ? <RefreshCcw size={16} className="animate-spin" /> : <MessageCircle size={16} />} WhatsApp
+            </button>
+          </div>
+          <button type="button" onClick={onClose} className="mt-3 w-full rounded-xl bg-slate-100 py-3 text-sm font-black text-slate-600 hover:bg-slate-200">
+            Done
+          </button>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4">
-      <div className="w-full max-w-md rounded-[28px] bg-white p-6 shadow-2xl">
+      <div className="max-h-[92vh] w-full max-w-md overflow-y-auto rounded-[28px] bg-white p-6 shadow-2xl">
         <div className="mb-4 flex items-center justify-between">
           <div>
-            <h2 className="text-lg font-black text-slate-900">Record Payment</h2>
+            <h2 className="text-lg font-black text-slate-900">Pay Salary</h2>
             <p className="text-xs font-bold text-slate-400">{row.name} · ${row.remaining.toLocaleString()} remaining this month</p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full p-2 text-slate-400 hover:bg-slate-100"><X size={18} /></button>
@@ -336,6 +513,67 @@ function RecordPaymentModal({ row, onClose, onSaved }: { row: PayrollRow; onClos
             </div>
           </div>
           <div>
+            <label className="mb-1 block text-xs font-bold text-slate-500">
+              {type === 'deduction' ? 'Money returned to (optional)' : 'Pay from'}
+            </label>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                type="button"
+                onClick={() => setSource(source === 'cash' && type === 'deduction' ? '' : 'cash')}
+                className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-xs font-black transition ${source === 'cash' ? 'border-emerald-500 bg-emerald-50 text-emerald-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+              >
+                <Wallet size={16} /> Cash in Hand
+              </button>
+              <button
+                type="button"
+                onClick={() => setSource(source === 'bank' && type === 'deduction' ? '' : 'bank')}
+                className={`flex items-center justify-center gap-2 rounded-xl border px-3 py-3 text-xs font-black transition ${source === 'bank' ? 'border-sky-500 bg-sky-50 text-sky-700' : 'border-slate-200 text-slate-500 hover:bg-slate-50'}`}
+              >
+                <Landmark size={16} /> Bank
+              </button>
+            </div>
+            {source === 'bank' ? (
+              banks.length === 0 ? (
+                <p className="mt-2 text-xs font-bold text-amber-600">No bank added yet - add one on the Bank page first.</p>
+              ) : (
+                <select
+                  value={bankId}
+                  onChange={(e) => setBankId(e.target.value)}
+                  className="mt-2 w-full rounded-xl border border-slate-200 bg-white px-3 py-2.5 text-sm font-bold outline-none focus:border-sky-400"
+                >
+                  <option value="">Select a bank</option>
+                  {banks.map((b) => (
+                    <option key={b.id} value={b.id}>{b.name} - ${b.balance.toLocaleString()}</option>
+                  ))}
+                </select>
+              )
+            ) : null}
+            <p className="mt-1.5 text-[11px] font-semibold text-slate-400">
+              {source === 'cash'
+                ? type === 'deduction' ? 'Added back to Cash in Hand.' : 'Taken out of Cash in Hand.'
+                : source === 'bank'
+                  ? type === 'deduction' ? 'Deposited back into this bank.' : 'Withdrawn from this bank.'
+                  : type === 'deduction' ? 'Leave empty if no money changes hands.' : 'The amount is minused from where you pick.'}
+            </p>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="mb-1 block text-xs font-bold text-slate-500">Date</label>
+              <input
+                type="date"
+                value={date}
+                onChange={(e) => setDate(e.target.value)}
+                className="w-full rounded-xl border border-slate-200 px-3 py-2.5 text-sm font-bold outline-none focus:border-purple-400"
+              />
+            </div>
+            <div className="rounded-xl bg-slate-50 px-3 py-2">
+              <p className="text-[10px] font-black uppercase tracking-widest text-slate-400">Left after this</p>
+              <p className={`text-sm font-black ${remainingAfter < 0 ? 'text-rose-600' : 'text-slate-900'}`}>
+                {remainingAfter < 0 ? `-$${Math.abs(remainingAfter).toLocaleString()}` : `$${remainingAfter.toLocaleString()}`}
+              </p>
+            </div>
+          </div>
+          <div>
             <label className="mb-1 block text-xs font-bold text-slate-500">Note (optional)</label>
             <input
               type="text"
@@ -355,7 +593,7 @@ function RecordPaymentModal({ row, onClose, onSaved }: { row: PayrollRow; onClos
           onClick={submit}
           className="mt-5 w-full rounded-xl bg-purple-600 py-3 text-sm font-black text-white transition hover:bg-purple-700 disabled:cursor-not-allowed disabled:opacity-60"
         >
-          {submitting ? 'Saving...' : 'Save Payment'}
+          {submitting ? 'Saving...' : type === 'deduction' ? 'Save Deduction' : `Pay $${value ? value.toLocaleString() : 0}`}
         </button>
       </div>
     </div>
@@ -381,11 +619,13 @@ function isDateInMonth(dateStr: string, monthKey: string) {
 
 function EmployeeHistoryModal({
   row,
+  rows,
   month,
   onClose,
   onLoggedMeal,
 }: {
   row: PayrollRow;
+  rows: PayrollRow[];
   month: string;
   onClose: () => void;
   onLoggedMeal: () => void;
@@ -396,11 +636,13 @@ function EmployeeHistoryModal({
   const [mealAmount, setMealAmount] = useState('');
   const [mealNote, setMealNote] = useState('');
   const [savingMeal, setSavingMeal] = useState(false);
+  // Every payment ever made to this person, not just this month.
+  const [allTime, setAllTime] = useState(false);
 
   const load = () => {
     setLoading(true);
     Promise.all([
-      shopApi.listPayments({ employeeId: row.employeeId, month }),
+      shopApi.listPayments(allTime ? { employeeId: row.employeeId } : { employeeId: row.employeeId, month }),
       fetchExpenses({ employeeId: row.employeeId }),
     ])
       .then(([paymentList, expenseList]) => {
@@ -410,7 +652,11 @@ function EmployeeHistoryModal({
       .finally(() => setLoading(false));
   };
 
-  useEffect(load, [row.employeeId, month]);
+  useEffect(load, [row.employeeId, month, allTime]);
+  const historyTotal = useMemo(
+    () => payments.reduce((sum, p) => sum + (p.type === 'deduction' ? -p.amount : p.type === 'bonus' ? 0 : p.amount), 0),
+    [payments],
+  );
 
   const mealsTotal = useMemo(() => meals.reduce((sum, m) => sum + m.amount, 0), [meals]);
 
@@ -468,21 +714,31 @@ function EmployeeHistoryModal({
           </div>
         </div>
 
-        <h3 className="mt-6 mb-2 text-xs font-black uppercase tracking-widest text-slate-400">Payment History</h3>
-        <div className="max-h-40 overflow-y-auto rounded-2xl border border-slate-100">
+        <div className="mt-6 mb-2 flex flex-wrap items-center justify-between gap-2">
+          <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
+            Payment History {allTime ? '- all time' : `- ${monthLabel(month)}`} · ${historyTotal.toLocaleString()} given
+          </h3>
+          <div className="flex gap-1 rounded-full bg-slate-100 p-1">
+            <button type="button" onClick={() => setAllTime(false)} className={`rounded-full px-3 py-1 text-[11px] font-black ${!allTime ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>This month</button>
+            <button type="button" onClick={() => setAllTime(true)} className={`rounded-full px-3 py-1 text-[11px] font-black ${allTime ? 'bg-white text-slate-900 shadow-sm' : 'text-slate-500'}`}>All time</button>
+          </div>
+        </div>
+        <div className="max-h-64 overflow-y-auto rounded-2xl border border-slate-100">
           {loading ? (
             <p className="p-4 text-sm font-bold text-slate-400">Loading...</p>
           ) : payments.length === 0 ? (
-            <p className="p-4 text-sm font-bold text-slate-400">No payments recorded this month.</p>
+            <p className="p-4 text-sm font-bold text-slate-400">{allTime ? 'No payments recorded yet.' : 'No payments recorded this month.'}</p>
           ) : (
             <table className="w-full text-left text-xs">
               <tbody className="divide-y divide-slate-50">
                 {payments.map((p) => (
                   <tr key={p._id}>
-                    <td className="px-4 py-2.5 font-bold text-slate-500">{new Date(p.date).toLocaleDateString()}</td>
+                    <td className="px-4 py-2.5 font-bold text-slate-500">{new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                     <td className="px-4 py-2.5"><span className="rounded-full bg-slate-100 px-2 py-1 font-black uppercase text-slate-600">{p.type}</span></td>
                     <td className="px-4 py-2.5 font-black text-slate-900">${p.amount.toLocaleString()}</td>
+                    <td className="px-4 py-2.5 font-bold text-slate-500">{paidFromLabel(p)}</td>
                     <td className="px-4 py-2.5 text-slate-500">{p.note || '—'}</td>
+                    <td className="px-4 py-2.5"><PaymentActions payment={p} rows={rows} /></td>
                   </tr>
                 ))}
               </tbody>

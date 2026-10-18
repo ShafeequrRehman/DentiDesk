@@ -126,7 +126,10 @@ export default function DashboardShell() {
   // same sequential mapping like every other hotkeyed page.
   useEffect(() => {
     function handleGlobalShortcut(event: KeyboardEvent) {
-      const match = navItems.find((item) => item.hotkey === event.key);
+      // Chrome autofill fires a keydown with no key - without this guard it
+      // matched the pages that have no hotkey (Dashboard) and jumped there.
+      if (!event.key || !/^F\d{1,2}$/.test(event.key)) return;
+      const match = navItems.find((item) => !!item.hotkey && item.hotkey === event.key);
       if (!match) return;
       event.preventDefault();
       navigate(match.href);

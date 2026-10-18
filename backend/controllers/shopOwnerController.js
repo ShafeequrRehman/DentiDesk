@@ -4,6 +4,9 @@ const Role = require("../models/Role");
 const Shop = require("../models/Shop");
 const Plan = require("../models/Plan");
 const StaffPayment = require("../models/StaffPayment");
+const Bank = require("../models/Bank");
+const { recordCashMovement } = require("./cashController");
+const { recordCustomerBankMovement } = require("./bankController");
 const { PERMISSIONS, PERMISSION_KEYS, DEFAULT_ROLE_PRESETS } = require("../config/permissions");
 
 function safeUser(user) {
@@ -221,7 +224,13 @@ exports.listPayroll = async (req, res) => {
     }).lean();
 
     const totalsByEmployee = new Map();
+    let paidCash = 0;
+    let paidBank = 0;
     for (const payment of payments) {
+      if (payment.type !== "deduction") {
+        if (payment.paymentSource === "cash") paidCash += payment.amount;
+        else if (payment.paymentSource === "bank") paidBank += payment.amount;
+      }
       const key = String(payment.employeeId);
       const bucket = totalsByEmployee.get(key) || { paid: 0, bonus: 0, deduction: 0 };
       if (payment.type === "deduction") bucket.deduction += payment.amount;
@@ -238,6 +247,7 @@ exports.listPayroll = async (req, res) => {
         employeeId: String(employee._id),
         name: employee.name,
         username: employee.username,
+        phone: employee.phone || "",
         designation: employee.designation || "",
         isActive: employee.isActive,
         monthlySalary: employee.monthlySalary || 0,
@@ -256,6 +266,10 @@ exports.listPayroll = async (req, res) => {
       },
       { totalMonthlySalary: 0, totalPaidThisMonth: 0, totalRemaining: 0 }
     );
+    summary.paidCash = paidCash;
+    summary.paidBank = paidBank;
+    summary.staffCount = rows.length;
+    summary.settledCount = rows.filter((row) => row.monthlySalary > 0 && row.remaining <= 0).length;
 
     res.json({ month: monthKey, rows, summary });
   } catch (error) {
@@ -272,7 +286,7 @@ exports.listPayments = async (req, res) => {
       const { start, end } = monthRange(req.query.month);
       query.date = { $gte: start, $lt: end };
     }
-    const payments = await StaffPayment.find(query).populate("employeeId", "name username").sort({ date: -1 }).lean();
+    const payments = await StaffPayment.find(query).populate("employeeId", "name username phone designation").sort({ date: -1 }).lean();
     res.json(payments);
   } catch (error) {
     res.status(500).json({ message: "Failed to load payroll payments", detail: error.message });
@@ -282,24 +296,56 @@ exports.listPayments = async (req, res) => {
 // POST /api/shop/payroll/payments  body: { employeeId, amount, type, note, date }
 exports.recordPayment = async (req, res) => {
   try {
-    const { employeeId, amount, type, note, date } = req.body;
+    const { employeeId, amount, type, note, date, paymentSource, bankId } = req.body;
     if (!employeeId || !amount || Number(amount) <= 0) {
       return res.status(400).json({ message: "employeeId and a positive amount are required", reason: "validation_error" });
     }
     const employee = await User.findOne({ _id: employeeId, shopId: req.user.shopId, role: "employee" });
     if (!employee) return res.status(404).json({ message: "Employee not found" });
 
+    const value = Number(amount);
+    const kind = ["salary", "advance", "bonus", "deduction"].includes(type) ? type : "salary";
+    // Salary / advance / bonus = money going OUT to the staff member, so
+    // it must come from Cash in Hand or a bank. A deduction (money the
+    // staff member gives back) can optionally go back IN to one.
+    const source = paymentSource === "bank" ? "bank" : paymentSource === "cash" ? "cash" : "";
+    if (!source && kind !== "deduction") {
+      return res.status(400).json({ message: "Choose where the money comes from - Cash in Hand or Bank.", reason: "validation_error" });
+    }
+    let bank = null;
+    if (source === "bank") {
+      bank = bankId ? await Bank.findOne({ _id: bankId, shopId: req.user.shopId }) : null;
+      if (!bank) return res.status(400).json({ message: "Pick the bank the salary is paid from.", reason: "validation_error" });
+      if (kind !== "deduction" && value > bank.balance) {
+        return res.status(400).json({ message: `${bank.name} only has $${bank.balance.toLocaleString()} - not enough for $${value.toLocaleString()}.`, reason: "validation_error" });
+      }
+    }
+
     const payment = await StaffPayment.create({
       shopId: req.user.shopId,
       employeeId,
-      amount: Number(amount),
-      type: ["salary", "advance", "bonus", "deduction"].includes(type) ? type : "salary",
+      amount: value,
+      type: kind,
       note: note || "",
       date: date ? new Date(date) : new Date(),
       recordedBy: req.user.id || req.user._id,
+      paymentSource: source,
+      bankId: bank ? bank._id : null,
+      bankName: bank ? bank.name : "",
     });
 
-    res.status(201).json(await payment.populate("employeeId", "name username"));
+    // Move the money: out of Cash in Hand / the bank (in, for a deduction).
+    const recorder = await User.findById(req.user.id || req.user._id).select("name username").lean();
+    const createdBy = recorder?.name || recorder?.username || "";
+    const label = `${kind === "deduction" ? "Salary deduction from" : `${kind[0].toUpperCase()}${kind.slice(1)} paid to`} ${employee.name}${note ? ` - ${note}` : ""}`;
+    const moneyIn = kind === "deduction";
+    if (source === "cash") {
+      await recordCashMovement({ shopId: req.user.shopId, type: "salary", direction: moneyIn ? "in" : "out", amount: value, note: label, createdBy });
+    } else if (source === "bank") {
+      await recordCustomerBankMovement({ bankId: bank._id, shopId: req.user.shopId, type: moneyIn ? "deposit" : "withdrawal", amount: value, note: label, customerName: employee.name, customerPhone: employee.phone || "", createdBy });
+    }
+
+    res.status(201).json(await payment.populate("employeeId", "name username phone designation"));
   } catch (error) {
     res.status(500).json({ message: "Failed to record payment", detail: error.message });
   }
@@ -308,8 +354,19 @@ exports.recordPayment = async (req, res) => {
 // DELETE /api/shop/payroll/payments/:id
 exports.deletePayment = async (req, res) => {
   try {
-    const result = await StaffPayment.deleteOne({ _id: req.params.id, shopId: req.user.shopId });
-    if (result.deletedCount === 0) return res.status(404).json({ message: "Payment record not found" });
+    const payment = await StaffPayment.findOne({ _id: req.params.id, shopId: req.user.shopId }).populate("employeeId", "name");
+    if (!payment) return res.status(404).json({ message: "Payment record not found" });
+    await StaffPayment.deleteOne({ _id: payment._id });
+    // Put the money back where it came from (or take it back out, for a
+    // deduction), so Cash in Hand / the bank stay right.
+    const name = payment.employeeId?.name || "staff member";
+    const label = `Reversed ${payment.type} for ${name} (deleted from Payroll)`;
+    const moneyBack = payment.type !== "deduction";
+    if (payment.paymentSource === "cash") {
+      await recordCashMovement({ shopId: req.user.shopId, type: "salary", direction: moneyBack ? "in" : "out", amount: payment.amount, note: label });
+    } else if (payment.paymentSource === "bank" && payment.bankId) {
+      await recordCustomerBankMovement({ bankId: payment.bankId, shopId: req.user.shopId, type: moneyBack ? "deposit" : "withdrawal", amount: payment.amount, note: label, customerName: name });
+    }
     res.json({ message: "Payment record removed" });
   } catch (error) {
     res.status(500).json({ message: "Failed to delete payment", detail: error.message });
