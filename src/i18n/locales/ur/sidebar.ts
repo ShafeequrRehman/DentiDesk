@@ -4,6 +4,7 @@ export const sidebar = {
   sales: "اپائنٹمنٹس",
   doctors: "ڈاکٹرز اور سروسز",
   availability: "ڈاکٹر کی دستیابی",
+  "dr-payments": "ڈاکٹر ادائیگیاں",
   accounting: "اکاؤنٹنگ",
   purchase: "خریداری",
   "ingredient-stock": "میڈیسن اسٹاک",

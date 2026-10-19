@@ -436,7 +436,8 @@ orderSchema.methods.logOrderPayment = function logOrderPayment(amount, meta = {}
   this.$locals.loggedPaid = Number(this.$locals.loggedPaid || 0) + value;
 };
 
-orderSchema.pre("save", function logUnexplainedPaidChange(next) {
+// Mongoose 9: document middleware has no next() - just return.
+orderSchema.pre("save", function logUnexplainedPaidChange() {
   const orig = this.isNew ? 0 : Number(this.$locals.origPaid ?? this.paidAmount ?? 0);
   const now = Number(this.paidAmount || 0);
   const unexplained = Math.round((now - orig - Number(this.$locals.loggedPaid || 0)) * 100) / 100;
@@ -452,7 +453,6 @@ orderSchema.pre("save", function logUnexplainedPaidChange(next) {
   }
   this.$locals.origPaid = now;
   this.$locals.loggedPaid = 0;
-  next();
 });
 
 module.exports = mongoose.model("Order", orderSchema);
