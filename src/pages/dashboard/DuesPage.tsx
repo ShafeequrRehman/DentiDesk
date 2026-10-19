@@ -271,7 +271,7 @@ export default function CustomerDuesPage() {
         const freshCustomer = fresh?.find((c) => c.phone === phone);
         const newestEntry = newestDuesEntry(freshCustomer?.duesHistory);
         if (freshCustomer && newestEntry) {
-          writeDuesEntryReceiptToWindow(printWindow, freshCustomer.name, newestEntry, freshCustomer.totalDue);
+          writeDuesEntryReceiptToWindow(printWindow, freshCustomer.name, newestEntry, typeof freshCustomer.netBalance === 'number' ? freshCustomer.netBalance : freshCustomer.totalDue);
         } else {
           printWindow.close();
         }
@@ -294,7 +294,7 @@ export default function CustomerDuesPage() {
           if (printWindow && !printWindow.closed) {
             const newestEntry = newestDuesEntry(patched.duesHistory);
             if (newestEntry) {
-              writeDuesEntryReceiptToWindow(printWindow, patched.name, newestEntry, patched.totalDue);
+              writeDuesEntryReceiptToWindow(printWindow, patched.name, newestEntry, typeof patched.netBalance === 'number' ? patched.netBalance : patched.totalDue);
             } else {
               printWindow.close();
             }
@@ -335,7 +335,7 @@ export default function CustomerDuesPage() {
         const freshCustomer = fresh?.find((c) => c.phone === phone);
         const newestEntry = newestDuesEntry(freshCustomer?.duesHistory);
         if (freshCustomer && newestEntry) {
-          writeDuesEntryReceiptToWindow(printWindow, freshCustomer.name, newestEntry, freshCustomer.totalDue);
+          writeDuesEntryReceiptToWindow(printWindow, freshCustomer.name, newestEntry, typeof freshCustomer.netBalance === 'number' ? freshCustomer.netBalance : freshCustomer.totalDue);
         } else {
           printWindow.close();
         }
@@ -356,7 +356,7 @@ export default function CustomerDuesPage() {
           if (printWindow && !printWindow.closed) {
             const newestEntry = newestDuesEntry(patched.duesHistory);
             if (newestEntry) {
-              writeDuesEntryReceiptToWindow(printWindow, patched.name, newestEntry, patched.totalDue);
+              writeDuesEntryReceiptToWindow(printWindow, patched.name, newestEntry, typeof patched.netBalance === 'number' ? patched.netBalance : patched.totalDue);
             } else {
               printWindow.close();
             }
