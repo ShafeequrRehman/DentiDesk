@@ -379,6 +379,9 @@ export interface LedgerCustomer {
   // full computation and worked examples.
   totalPurchaseBalance: number;
   netBalance: number;
+  // Due per Dr / Service (all dates), and advance kept for one.
+  duesByProvider?: Array<{ name: string; due: number }>;
+  advanceFor?: Array<{ name: string; amount: number }>;
   lastOrderAt: string | null;
   orders: LedgerOrder[];
   // Period-scoped (same convention as `orders` above) - this contact's

@@ -190,7 +190,7 @@ exports.getCustomerLedger = async (req, res) => {
       // to hit the frontend's request timeout.
       Order.find(
         { ...scope, "customer.phone": { $exists: true, $ne: "" } },
-        "customer.phone dailyOrderNumber createdAt orderType status paymentMethod total paidAmount remainingAmount billTid billName cashRecipientName"
+        "customer.phone dailyOrderNumber createdAt orderType status paymentMethod total paidAmount remainingAmount billTid billName cashRecipientName doctorName items.name items.price items.quantity"
       )
         .sort({ createdAt: -1 })
         .lean(),
@@ -249,6 +249,20 @@ exports.getCustomerLedger = async (req, res) => {
         return sum + remaining;
       }, 0);
       const previousDues = Number(customer.previousDues || 0);
+
+      // What's due per Dr / Service (all dates) - the Dues page lets the
+      // clinic receive a payment for one of them.
+      const dueByProvider = new Map();
+      for (const order of billable) {
+        const remaining = typeof order.remainingAmount === "number"
+          ? order.remainingAmount
+          : Math.max((order.total || 0) - (order.paidAmount || 0), 0);
+        if (!(remaining > 0)) continue;
+        const name = order.doctorName || order.items?.[0]?.name || "";
+        if (!name) continue;
+        dueByProvider.set(name, (dueByProvider.get(name) || 0) + remaining);
+      }
+      const duesByProvider = [...dueByProvider.entries()].map(([name, due]) => ({ name, due: Math.round(due * 100) / 100 }));
 
       // Everything else below (orderCount, totalBilled, totalPaid,
       // lastOrderAt, the `orders` list itself) IS scoped to the picked
@@ -312,6 +326,8 @@ exports.getCustomerLedger = async (req, res) => {
         totalDue,
         totalPurchaseBalance,
         netBalance,
+        duesByProvider,
+        advanceFor: customer.advanceFor || [],
         lastOrderAt: periodOrders[0]?.createdAt || null,
         // Manual add/settle entries (with whatever note the cashier typed)
         // - newest first. Merged client-side (DuesPage.tsx's History
@@ -593,9 +609,14 @@ async function applySettleCustomerDues(scope, phone, body, createdBy) {
   // own record as a due recovery), and anything left is kept as advance
   // (for one Dr / Service when picked, else general).
   const sign = await currencySignFor(scope.shopId);
+  // Received FOR one Dr / Service: goes only to that one's due appointments
+  // (oldest first) and anything extra is kept as advance for it. With no
+  // pick: older manual dues, then every unpaid appointment oldest first.
+  const target = String(body.advanceFor || "").trim();
+  const matchesTarget = (order) => !target || order.doctorName === target || (order.items || []).some((item) => item.name === target);
   let left = amount;
   let previousDues = Number(customer.previousDues || 0);
-  if (previousDues > 0) {
+  if (previousDues > 0 && !target) {
     const use = Math.min(previousDues, left);
     previousDues -= use;
     left -= use;
@@ -608,7 +629,7 @@ async function applySettleCustomerDues(scope, phone, body, createdBy) {
       const due = typeof order.remainingAmount === "number"
         ? order.remainingAmount
         : Math.max((order.total || 0) - (order.paidAmount || 0), 0);
-      if (!(due > 0)) continue;
+      if (!(due > 0) || !matchesTarget(order)) continue;
       const use = Math.min(due, left);
       order.paidAmount = Number(order.paidAmount || 0) + use;
       order.remainingAmount = Math.max(due - use, 0);
@@ -627,7 +648,6 @@ async function applySettleCustomerDues(scope, phone, body, createdBy) {
   }
   if (left > 0) {
     previousDues -= left;
-    const target = String(body.advanceFor || "").trim();
     if (target) {
       const list = customer.advanceFor || [];
       const existing = list.find((e) => e.name === target);

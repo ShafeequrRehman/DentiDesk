@@ -1467,14 +1467,28 @@ function CustomerCard({ customer, banks, providerNames = [], onAddManual, onSett
               value={advanceFor}
               onChange={(e) => setAdvanceFor(e.target.value)}
               className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500"
-              title="When more is received than is due, the extra is kept as advance"
+              title="Who this payment is for"
             >
-              <option value="">Extra as advance: General (any Dr / Service)</option>
-              {providerNames.map((name) => (
-                <option key={name} value={name}>Extra as advance for: {name}</option>
+              <option value="">Received for: Any (oldest due first)</option>
+              {(customer.duesByProvider || []).map((d) => (
+                <option key={`due-${d.name}`} value={d.name}>Received for: {d.name} - {cs()}{d.due.toLocaleString()} due</option>
               ))}
+              {providerNames
+                .filter((name) => !(customer.duesByProvider || []).some((d) => d.name === name))
+                .map((name) => (
+                  <option key={name} value={name}>Advance for: {name}</option>
+                ))}
             </select>
-            <p className="mt-1 text-[10px] font-semibold text-slate-400">"- Received" clears old dues first (each Dr / Service gets its share); anything extra is kept as advance.</p>
+            <p className="mt-1 text-[10px] font-semibold text-slate-400">
+              {advanceFor
+                ? `"- Received" goes only to ${advanceFor}'s due appointments (oldest first); anything extra is kept as advance for ${advanceFor}.`
+                : '"- Received" clears old dues first, oldest first (each Dr / Service gets its share); anything extra is kept as general advance.'}
+            </p>
+            {(customer.advanceFor || []).length > 0 ? (
+              <p className="mt-1 text-[10px] font-bold text-violet-600">
+                Advance kept: {(customer.advanceFor || []).map((a) => `${a.name} ${cs()}${a.amount.toLocaleString()}`).join(' · ')}
+              </p>
+            ) : null}
           </div>
         ) : null}
 
