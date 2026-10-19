@@ -92,7 +92,7 @@ exports.getIngredient = async (req, res) => {
 
 exports.createIngredient = async (req, res) => {
   try {
-    const { name, unit, categoryId, currentStock, lowStockThreshold, averageCost } = req.body || {};
+    const { name, unit, categoryId, currentStock, lowStockThreshold, averageCost, expiryDate, expiryAlertDays } = req.body || {};
     if (!name || !String(name).trim()) {
       return res.status(400).json({ error: "Ingredient name is required." });
     }
@@ -108,6 +108,8 @@ exports.createIngredient = async (req, res) => {
       // Cost per unit for stock added without a purchase, so the
       // Dashboard's Stock Value (stock x cost) counts it too.
       averageCost: Math.max(Number(averageCost) || 0, 0),
+      expiryDate: /^\d{4}-\d{2}-\d{2}$/.test(String(expiryDate || "")) ? String(expiryDate) : "",
+      expiryAlertDays: Math.max(Math.floor(Number(expiryAlertDays) || 0), 0),
       shopId: req.user.shopId,
     });
     res.status(201).json(ingredient);
@@ -138,6 +140,12 @@ exports.updateIngredient = async (req, res) => {
   }
   if (updates.averageCost !== undefined) {
     updates.averageCost = Math.max(Number(updates.averageCost) || 0, 0);
+  }
+  if (updates.expiryDate !== undefined) {
+    updates.expiryDate = /^\d{4}-\d{2}-\d{2}$/.test(String(updates.expiryDate || "")) ? String(updates.expiryDate) : "";
+  }
+  if (updates.expiryAlertDays !== undefined) {
+    updates.expiryAlertDays = Math.max(Math.floor(Number(updates.expiryAlertDays) || 0), 0);
   }
   // Bug fix (recipe/ingredient unit drift - see stockService.js's
   // deductStockForItems for the full story): a Recipe line's unit is only

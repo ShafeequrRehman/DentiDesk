@@ -1,6 +1,6 @@
 import { cs, xlsxMoneyFormat } from '@/lib/currency';
 import { useEffect, useMemo, useRef, useState } from "react";
-import { Boxes, Plus, Edit, Trash2, Search, PackagePlus, ShoppingCart, AlertTriangle, X, Building2, Download, FileSpreadsheet, MessageCircle, History, XCircle, ArrowDownCircle, ArrowUpCircle } from "lucide-react";
+import { Boxes, Plus, Edit, Trash2, Search, PackagePlus, ShoppingCart, AlertTriangle, X, Building2, Download, FileSpreadsheet, MessageCircle, History, XCircle, ArrowDownCircle, ArrowUpCircle, Clock3 } from "lucide-react";
 import {
   fetchIngredients,
   createIngredient,
@@ -30,6 +30,24 @@ import { estimateOfflineIngredients } from "@/lib/offline-ingredient-helpers";
 import { useLanguage } from "@/i18n";
 import { useBackspaceToClose } from "@/lib/keyboard-shortcuts";
 import { writePurchaseReceiptToWindow } from "@/lib/order-receipt-print";
+
+// Expiry: days left until the expiry date (negative = expired), and
+// whether it's inside the alert window set for this medicine.
+function expiryStatus(ingredient: { expiryDate?: string; expiryAlertDays?: number }) {
+  if (!ingredient.expiryDate || !/^\d{4}-\d{2}-\d{2}$/.test(ingredient.expiryDate)) return null;
+  const [y, m, d] = ingredient.expiryDate.split('-').map(Number);
+  const now = new Date();
+  const today = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const daysLeft = Math.round((new Date(y, m - 1, d).getTime() - today.getTime()) / 86400000);
+  const alertDays = Number(ingredient.expiryAlertDays || 0);
+  const dateText = new Date(y, m - 1, d).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+  const label = daysLeft < 0
+    ? `Expired ${Math.abs(daysLeft)} day${Math.abs(daysLeft) === 1 ? '' : 's'} ago`
+    : daysLeft === 0
+      ? 'Expires today'
+      : `${daysLeft} day${daysLeft === 1 ? '' : 's'} left · Exp ${dateText}`;
+  return { daysLeft, alert: daysLeft < 0 || (alertDays > 0 && daysLeft <= alertDays), label };
+}
 
 function formatMoney(amount: number) {
   return `${cs()}${Math.round(amount).toLocaleString()}`;
@@ -168,6 +186,9 @@ export function IngredientStockSection({
   // Cost per unit ($) - Stock Value = stock x cost, so it drops exactly
   // as stock is used.
   const [unitCost, setUnitCost] = useState("");
+  // Expiry date and how many days before it to warn.
+  const [expiryDate, setExpiryDate] = useState("");
+  const [expiryAlertDays, setExpiryAlertDays] = useState("");
 
   const [searchQuery, setSearchQuery] = useState("");
   // Directory list paginates like Customer Dues/Record/POS - 30 shown,
@@ -385,6 +406,8 @@ export function IngredientStockSection({
     setCurrentStock("");
     setLowStockThreshold("");
     setUnitCost("");
+    setExpiryDate("");
+    setExpiryAlertDays("");
     setIsProductDropdownOpen(false);
   }
 
@@ -478,6 +501,8 @@ export function IngredientStockSection({
         lowStockThreshold: lowStockThreshold ? Number(lowStockThreshold) : 0,
         // Only sent when filled in - an empty box keeps the cost from purchases.
         ...(unitCost.trim() !== "" ? { averageCost: Math.max(Number(unitCost) || 0, 0) } : {}),
+        expiryDate,
+        expiryAlertDays: expiryAlertDays ? Math.max(Math.floor(Number(expiryAlertDays)) || 0, 0) : 0,
       };
       if (editingId) {
         const updated = await updateIngredient(editingId, payload);
@@ -508,6 +533,8 @@ export function IngredientStockSection({
     setCurrentStock(ingredient.currentStock ? String(ingredient.currentStock) : "");
     setLowStockThreshold(ingredient.lowStockThreshold ? String(ingredient.lowStockThreshold) : "");
     setUnitCost(ingredient.averageCost ? String(ingredient.averageCost) : "");
+    setExpiryDate(ingredient.expiryDate || "");
+    setExpiryAlertDays(ingredient.expiryAlertDays ? String(ingredient.expiryAlertDays) : "");
     window.scrollTo({ top: 0, behavior: "smooth" });
   }
 
@@ -1221,7 +1248,7 @@ export function IngredientStockSection({
           </div>
         </div>
 
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-5">
+        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-5">
           <div className="space-y-2">
             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">{t('ingredientStock.form.unitLabel')}</label>
             <select
@@ -1269,6 +1296,32 @@ export function IngredientStockSection({
               {Number(unitCost) > 0 && Number(currentStock) > 0
                 ? `Stock value: ${formatMoney(Number(unitCost) * Number(currentStock))}`
                 : 'Counts in Dashboard Stock Value. Purchases update it automatically.'}
+            </p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Expiry Date</label>
+            <input
+              type="date"
+              value={expiryDate}
+              onChange={(e) => setExpiryDate(e.target.value)}
+              className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+            />
+            <p className="text-[10px] font-bold text-slate-400 ml-1">Optional - leave empty if it doesn't expire.</p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Expiry Alert (days before)</label>
+            <input
+              type="number"
+              min={0}
+              value={expiryAlertDays}
+              onChange={(e) => setExpiryAlertDays(e.target.value)}
+              placeholder="e.g. 30"
+              className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-emerald-500 transition-all"
+            />
+            <p className="text-[10px] font-bold text-slate-400 ml-1">
+              {expiryDate && Number(expiryAlertDays) > 0
+                ? `Turns red from ${new Date(new Date(`${expiryDate}T00:00:00`).getTime() - Number(expiryAlertDays) * 86400000).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}, with a days-left counter.`
+                : 'The medicine turns red this many days before it expires.'}
             </p>
           </div>
         </div>
@@ -1501,6 +1554,7 @@ export function IngredientStockSection({
         <div className="flex flex-col gap-3">
           {visibleIngredients.map((ingredient) => {
             const isLow = ingredient.lowStockThreshold > 0 && ingredient.currentStock < ingredient.lowStockThreshold;
+            const expiry = expiryStatus(ingredient);
             const isRestocking = restockingId === ingredient.id;
             const isPurchasing = purchasingId === ingredient.id;
             return (
@@ -1519,8 +1573,13 @@ export function IngredientStockSection({
                     Unchanged from sm (640px) up - still one row. */}
                 <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
                   <div className="min-w-0">
-                    <div className="text-[15px] font-black text-slate-900 flex items-center gap-2 flex-wrap">
+                    <div className={`text-[15px] font-black flex items-center gap-2 flex-wrap ${expiry?.alert ? 'text-rose-600' : 'text-slate-900'}`}>
                       {ingredient.name}
+                      {expiry ? (
+                        <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] uppercase font-black tracking-wider ${expiry.alert ? 'bg-rose-100 text-rose-600' : 'bg-slate-100 text-slate-500'}`}>
+                          <Clock3 size={10} /> {expiry.label}
+                        </span>
+                      ) : null}
                       {isLow ? (
                         <span className="inline-flex items-center gap-1 bg-rose-100 text-rose-600 px-2 py-0.5 rounded-lg text-[10px] uppercase font-black tracking-wider">
                           <AlertTriangle size={10} /> {t('ingredientStock.directory.lowStockBadge')}

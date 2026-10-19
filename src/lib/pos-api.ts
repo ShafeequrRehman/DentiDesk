@@ -594,6 +594,8 @@ export interface IngredientInput {
   lowStockThreshold?: number;
   // Cost per unit ($) - Stock Value on the Dashboard = stock x this.
   averageCost?: number;
+  expiryDate?: string;
+  expiryAlertDays?: number;
 }
 
 export async function createIngredient(payload: IngredientInput) {

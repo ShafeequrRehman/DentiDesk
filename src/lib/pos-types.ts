@@ -483,6 +483,9 @@ export interface Ingredient {
   // against (Purchasing/Financial Logic Task 2).
   averageCost: number;
   lowStockThreshold: number;
+  // Expiry date ("YYYY-MM-DD" or "") and days-before alert.
+  expiryDate?: string;
+  expiryAlertDays?: number;
   isActive: boolean;
 }
 

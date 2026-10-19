@@ -33,6 +33,10 @@ const ingredientSchema = new mongoose.Schema(
     // (see IngredientStockSection.tsx). Never blocks a sale on its own;
     // nothing in the order flow reads this.
     lowStockThreshold: { type: Number, default: 0, min: 0 },
+    // Expiry date ("YYYY-MM-DD", "" = none) and how many days before it
+    // the Medicine Stock directory starts warning (red + days left).
+    expiryDate: { type: String, default: "" },
+    expiryAlertDays: { type: Number, default: 0, min: 0 },
     isActive: { type: Boolean, default: true },
   },
   { timestamps: true }
