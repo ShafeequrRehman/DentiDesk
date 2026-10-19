@@ -1745,7 +1745,8 @@ export default function SalesPage() {
                 // path) for the same reason. Re-enables the moment the
                 // field is cleared (and the tick with it) or filled up to
                 // the full amount.
-                disabled={(Boolean(paymentAmount) && Number(paymentAmount) < payable) || confirmPending}
+                // Only once the full amount is typed in.
+                disabled={!paymentAmount || Number(paymentAmount) < payable || confirmPending}
                 className="rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] px-4 py-3 text-sm font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-3px_8px_rgba(0,110,125,0.4)] transition hover:brightness-105 disabled:cursor-not-allowed disabled:opacity-50"
               >
                 {t('sales.payFull')}

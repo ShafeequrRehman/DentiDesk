@@ -263,7 +263,7 @@ export default function CustomerDuesPage() {
         const freshCustomer = fresh?.find((c) => c.phone === phone);
         const newestEntry = newestDuesEntry(freshCustomer?.duesHistory);
         if (freshCustomer && newestEntry) {
-          writeDuesEntryReceiptToWindow(printWindow, freshCustomer.name, newestEntry);
+          writeDuesEntryReceiptToWindow(printWindow, freshCustomer.name, newestEntry, freshCustomer.totalDue);
         } else {
           printWindow.close();
         }
@@ -286,7 +286,7 @@ export default function CustomerDuesPage() {
           if (printWindow && !printWindow.closed) {
             const newestEntry = newestDuesEntry(patched.duesHistory);
             if (newestEntry) {
-              writeDuesEntryReceiptToWindow(printWindow, patched.name, newestEntry);
+              writeDuesEntryReceiptToWindow(printWindow, patched.name, newestEntry, patched.totalDue);
             } else {
               printWindow.close();
             }
@@ -327,7 +327,7 @@ export default function CustomerDuesPage() {
         const freshCustomer = fresh?.find((c) => c.phone === phone);
         const newestEntry = newestDuesEntry(freshCustomer?.duesHistory);
         if (freshCustomer && newestEntry) {
-          writeDuesEntryReceiptToWindow(printWindow, freshCustomer.name, newestEntry);
+          writeDuesEntryReceiptToWindow(printWindow, freshCustomer.name, newestEntry, freshCustomer.totalDue);
         } else {
           printWindow.close();
         }
@@ -348,7 +348,7 @@ export default function CustomerDuesPage() {
           if (printWindow && !printWindow.closed) {
             const newestEntry = newestDuesEntry(patched.duesHistory);
             if (newestEntry) {
-              writeDuesEntryReceiptToWindow(printWindow, patched.name, newestEntry);
+              writeDuesEntryReceiptToWindow(printWindow, patched.name, newestEntry, patched.totalDue);
             } else {
               printWindow.close();
             }

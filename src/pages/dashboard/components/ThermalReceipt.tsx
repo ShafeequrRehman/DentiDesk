@@ -1,4 +1,5 @@
 import { cs, poweredByLine } from '@/lib/currency';
+import { accountBalanceLines } from '@/lib/order-receipt-print';
 import React, { useEffect, useState } from 'react';
 import { SavedOrder } from '@/lib/pos-types';
 import { getStoreSettings, defaultSettings } from '@/lib/pos-settings';
@@ -15,7 +16,7 @@ export default function ThermalReceipt({
   // bill, never a running arrears/account-balance figure (see the
   // removed DUE/ARREARS block below, and order-receipt-print.ts's
   // matching comment on the reprint version of this same slip).
-  previousDues: _previousDues = 0,
+  previousDues = 0,
 }: {
   order: SavedOrder;
   type: 'cashier';
@@ -246,6 +247,19 @@ export default function ThermalReceipt({
           </div>
         </div>
       )}
+
+      {/* Patient's account after this slip: due on this appointment,
+          previous due / advance, and the total due or advance left. */}
+      {accountBalanceLines(order, previousDues).length > 0 ? (
+        <div className="mt-2 border-t border-dashed border-black pt-2">
+          {accountBalanceLines(order, previousDues).map((line) => (
+            <div key={line.label} className={`flex justify-between ${line.bold ? 'font-bold' : ''}`}>
+              <span>{line.label}</span>
+              <span className="pr-[1mm]">{line.value}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {/* Footer */}
       <div className="text-center mt-5 mb-2">

@@ -98,6 +98,8 @@ export default function StandaloneReceiptPrintPage() {
   // Dues carried forward from the customer's OTHER unpaid orders - see
   // PrintOrderPage.tsx for the same pattern.
   const [previousDues, setPreviousDues] = useState(0);
+  // The slip shows the patient's due / advance - print only once it's in.
+  const [duesReady, setDuesReady] = useState(false);
   const [logoSrc] = useState<string | null>(() => typeof window === 'undefined' ? null : window.localStorage.getItem(PRINT_LOGO_STORAGE_KEY));
   const [isReady, setIsReady] = useState(false);
 
@@ -108,14 +110,19 @@ export default function StandaloneReceiptPrintPage() {
 
   useEffect(() => {
     const phone = order?.customer.phone;
-    if (!phone || phone === '03000000000') return setPreviousDues(0);
+    if (!order) return;
+    if (!phone || phone === '03000000000') {
+      setPreviousDues(0);
+      setDuesReady(true);
+      return;
+    }
     void fetchCustomerOutstanding(phone, order?.id).then((result) => {
       setPreviousDues(Number(result?.outstanding ?? 0));
-    }).catch(() => setPreviousDues(0));
+    }).catch(() => setPreviousDues(0)).finally(() => setDuesReady(true));
   }, [order?.customer.phone, order?.id]);
 
   useEffect(() => {
-    if (!order) return;
+    if (!order || !duesReady) return;
 
     const notifyReady = async () => {
       const measurement = await waitForReceiptLayout();
@@ -145,7 +152,7 @@ export default function StandaloneReceiptPrintPage() {
     };
 
     void notifyReady();
-  }, [order, receiptType]);
+  }, [order, receiptType, duesReady]);
 
   if (!order) {
     return null;

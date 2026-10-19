@@ -1,4 +1,5 @@
 import { poweredByLine } from '@/lib/currency';
+import { accountBalanceLines } from '@/lib/order-receipt-print';
 import { useEffect, useState } from 'react';
 import { SavedOrder } from '@/lib/pos-types';
 import { getStoreSettings, defaultSettings } from '@/lib/pos-settings';
@@ -23,7 +24,7 @@ export default function ItemizedBillReceipt({
   // bill to show only the payment made against it, never a running
   // arrears/account-balance figure, so this is unused now but kept as a
   // prop so callers don't need touching.
-  previousDues: _previousDues = 0,
+  previousDues = 0,
 }: {
   order: SavedOrder;
   logoSrc?: string | null;
@@ -231,6 +232,19 @@ export default function ItemizedBillReceipt({
         <p className="font-bold">In Words:</p>
         <p className="uppercase">{amountInWords(billTotal)}</p>
       </div>
+
+      {/* Patient's account after this slip: due on this appointment,
+          previous due / advance, and the total due or advance left. */}
+      {accountBalanceLines(order, previousDues).length > 0 ? (
+        <div className="mt-2 border-t border-dashed border-black pt-2">
+          {accountBalanceLines(order, previousDues).map((line) => (
+            <div key={line.label} className={`flex justify-between ${line.bold ? 'font-bold' : ''}`}>
+              <span>{line.label}</span>
+              <span className="pr-[1mm]">{line.value}</span>
+            </div>
+          ))}
+        </div>
+      ) : null}
 
       {/* Footer */}
       <div className="text-center mt-4 mb-2">

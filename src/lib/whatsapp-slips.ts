@@ -7,7 +7,8 @@
 // isn't linked or the number isn't on WhatsApp.
 import { cs } from '@/lib/currency';
 import { createElement } from 'react';
-import { sendWhatsappDocument } from '@/lib/pos-api';
+import { fetchCustomerOutstanding, sendWhatsappDocument } from '@/lib/pos-api';
+import { accountBalanceLines } from '@/lib/order-receipt-print';
 import type { SavedOrder } from '@/lib/pos-types';
 import { formatAppointmentDate, formatSlot } from '@/lib/appointments';
 
@@ -64,6 +65,18 @@ export async function sendAppointmentSlip(order: SavedOrder, kind: SlipKind) {
     { label: 'Paid', value: money(order.paidAmount) },
     { label: remaining > 0 ? 'Due' : 'Status', value: remaining > 0 ? money(remaining) : 'Fully paid' },
   ];
+  // The patient's whole account: previous due / advance and the total.
+  try {
+    const result = await fetchCustomerOutstanding(order.customer.phone, order.id);
+    const lines = accountBalanceLines({ ...order, remainingAmount: remaining }, Number(result?.outstanding ?? 0))
+      .filter((line) => line.label !== 'THIS APPOINTMENT DUE:');
+    lines.forEach((line) => {
+      const label = line.label.replace(':', '').toLowerCase().replace(/(^|\s)\w/g, (c) => c.toUpperCase());
+      stats.push({ label, value: line.value });
+    });
+  } catch {
+    // balance is extra - the slip still goes without it
+  }
   const doc = createElement(ReportPdfDocument, {
     title: kind === 'completed' ? 'Appointment Slip - Completed' : 'Appointment Slip - Booked',
     subtitle: kind === 'completed' ? 'Thank you for your visit!' : 'Please arrive 10 minutes before your time.',

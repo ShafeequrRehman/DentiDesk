@@ -20,6 +20,41 @@ import { cs, poweredByLine } from '@/lib/currency';
 import { SavedOrder, DuesHistoryEntry } from '@/lib/pos-types';
 import { getStoreSettings } from '@/lib/pos-settings';
 import { PRINT_LOGO_STORAGE_KEY } from '@/lib/print-logo';
+import { fetchCustomerOutstanding } from '@/lib/pos-api';
+
+const WALKIN_PHONE = '03000000000';
+
+function money(value: number) {
+  return `${cs()}${Math.round(Math.abs(value)).toLocaleString()}`;
+}
+
+// The patient's account after this slip: what's still due on this
+// appointment, what was due/advance before, and the total due - or the
+// advance left - overall. `previousDues` = everything else on the
+// account (other appointments + older dues; negative = advance).
+export function accountBalanceLines(order: Pick<SavedOrder, 'remainingAmount' | 'customer'>, previousDues: number) {
+  const remaining = Math.max(Number(order.remainingAmount || 0), 0);
+  const realPatient = !!order.customer?.phone && order.customer.phone !== WALKIN_PHONE;
+  const lines: Array<{ label: string; value: string; bold?: boolean }> = [];
+  if (remaining > 0) lines.push({ label: 'THIS APPOINTMENT DUE:', value: money(remaining) });
+  if (!realPatient) return lines;
+  const prev = Number(previousDues || 0);
+  if (prev > 0) lines.push({ label: 'PREVIOUS DUE:', value: money(prev) });
+  else if (prev < 0) lines.push({ label: 'PREVIOUS ADVANCE:', value: money(prev) });
+  const total = prev + remaining;
+  if (total > 0) lines.push({ label: 'TOTAL DUE BALANCE:', value: money(total), bold: true });
+  else if (total < 0) lines.push({ label: 'ADVANCE BALANCE:', value: money(total), bold: true });
+  else lines.push({ label: 'BALANCE:', value: 'CLEAR', bold: true });
+  return lines;
+}
+
+function balanceHtml(order: SavedOrder, previousDues: number) {
+  const lines = accountBalanceLines(order, previousDues);
+  if (lines.length === 0) return '';
+  return `<div class="dashed"></div>${lines
+    .map((l) => `<div class="row${l.bold ? ' bold' : ''}"><span>${l.label}</span><span>${l.value}</span></div>`)
+    .join('')}`;
+}
 
 // Same shop-header/bordered-title-block/footer shell DuesPage.tsx's own
 // Dues Entry and Purchase receipts use (buildReceiptHtml there) - kept
@@ -107,7 +142,7 @@ function paymentModeLabel(order: SavedOrder) {
   return method.toUpperCase();
 }
 
-function buildOrderReceiptBodyHtml(order: SavedOrder) {
+function buildOrderReceiptBodyHtml(order: SavedOrder, previousDues = 0) {
   const itemsTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const billTotal = order.total ?? itemsTotal;
   const discountAmount = order.discount?.amount || 0;
@@ -154,6 +189,7 @@ function buildOrderReceiptBodyHtml(order: SavedOrder) {
       <div class="row"><span>CASH TENDERED/RECEIVED:</span><span>${cs()}${cashReceived.toFixed(2)}</span></div>
       <div class="row bold"><span>CHANGE RETURNED:</span><span>${cs()}${changeReturned.toFixed(2)}</span></div>
     ` : amountTendered !== undefined ? `<p>AMOUNT TENDERED: ${cs()}${amountTendered.toFixed(2)}</p>` : ''}
+    ${balanceHtml(order, previousDues)}
   `;
 }
 
@@ -173,7 +209,9 @@ function buildOrderReceiptBodyHtml(order: SavedOrder) {
 // fixed) - the shop owner then asked for no balance figure here at all,
 // only the transaction, so that line is gone entirely rather than fixed
 // again.
-export function writeDuesEntryReceiptToWindow(printWindow: Window, customerName: string, entry: DuesHistoryEntry) {
+// `balance` = the patient's total due after this entry (negative =
+// advance) - printed under the payment.
+export function writeDuesEntryReceiptToWindow(printWindow: Window, customerName: string, entry: DuesHistoryEntry, balance?: number) {
   const date = new Date(entry.createdAt).toLocaleString('en-PK', { year: 'numeric', month: 'short', day: '2-digit', hour: '2-digit', minute: '2-digit' });
   // Same "+ $X paid"/"- $X received" wording DuesPage.tsx's own
   // History row uses for this exact entry.type.
@@ -190,6 +228,7 @@ export function writeDuesEntryReceiptToWindow(printWindow: Window, customerName:
     <div class="dashed"></div>
     <p>NOTE: ${entry.note || 'No note'}</p>
     <p>BY: ${entry.createdBy || '—'}</p>
+    ${typeof balance === 'number' ? `<div class="dashed"></div><div class="row bold"><span>${balance > 0 ? 'REMAINING DUE:' : balance < 0 ? 'ADVANCE BALANCE:' : 'BALANCE:'}</span><span>${balance === 0 ? 'CLEAR' : money(balance)}</span></div>` : ''}
   `;
   printWindow.document.open();
   printWindow.document.write(buildReceiptShellHtml('Dues Receipt', bodyHtml));
@@ -248,12 +287,27 @@ export function writePurchaseReceiptToWindow(printWindow: Window, purchase: Purc
 // CompleteOrderModal.tsx, which still fetch it for other reasons) keeps
 // working unchanged - only its name changed, to satisfy the unused-var
 // lint rule.
-export function writeOrderReceiptToWindow(printWindow: Window, order: SavedOrder, _previousDues: number) {
+// The patient's balance is looked up fresh (after the payment) so the
+// slip shows the real due / advance; `previousDues` is the fallback when
+// offline.
+export function writeOrderReceiptToWindow(printWindow: Window, order: SavedOrder, previousDues: number) {
   const orderNumber = String(order.dailyOrderNumber ?? order.id.slice(-3)).padStart(3, '0');
-  const bodyHtml = buildOrderReceiptBodyHtml(order);
-  printWindow.document.open();
-  printWindow.document.write(buildReceiptShellHtml('Appointment No.', bodyHtml, orderNumber));
-  printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
+  const write = (prev: number) => {
+    if (printWindow.closed) return;
+    const bodyHtml = buildOrderReceiptBodyHtml(order, prev);
+    printWindow.document.open();
+    printWindow.document.write(buildReceiptShellHtml('Appointment No.', bodyHtml, orderNumber));
+    printWindow.document.close();
+    printWindow.focus();
+    printWindow.print();
+  };
+  const phone = order.customer?.phone;
+  const online = typeof navigator === 'undefined' || navigator.onLine !== false;
+  if (!phone || phone === WALKIN_PHONE || !online || !order.id || order.id.startsWith('local')) {
+    write(previousDues || 0);
+    return;
+  }
+  void fetchCustomerOutstanding(phone, order.id)
+    .then((result) => write(typeof result?.outstanding === 'number' ? result.outstanding : previousDues || 0))
+    .catch(() => write(previousDues || 0));
 }

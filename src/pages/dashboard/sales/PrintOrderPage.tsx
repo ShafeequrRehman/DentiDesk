@@ -74,6 +74,8 @@ export default function PrintOrderPage() {
   // manual/re-print here shows the same "Previous Dues" figure the cashier
   // saw when the bill was completed.
   const [previousDues, setPreviousDues] = useState(0);
+  // The slip shows the patient's due / advance - print only once it's in.
+  const [duesReady, setDuesReady] = useState(false);
   const receiptType = 'cashier' as const;
   const [cashierPrinter, setCashierPrinter] = useState(() => typeof window === 'undefined' ? '' : (window.localStorage.getItem('preferred-cashier-printer') ?? ''));
   const [logoSrc, setLogoSrc] = useState<string | null>(() => typeof window === 'undefined' ? null : window.localStorage.getItem(PRINT_LOGO_STORAGE_KEY));
@@ -134,14 +136,19 @@ export default function PrintOrderPage() {
 
   useEffect(() => {
     const phone = order?.customer.phone;
-    if (!phone || phone === '03000000000') return setPreviousDues(0);
+    if (!order) return;
+    if (!phone || phone === '03000000000') {
+      setPreviousDues(0);
+      setDuesReady(true);
+      return;
+    }
     void fetchCustomerOutstanding(phone, order?.id).then((result) => {
       setPreviousDues(Number(result?.outstanding ?? 0));
-    }).catch(() => setPreviousDues(0));
+    }).catch(() => setPreviousDues(0)).finally(() => setDuesReady(true));
   }, [order?.customer.phone, order?.id]);
 
   useEffect(() => {
-    if (!order) return;
+    if (!order || !duesReady) return;
 
     const handlePrintReady = async () => {
       const measurement = await waitForReceiptLayout();
@@ -188,7 +195,7 @@ export default function PrintOrderPage() {
 
     void handlePrintReady();
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [order, autoPrint, isSilent, receiptType]);
+  }, [order, autoPrint, isSilent, receiptType, duesReady]);
 
   useEffect(() => {
     window.localStorage.setItem('preferred-cashier-printer', cashierPrinter);

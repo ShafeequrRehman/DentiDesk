@@ -363,7 +363,9 @@ export default function CompleteOrderModal({
             // the checkbox is ticked instead of only Confirm Payment
             // being usable. Untick it (or type an amount, which already
             // auto-unticks it above) to get Pay Full back.
-            disabled={saving || confirmPending}
+            // Only once the full amount is typed in the box.
+            disabled={saving || confirmPending || !paymentAmount || Number(paymentAmount) < payable}
+            title={!paymentAmount || Number(paymentAmount) < payable ? `Type the full amount (${cs()}${payable}) to use Pay Full` : undefined}
             onClick={() => void settle(true)}
             className="rounded-[20px] bg-[#00B0C7] px-4 py-3 text-sm font-black text-black disabled:cursor-not-allowed disabled:opacity-50"
           >
