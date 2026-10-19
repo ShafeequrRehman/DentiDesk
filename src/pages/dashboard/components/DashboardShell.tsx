@@ -6,7 +6,7 @@ import {
   Package, DollarSign, FileText, Settings, HelpCircle,
   Search, Cloud, MessageCircle, Bell, LogOut, UserCog, BookText,
   Store, Lock, ClipboardList, Wifi, WifiOff, Download, RefreshCcw,
-  Menu, X, Smartphone, Boxes, Landmark, Stethoscope, FlaskConical, CalendarPlus, CalendarCheck, CalendarOff, Megaphone
+  Menu, X, Smartphone, Boxes, Landmark, Stethoscope, FlaskConical, CalendarPlus, CalendarCheck, CalendarOff, Megaphone, HandCoins
 } from 'lucide-react';
 import { clearAuthSession, getAuthRole, getAuthShop, hasPermission, hasAnyPermission, isPageEnabled, getIsDashboardHidden } from '@/lib/auth';
 import { DASHBOARD_PAGES } from '@/lib/dashboard-pages';
@@ -32,6 +32,7 @@ const PAGE_ICONS: Record<string, React.ReactNode> = {
   sales: <CalendarCheck size={18} />,
   doctors: <Stethoscope size={18} />,
   availability: <CalendarOff size={18} />,
+  'dr-payments': <HandCoins size={18} />,
   accounting: <Calculator size={18} />,
   purchase: <Package size={18} />,
   'ingredient-stock': <Boxes size={18} />,

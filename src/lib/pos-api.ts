@@ -223,6 +223,7 @@ export async function settleCustomerDues(phone: string, amount: number, note?: s
       note,
       paymentMethod: payment?.method || 'cash',
       bankId: payment?.bankId,
+      advanceFor: payment?.advanceFor || undefined,
     });
     return response.data;
   } catch (error) {
@@ -1459,6 +1460,66 @@ export async function fetchBroadcast(id: string) {
   try {
     const response = await api.get<BroadcastJob>(`/whatsapp/broadcast/${encodeURIComponent(id)}`, { baseURL: getSystemApiBaseUrl() });
     return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+// --- Dr / Service Payments page (backend providerPaymentsController.js) ---
+export interface ProviderPaymentLine {
+  id: string;
+  date: string;
+  amount: number;
+  full: number;
+  share: number;
+  kind: 'payment' | 'recovery' | 'advance' | 'adjust';
+  method: string;
+  note: string;
+  createdBy: string;
+  orderId: string;
+  label: string;
+  patient: string;
+  phone: string;
+}
+
+export interface ProviderPaymentRow {
+  name: string;
+  type: 'dr' | 'service';
+  appointments: number;
+  billed: number;
+  collected: number;
+  recovered: number;
+  advanceUsed: number;
+  remainingDue: number;
+  advanceHeld: number;
+  net: number;
+  payments: ProviderPaymentLine[];
+  appointmentsList: Array<{ orderId: string; label: string; patient: string; phone: string; date: string; slot: string; billed: number; paid: number; due: number }>;
+  dues: Array<{ orderId: string; label: string; patient: string; phone: string; date: string; due: number; fullDue: number }>;
+}
+
+export async function fetchProviderPayments(from: string, to: string) {
+  try {
+    const response = await api.get<{ from: string; to: string; rows: ProviderPaymentRow[] }>('/provider-payments', { params: { from, to } });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function addProviderPayment(orderId: string, payload: { amount: number; method: 'Cash' | 'Bank'; bankId?: string; note?: string }) {
+  try {
+    await api.post(`/provider-payments/${orderId}`, payload);
+    return true;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function removeProviderPayment(orderId: string, entryId: string) {
+  try {
+    await api.delete(`/provider-payments/${orderId}/${entryId}`);
+    return true;
   } catch (error) {
     handleApiError(error);
   }

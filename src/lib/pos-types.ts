@@ -320,6 +320,9 @@ export type DuesPaymentMethod = 'cash' | 'bank';
 export interface DuesPaymentOption {
   method: DuesPaymentMethod;
   bankId?: string;
+  // "- Received": any extra (more than is due) is kept as advance for
+  // this Dr / Service (name) - empty = general advance.
+  advanceFor?: string;
 }
 
 // One linked-purchase row on a Unified Khata contact's statement - the

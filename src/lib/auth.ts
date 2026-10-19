@@ -179,6 +179,7 @@ export function isPageEnabled(pageKey: string): boolean {
   // Set Medicine is part of Medicine Stock - shown wherever that page is on.
   if (pageKey === 'post') return enabledPages.includes(pageKey) || enabledPages.includes('whatsapp');
   if (pageKey === 'availability') return enabledPages.includes(pageKey) || enabledPages.includes('doctors');
+  if (pageKey === 'dr-payments') return enabledPages.includes(pageKey) || enabledPages.includes('dues');
   if (pageKey === 'medicine-setup') return enabledPages.includes(pageKey) || enabledPages.includes('ingredient-stock');
   return enabledPages.includes(pageKey);
 }

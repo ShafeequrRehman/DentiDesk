@@ -17,6 +17,7 @@ import {
   cancelIngredientPurchase,
   deleteDuesHistoryEntry,
   fetchBanks,
+  fetchProducts,
 } from '@/lib/pos-api';
 import { LedgerCustomer, LedgerPurchase, SavedOrder, DuesHistoryEntry, Bank, DuesPaymentOption } from '@/lib/pos-types';
 import { isDesktopApp } from '@/lib/api';
@@ -50,6 +51,13 @@ export default function CustomerDuesPage() {
   // CustomerCard's Cash/Bank payment-method picker can offer the same
   // up-to-date list without each card fetching it separately.
   const [banks, setBanks] = useState<Bank[]>([]);
+  // Drs / Services an advance can be kept for ("- Received" extra).
+  const [providerNames, setProviderNames] = useState<string[]>([]);
+  useEffect(() => {
+    void fetchProducts()
+      .then((result) => setProviderNames([...new Set((result?.products || []).filter((p) => !p.specialType).map((p) => p.name))].sort()))
+      .catch(() => undefined);
+  }, []);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [showAddCustomer, setShowAddCustomer] = useState(false);
@@ -552,6 +560,7 @@ export default function CustomerDuesPage() {
                   key={c.id}
                   customer={c}
                   banks={banks}
+                  providerNames={providerNames}
                   onAddManual={handleAddManualDue}
                   onSettlePayment={handleSettlePayment}
                   onRemind={() => handleSendReminder(c)}
@@ -589,6 +598,7 @@ export default function CustomerDuesPage() {
                   key={c.id}
                   customer={c}
                   banks={banks}
+                  providerNames={providerNames}
                   onAddManual={handleAddManualDue}
                   onSettlePayment={handleSettlePayment}
                   onRemind={() => handleSendReminder(c)}
@@ -642,7 +652,7 @@ function todayDateInputValue() {
   return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`;
 }
 
-function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind, onOrderCancelled, onCustomerChanged, whatsappConnected }: { customer: LedgerCustomer, banks: Bank[], onAddManual: (phone: string, amount: number, note: string, payment?: DuesPaymentOption, printWindow?: Window | null) => Promise<boolean>, onSettlePayment: (phone: string, amount: number, note: string, payment?: DuesPaymentOption, printWindow?: Window | null) => Promise<boolean>, onRemind: () => void, onOrderCancelled: () => void, onCustomerChanged: () => void, whatsappConnected: boolean }) {
+function CustomerCard({ customer, banks, providerNames = [], onAddManual, onSettlePayment, onRemind, onOrderCancelled, onCustomerChanged, whatsappConnected }: { customer: LedgerCustomer, banks: Bank[], providerNames?: string[], onAddManual: (phone: string, amount: number, note: string, payment?: DuesPaymentOption, printWindow?: Window | null) => Promise<boolean>, onSettlePayment: (phone: string, amount: number, note: string, payment?: DuesPaymentOption, printWindow?: Window | null) => Promise<boolean>, onRemind: () => void, onOrderCancelled: () => void, onCustomerChanged: () => void, whatsappConnected: boolean }) {
   const { confirm, toast } = useToast();
   // Edit Customer - a small inline form toggled from the header's Pencil
   // icon, reusing the exact same name/phone/address/isVendor shape the
@@ -723,8 +733,12 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
   // bank - see customerController.applyUpdateCustomerDues/applySettleCustomerDues.
   const [paymentMethod, setPaymentMethod] = useState<'cash' | 'bank'>('cash');
   const [bankId, setBankId] = useState<string>('');
-  const paymentOption: DuesPaymentOption =
-    paymentMethod === 'bank' ? { method: 'bank', bankId } : { method: 'cash' };
+  // Extra beyond what's due is kept as advance - for one Dr / Service or general.
+  const [advanceFor, setAdvanceFor] = useState('');
+  const paymentOption: DuesPaymentOption = {
+    ...(paymentMethod === 'bank' ? { method: 'bank' as const, bankId } : { method: 'cash' as const }),
+    ...(advanceFor ? { advanceFor } : {}),
+  };
   const paymentIncomplete = paymentMethod === 'bank' && !bankId;
   // Dues Statement PDF (Download/Send): a full, printable record of
   // everything that makes up this customer's balance - same historyEntries
@@ -1446,6 +1460,22 @@ function CustomerCard({ customer, banks, onAddManual, onSettlePayment, onRemind,
               <option key={b.id} value={b.id}>{b.name} ({cs()}{b.balance.toLocaleString()})</option>
             ))}
           </select>
+        ) : null}
+        {providerNames.length > 0 ? (
+          <div>
+            <select
+              value={advanceFor}
+              onChange={(e) => setAdvanceFor(e.target.value)}
+              className="w-full p-2.5 bg-slate-50 border border-slate-200 rounded-xl text-xs font-bold outline-none focus:border-indigo-500"
+              title="When more is received than is due, the extra is kept as advance"
+            >
+              <option value="">Extra as advance: General (any Dr / Service)</option>
+              {providerNames.map((name) => (
+                <option key={name} value={name}>Extra as advance for: {name}</option>
+              ))}
+            </select>
+            <p className="mt-1 text-[10px] font-semibold text-slate-400">"- Received" clears old dues first (each Dr / Service gets its share); anything extra is kept as advance.</p>
+          </div>
         ) : null}
 
         <div className="flex gap-2">

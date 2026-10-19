@@ -1334,30 +1334,16 @@ async function applyOrderPatch(order, patch, req, options) {
       // Any advance the patient has is used first.
       await applyCustomerAdvance(order, buildShopScope(req));
       let paidTotal = Math.max(Number(patch.paidAmount) || 0, 0);
-      // Cash-in-Hand / Balance-on-Bank dashboard routing: the FULL amount
-      // actually collected right now (before it gets distributed below
-      // across this order/previousDues/other orders) is exactly how much
-      // real cash or bank money just came into the shop - recorded once,
-      // at the very end of this branch, into whichever the cashier picked
-      // (Cash by default, or the Bank the payment method/bankId below
-      // names). Captured here, before paidTotal is mutated.
       const totalCollectedNow = paidTotal;
+      const payMethod = typeof patch.paymentMethod === "string" ? patch.paymentMethod : order.paymentMethod || "Cash";
+      const payBankId = patch.bankId || null;
+      const collector = await currentUserDisplayName(req);
 
-      // This order's own remaining balance (not order.total on its own -
-      // that ignores anything already paid toward it) is settled before
-      // anything else touches `paidTotal`. Same due-then-increment pattern
-      // as the otherOrders loop below and customerController.js's
-      // settleCustomerDues - this order is never any different from those.
-      const thisOrderDue = typeof order.remainingAmount === "number"
-        ? order.remainingAmount
-        : Math.max((order.total || 0) - (order.paidAmount || 0), 0);
-      const appliedToThis = Math.min(thisOrderDue, paidTotal);
-      order.paidAmount = Number(order.paidAmount || 0) + appliedToThis;
-      order.remainingAmount = Math.max(thisOrderDue - appliedToThis, 0);
-      order.status = "completed";
-      await applyStockOnFinish(order);
-      paidTotal -= appliedToThis;
-
+      // Old dues are cleared FIRST (older manual dues, then other unpaid
+      // appointments, oldest first) - each Dr / Service gets the money in
+      // its own record as a due recovery - and what's left goes to this
+      // appointment.
+      let appliedToOthers = 0;
       if (customerPhone && customerPhone !== "03000000000") {
         const customerDoc = await Customer.findOne({ phone: customerPhone, ...buildShopScope(req) });
         let previousDues = Number(customerDoc?.previousDues || 0);
@@ -1366,6 +1352,7 @@ async function applyOrderPatch(order, patch, req, options) {
           const applied = Math.min(previousDues, paidTotal);
           previousDues -= applied;
           paidTotal -= applied;
+          appliedToOthers += applied;
         }
 
         if (paidTotal > 0) {
@@ -1386,6 +1373,13 @@ async function applyOrderPatch(order, patch, req, options) {
             const applied = Math.min(due, paidTotal);
             other.paidAmount = Number(other.paidAmount || 0) + applied;
             other.remainingAmount = Math.max(due - applied, 0);
+            other.logOrderPayment(applied, {
+              kind: "recovery",
+              method: payMethod,
+              bankId: payBankId,
+              note: `Paid with Appointment #${order.dailyOrderNumber ?? String(order._id).slice(-4)}`,
+              createdBy: collector,
+            });
             if (other.remainingAmount === 0) {
               other.status = "completed";
               await applyStockOnFinish(other);
@@ -1393,6 +1387,7 @@ async function applyOrderPatch(order, patch, req, options) {
             other.version = Number(other.version || 0) + 1;
             await other.save();
             paidTotal -= applied;
+            appliedToOthers += applied;
           }
         }
 
@@ -1400,9 +1395,20 @@ async function applyOrderPatch(order, patch, req, options) {
           customerDoc.previousDues = previousDues;
           await customerDoc.save();
         }
-        // What of this payment went to older dues / other appointments.
-        order.duesCollected = Math.max(totalCollectedNow - appliedToThis - Math.max(paidTotal, 0), 0);
       }
+
+      const thisOrderDue = typeof order.remainingAmount === "number"
+        ? order.remainingAmount
+        : Math.max((order.total || 0) - (order.paidAmount || 0), 0);
+      const appliedToThis = Math.min(thisOrderDue, paidTotal);
+      order.paidAmount = Number(order.paidAmount || 0) + appliedToThis;
+      order.remainingAmount = Math.max(thisOrderDue - appliedToThis, 0);
+      order.logOrderPayment(appliedToThis, { kind: "payment", method: payMethod, bankId: payBankId, createdBy: collector });
+      order.status = "completed";
+      await applyStockOnFinish(order);
+      paidTotal -= appliedToThis;
+      // What of this payment went to older dues / other appointments.
+      order.duesCollected = Number(order.duesCollected || 0) + appliedToOthers;
 
       if (typeof patch.paymentMethod === "string") order.paymentMethod = patch.paymentMethod;
       if (typeof patch.note === "string") order.note = patch.note;

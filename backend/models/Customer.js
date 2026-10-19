@@ -71,6 +71,13 @@ const customerSchema = new mongoose.Schema(
     // goes negative too in that case - see getCustomerLedger's own comment.
     previousDues: { type: Number, default: 0 },
     duesHistory: { type: [duesHistorySchema], default: [] },
+    // Part of the advance (negative previousDues) kept for one Dr /
+    // Service (by name) - used only on that Dr's / Service's next
+    // appointment. Whatever isn't listed here is a general advance.
+    advanceFor: {
+      type: [new mongoose.Schema({ name: { type: String, trim: true }, amount: { type: Number, default: 0 } }, { _id: false })],
+      default: [],
+    },
   },
   { timestamps: true }
 );

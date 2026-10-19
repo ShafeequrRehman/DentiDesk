@@ -7,6 +7,8 @@ const { shopScope } = require("../middleware/attachShopScope");
 const { escapeRegex } = require("../utils/escapeRegex");
 const { recordCustomerBankMovement } = require("./bankController");
 const { recordCashMovement } = require("./cashController");
+const { currencySignFor } = require("../services/currency");
+const { clampTargets } = require("../services/advanceService");
 
 // The JWT (req.user) only ever carries id/role/shopId/permissions - never
 // a display name (see auth/tokenService.js) - so recording who made a
@@ -422,7 +424,27 @@ exports.getCustomerOutstanding = async (req, res) => {
 
     const previousDues = Number(customer?.previousDues || 0);
 
-    res.json({ outstanding: ordersBalance + previousDues, ordersBalance, previousDues, pendingOrderCount: orders.filter((o) => o.status === "pending").length });
+    // Unified record (customer-supplier netting): what the clinic still
+    // owes this contact for purchases is set off against what they owe -
+    // same netBalance the Dues page shows - so Complete Appointment and
+    // the slip ask only for what's really left (e.g. 4500 + 4500 sales -
+    // 6000 purchase owed = 3000).
+    let purchaseBalance = 0;
+    if (customer?._id) {
+      const purchases = await IngredientPurchase.find(
+        { ...scope, linkedCustomerId: customer._id, status: "received" },
+        "remainingAmount",
+      ).lean();
+      purchaseBalance = purchases.reduce((sum, p) => sum + Number(p.remainingAmount || 0), 0);
+    }
+
+    res.json({
+      outstanding: ordersBalance + previousDues - purchaseBalance,
+      ordersBalance,
+      previousDues,
+      purchaseBalance,
+      pendingOrderCount: orders.filter((o) => o.status === "pending").length,
+    });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -566,8 +588,60 @@ async function applySettleCustomerDues(scope, phone, body, createdBy) {
     throw Object.assign(new Error("Patient not found"), { statusCode: 404 });
   }
 
-  const previousDues = Number(customer.previousDues || 0) - amount;
+  // Where the money goes: older manual dues first, then the patient's
+  // unpaid appointments (oldest first - each Dr / Service gets it in its
+  // own record as a due recovery), and anything left is kept as advance
+  // (for one Dr / Service when picked, else general).
+  const sign = await currencySignFor(scope.shopId);
+  let left = amount;
+  let previousDues = Number(customer.previousDues || 0);
+  if (previousDues > 0) {
+    const use = Math.min(previousDues, left);
+    previousDues -= use;
+    left -= use;
+  }
+  const appliedTo = [];
+  if (left > 0) {
+    const unpaid = await Order.find({ ...scope, "customer.phone": phone, status: { $ne: "cancelled" } }).sort({ createdAt: 1 });
+    for (const order of unpaid) {
+      if (left <= 0) break;
+      const due = typeof order.remainingAmount === "number"
+        ? order.remainingAmount
+        : Math.max((order.total || 0) - (order.paidAmount || 0), 0);
+      if (!(due > 0)) continue;
+      const use = Math.min(due, left);
+      order.paidAmount = Number(order.paidAmount || 0) + use;
+      order.remainingAmount = Math.max(due - use, 0);
+      order.logOrderPayment(use, {
+        kind: "recovery",
+        method: paymentMethod === "bank" ? "Bank" : "Cash",
+        bankId: paymentMethod === "bank" && bankId ? bankId : null,
+        note: note || "Due paid on Dues page",
+        createdBy,
+      });
+      order.version = Number(order.version || 0) + 1;
+      await order.save();
+      appliedTo.push(`#${order.dailyOrderNumber ?? String(order._id).slice(-4)} (${sign.trim()}${use})`);
+      left -= use;
+    }
+  }
+  if (left > 0) {
+    previousDues -= left;
+    const target = String(body.advanceFor || "").trim();
+    if (target) {
+      const list = customer.advanceFor || [];
+      const existing = list.find((e) => e.name === target);
+      if (existing) existing.amount = Number(existing.amount || 0) + left;
+      else list.push({ name: target, amount: left });
+      customer.advanceFor = list;
+    }
+  }
   customer.previousDues = previousDues;
+  clampTargets(customer);
+  const allocationNote = [
+    appliedTo.length ? `Applied: ${appliedTo.join(", ")}` : "",
+    left > 0 ? `Advance ${sign.trim()}${left}${body.advanceFor ? ` for ${String(body.advanceFor).trim()}` : ""}` : "",
+  ].filter(Boolean).join(" · ");
 
   // Move the bank's own money FIRST (if applicable) so its real name is
   // known before building the duesHistory entry below - see
@@ -606,7 +680,7 @@ async function applySettleCustomerDues(scope, phone, body, createdBy) {
   customer.duesHistory.push({
     type: "settle",
     amount,
-    note,
+    note: [note, allocationNote].filter(Boolean).join(" - "),
     balanceAfter: previousDues,
     createdBy,
     paymentMethod: bank ? "bank" : "cash",

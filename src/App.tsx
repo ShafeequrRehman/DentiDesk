@@ -22,6 +22,7 @@ import RecordPage from '@/pages/dashboard/RecordPage';
 import ShiftsPage from '@/pages/dashboard/ShiftsPage';
 import DoctorsPage from '@/pages/dashboard/DoctorsPage';
 import AvailabilityPage from '@/pages/dashboard/AvailabilityPage';
+import DrPaymentsPage from '@/pages/dashboard/DrPaymentsPage';
 import MedicineSetupPage from '@/pages/dashboard/MedicineSetupPage';
 import PayrollPage from '@/pages/dashboard/PayrollPage';
 import OfflineSyncPage from '@/pages/dashboard/OfflineSyncPage';
@@ -122,6 +123,7 @@ export default function App() {
             <Route element={<RequirePermission permission={['sales.create', 'orders.record.view']} />}>
               <Route path="doctors" element={<DoctorsPage />} />
               <Route path="availability" element={<AvailabilityPage />} />
+              <Route path="dr-payments" element={<DrPaymentsPage />} />
             </Route>
             <Route element={<RequirePermission permission="orders.record.view" />}>
               <Route path="record" element={<RecordPage />} />

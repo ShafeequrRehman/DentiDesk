@@ -98,6 +98,26 @@ const customerChangeRequestSchema = new mongoose.Schema(
   { _id: false }
 );
 
+// One line per money movement on this appointment - who paid what, when,
+// and how - so each Dr / Service's collections, due recoveries and advance
+// use can be reported by date (see reportController.getProviderPayments).
+//   payment  - paid on the appointment's own day
+//   recovery - paid later, clearing this appointment's due
+//   advance  - taken from the patient's advance
+//   adjust   - a correction (e.g. paid amount lowered by an edit)
+const paymentEntrySchema = new mongoose.Schema(
+  {
+    date: { type: Date, default: Date.now },
+    amount: { type: Number, required: true },
+    kind: { type: String, enum: ["payment", "recovery", "advance", "adjust"], default: "payment" },
+    method: { type: String, default: "Cash" },
+    bankId: { type: mongoose.Schema.Types.ObjectId, ref: "Bank", default: null },
+    note: { type: String, default: "" },
+    createdBy: { type: String, default: "" },
+  },
+  { _id: true }
+);
+
 const orderSchema = new mongoose.Schema(
   {
     shopId: { type: mongoose.Schema.Types.ObjectId, ref: "Shop", required: true, index: true },
@@ -170,6 +190,7 @@ const orderSchema = new mongoose.Schema(
     // Never touched for a Cash payment.
     bankId: { type: mongoose.Schema.Types.ObjectId, ref: "Bank", default: null },
     bankName: { type: String, default: "" },
+    payments: { type: [paymentEntrySchema], default: [] },
     paidAmount: { type: Number, default: 0 },
     remainingAmount: { type: Number, default: 0 },
     // Part of paidAmount that came from the patient's advance (paid
@@ -387,5 +408,51 @@ orderSchema.index({ shopId: 1, "pendingKitchenUpdate.queuedAt": 1 });
 // scan cost grows with the shop's total order history - felt as "selecting
 // an order with a phone number feels slower over time."
 orderSchema.index({ shopId: 1, "customer.phone": 1 });
+
+// --- Payment history ------------------------------------------------------
+// Any change to paidAmount leaves a line in `payments`. Code that knows
+// what the money was (advance, due recovery...) calls logOrderPayment();
+// any change it didn't explain is logged here on save.
+function karachiDay(date) {
+  return new Date(new Date(date).getTime() + 5 * 60 * 60 * 1000).toISOString().slice(0, 10);
+}
+
+orderSchema.post("init", function rememberPaid() {
+  this.$locals.origPaid = Number(this.paidAmount || 0);
+});
+
+orderSchema.methods.logOrderPayment = function logOrderPayment(amount, meta = {}) {
+  const value = Math.round(Number(amount || 0) * 100) / 100;
+  if (!value) return;
+  this.payments.push({
+    date: new Date(),
+    amount: value,
+    kind: meta.kind || "payment",
+    method: meta.method || this.paymentMethod || "Cash",
+    bankId: meta.bankId || null,
+    note: meta.note || "",
+    createdBy: meta.createdBy || "",
+  });
+  this.$locals.loggedPaid = Number(this.$locals.loggedPaid || 0) + value;
+};
+
+orderSchema.pre("save", function logUnexplainedPaidChange(next) {
+  const orig = this.isNew ? 0 : Number(this.$locals.origPaid ?? this.paidAmount ?? 0);
+  const now = Number(this.paidAmount || 0);
+  const unexplained = Math.round((now - orig - Number(this.$locals.loggedPaid || 0)) * 100) / 100;
+  if (unexplained !== 0) {
+    const sameDay = this.isNew || karachiDay(this.createdAt || Date.now()) === karachiDay(Date.now());
+    this.payments.push({
+      date: new Date(),
+      amount: unexplained,
+      kind: unexplained < 0 ? "adjust" : sameDay ? "payment" : "recovery",
+      method: this.paymentMethod || "Cash",
+      bankId: this.bankId || null,
+    });
+  }
+  this.$locals.origPaid = now;
+  this.$locals.loggedPaid = 0;
+  next();
+});
 
 module.exports = mongoose.model("Order", orderSchema);

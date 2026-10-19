@@ -139,7 +139,8 @@ export default function CompleteOrderModal({
   }, [trulyOffline]);
 
   const owed = Number(order.remainingAmount ?? order.total ?? 0);
-  const payable = owed + customerDue;
+  // Advance / credit (negative customerDue) lowers what's payable now.
+  const payable = Math.max(owed + customerDue, 0);
   // How much change to hand back - shown live under the input, from the raw
   // typed amount (not the capped one below).
   const changeDue = paymentAmount && Number(paymentAmount) > payable ? Number(paymentAmount) - payable : 0;
@@ -271,6 +272,7 @@ export default function CompleteOrderModal({
           <DetailRow label={t('record.completeOrder.orderTotal')} value={`${cs()}${order.total}`} />
           <DetailRow label={t('record.completeOrder.alreadyPaid')} value={`${cs()}${order.paidAmount ?? 0}`} />
           {customerDue > 0 ? <DetailRow label={t('record.completeOrder.otherOutstandingDues')} value={`${cs()}${customerDue}`} /> : null}
+          {customerDue < 0 ? <DetailRow label="Advance / Credit adjusted" value={`-${cs()}${Math.abs(customerDue)}`} /> : null}
           <DetailRow label={t('record.completeOrder.payableNow')} value={`${cs()}${payable}`} strong />
         </div>
 

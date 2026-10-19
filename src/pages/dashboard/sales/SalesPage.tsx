@@ -506,7 +506,9 @@ export default function SalesPage() {
   const discountType: Discount['type'] = discountForOrder?.type ?? 'percent';
   const discountRawValue = discountForOrder?.value ?? 0;
   const adjustedTotal = Math.max(orderSubtotal + orderTax - discountAmount, 0);
-  const payable = adjustedTotal + customerDue;
+  // Already paid on this appointment (e.g. the patient's advance used on
+  // it) and any advance / credit (negative customerDue) lower what's due.
+  const payable = Math.max(adjustedTotal - Number(selectedOrder?.paidAmount || 0) + customerDue, 0);
   // Change-Return Calculation: Amount Paid is no longer clamped to payable
   // (see its input's own comment below) - it now represents the real cash
   // the customer physically handed over, which can be MORE than the bill.
@@ -1523,7 +1525,7 @@ export default function SalesPage() {
                       <Box label={t('sales.boxLabels.deliveryLocation')} value={t('sales.notShared')} />
                     )
                   ) : null}
-                  <Box label={t('sales.boxLabels.previousDues')} value={`${cs()}${customerDue}`} />
+                  <Box label={customerDue < 0 ? 'Advance / Credit' : t('sales.boxLabels.previousDues')} value={customerDue < 0 ? `-${cs()}${Math.abs(customerDue)}` : `${cs()}${customerDue}`} />
                   <Box label={t('sales.boxLabels.remaining')} value={`${cs()}${selectedOrder.remainingAmount ?? 0}`} />
                   {selectedOrder.note ? <Box label={t('sales.boxLabels.note')} value={selectedOrder.note} /> : null}
                   {/* Electricity Bill / Cash special-product details - only
@@ -1601,9 +1603,9 @@ export default function SalesPage() {
                     <Row label={selectedOrder.discount.type === 'percent' ? t('sales.billSummary.discountPercent', { value: selectedOrder.discount.value }) : t('sales.billSummary.discountFixed')} value={`-${cs()}${selectedOrder.discount.amount}`} />
                   ) : null}
                   <Row label={t('sales.billSummary.billTotal')} value={`${cs()}${selectedOrder.status === 'pending' ? adjustedTotal : selectedOrder.total}`} />
-                  <Row label={t('sales.boxLabels.previousDues')} value={`${cs()}${customerDue}`} />
+                  <Row label={customerDue < 0 ? 'Advance / Credit' : t('sales.boxLabels.previousDues')} value={customerDue < 0 ? `-${cs()}${Math.abs(customerDue)}` : `${cs()}${customerDue}`} />
                   <Row label={t('sales.billSummary.paid')} value={`${cs()}${selectedOrder.paidAmount ?? 0}`} />
-                  <Row label={t('sales.billSummary.grandTotal')} value={`${cs()}${(selectedOrder.status === 'pending' ? adjustedTotal : selectedOrder.total) + customerDue}`} strong />
+                  <Row label={t('sales.billSummary.grandTotal')} value={`${cs()}${selectedOrder.status === 'pending' ? payable : Math.max(Number(selectedOrder.remainingAmount || 0) + customerDue, 0)}`} strong />
                 </div>
                 {selectedOrder.status === 'pending' ? (
                   <div ref={completeButtonsRef} className="grid gap-2.5">
@@ -1682,7 +1684,7 @@ export default function SalesPage() {
                 <Row label={discountType === 'percent' ? t('sales.billSummary.discountPercent', { value: discountRawValue }) : t('sales.billSummary.discountFixed')} value={`-${cs()}${discountAmount}`} />
               ) : null}
               <Row label={t('sales.billSummary.billTotal')} value={`${cs()}${adjustedTotal}`} />
-              <Row label={t('sales.boxLabels.previousDues')} value={`${cs()}${customerDue}`} />
+              <Row label={customerDue < 0 ? 'Advance / Credit' : t('sales.boxLabels.previousDues')} value={customerDue < 0 ? `-${cs()}${Math.abs(customerDue)}` : `${cs()}${customerDue}`} />
               <Row label={t('sales.billSummary.finalPayable')} value={`${cs()}${payable}`} strong />
             </div>
             <div>
