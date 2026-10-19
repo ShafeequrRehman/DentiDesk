@@ -34,6 +34,7 @@ const KIND_LABEL: Record<string, string> = {
   recovery: 'Due recovered',
   advance: 'Advance used',
   adjust: 'Correction',
+  setoff: 'Purchase adjusted',
 };
 
 const KIND_TONE: Record<string, string> = {
@@ -41,6 +42,7 @@ const KIND_TONE: Record<string, string> = {
   recovery: 'bg-sky-50 text-sky-700',
   advance: 'bg-violet-50 text-violet-700',
   adjust: 'bg-amber-50 text-amber-700',
+  setoff: 'bg-teal-50 text-teal-700',
 };
 
 export default function DrPaymentsPage() {
@@ -88,10 +90,11 @@ export default function DrPaymentsPage() {
           collected: acc.collected + r.collected,
           recovered: acc.recovered + r.recovered,
           advanceUsed: acc.advanceUsed + r.advanceUsed,
+          purchaseAdjusted: acc.purchaseAdjusted + (r.purchaseAdjusted || 0),
           remainingDue: acc.remainingDue + r.remainingDue,
           advanceHeld: acc.advanceHeld + r.advanceHeld,
         }),
-        { billed: 0, collected: 0, recovered: 0, advanceUsed: 0, remainingDue: 0, advanceHeld: 0 },
+        { billed: 0, collected: 0, recovered: 0, advanceUsed: 0, purchaseAdjusted: 0, remainingDue: 0, advanceHeld: 0 },
       ),
     [list],
   );
@@ -142,11 +145,12 @@ export default function DrPaymentsPage() {
         <span className="flex items-center gap-1 text-xs font-bold text-gray-400"><CalendarDays size={13} /> {range.label}</span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
         <Stat label="Billed" value={money(totals.billed)} tone="text-gray-900" hint="Appointments in range" />
         <Stat label="Collected" value={money(totals.collected)} tone="text-emerald-600" hint="Cash + bank in range" />
         <Stat label="Due recovered" value={money(totals.recovered)} tone="text-sky-600" hint="Part of collected" />
         <Stat label="Advance used" value={money(totals.advanceUsed)} tone="text-violet-600" hint="From patients' advance" />
+        <Stat label="Purchase adjusted" value={money(totals.purchaseAdjusted)} tone="text-teal-600" hint="Set off against purchases" />
         <Stat label="Remaining due" value={money(totals.remainingDue)} tone="text-rose-600" hint="Right now, all dates" />
         <Stat label="Advance held" value={money(totals.advanceHeld)} tone="text-amber-600" hint="Kept for them" />
       </div>
@@ -246,6 +250,7 @@ function DetailModal({
             { label: 'Collected', value: money(row.collected) },
             { label: 'Due recovered', value: money(row.recovered) },
             { label: 'Advance used', value: money(row.advanceUsed) },
+            { label: 'Purchase adjusted', value: money(row.purchaseAdjusted || 0) },
             { label: 'Remaining due', value: money(row.remainingDue) },
             { label: 'Advance held', value: money(row.advanceHeld) },
             { label: 'Net', value: money(row.net) },
@@ -261,8 +266,8 @@ function DetailModal({
                 { label: 'Via', width: 0.7 },
                 { label: 'Amount', width: 0.9, align: 'right' as const },
               ],
-              rows: row.payments.map((p) => [shortDate(p.date), p.label, p.patient, KIND_LABEL[p.kind] || p.kind, p.kind === 'advance' ? 'Advance' : p.method, money(p.amount)]),
-              footer: ['Total', '', '', '', '', money(row.collected + row.advanceUsed)],
+              rows: row.payments.map((p) => [shortDate(p.date), p.label, p.patient, KIND_LABEL[p.kind] || p.kind, p.kind === 'advance' ? 'Advance' : p.kind === 'setoff' ? 'Purchase' : p.method, money(p.amount)]),
+              footer: ['Total', '', '', '', '', money(row.net)],
               emptyMessage: 'No payments in this period.',
             },
             {
@@ -329,6 +334,7 @@ function DetailModal({
           <Mini label="Collected" value={money(row.collected)} tone="text-emerald-600" />
           <Mini label="Due recovered" value={money(row.recovered)} tone="text-sky-600" />
           <Mini label="Advance used" value={money(row.advanceUsed)} tone="text-violet-600" />
+          <Mini label="Purchase adjusted" value={money(row.purchaseAdjusted || 0)} tone="text-teal-600" />
           <Mini label="Net" value={money(row.net)} tone="text-gray-900" />
           <Mini label="Billed" value={money(row.billed)} tone="text-gray-700" />
           <Mini label="Remaining due" value={money(row.remainingDue)} tone="text-rose-600" />
@@ -360,10 +366,10 @@ function DetailModal({
                       <td className="px-3 py-2.5 font-black text-gray-900">{p.label}</td>
                       <td className="px-3 py-2.5 font-semibold text-gray-700">{p.patient}</td>
                       <td className="px-3 py-2.5"><span className={`rounded-full px-2 py-0.5 text-[10px] font-black ${KIND_TONE[p.kind] || 'bg-gray-100 text-gray-600'}`}>{KIND_LABEL[p.kind] || p.kind}</span></td>
-                      <td className="px-3 py-2.5 font-semibold text-gray-500">{p.kind === 'advance' ? 'Advance' : p.method}</td>
+                      <td className="px-3 py-2.5 font-semibold text-gray-500">{p.kind === 'advance' ? 'Advance' : p.kind === 'setoff' ? 'Purchase' : p.method}</td>
                       <td className={`px-3 py-2.5 text-right font-black ${p.amount < 0 ? 'text-rose-600' : 'text-gray-900'}`}>{money(p.amount)}{p.share < 0.999 ? <span className="block text-[9px] font-semibold text-gray-400">of {money(p.full)}</span> : null}</td>
                       <td className="px-3 py-2.5 text-right">
-                        {p.amount > 0 && p.id ? (
+                        {p.amount > 0 && p.id && p.kind !== 'setoff' ? (
                           <button type="button" title="Remove this payment" onClick={() => void removeLine(p)} className="rounded-lg p-1.5 text-rose-400 hover:bg-rose-50 hover:text-rose-600"><Trash2 size={13} /></button>
                         ) : null}
                       </td>

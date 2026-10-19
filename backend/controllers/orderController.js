@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { applyPurchaseSetoff } = require("../services/setoffService");
 const { applyCustomerAdvance } = require("../services/advanceService");
 const { currencySignFor } = require("../services/currency");
 const Customer = require("../models/Customer");
@@ -803,7 +804,12 @@ exports.createOrder = async (req, res) => {
       }
     }
 
-    res.status(201).json({ ...order.toObject(), id: String(order._id), customerSyncWarning, stockWarning: stockResult.warning });
+    // Net appointment dues against any purchase the clinic owes this patient.
+    let saved = order;
+    if ((await applyPurchaseSetoff(buildShopScope(req), order.customer?.phone)) > 0) {
+      saved = (await Order.findById(order._id)) || order;
+    }
+    res.status(201).json({ ...saved.toObject(), id: String(saved._id), customerSyncWarning, stockWarning: stockResult.warning });
   } catch (error) {
     res.status(500).json({ error: error.message });
   }
@@ -1548,7 +1554,11 @@ exports.updateOrder = async (req, res) => {
       return res.status(404).json({ error: "Appointment not found" });
     }
 
-    const updated = await applyOrderPatch(order, req.body, req);
+    let updated = await applyOrderPatch(order, req.body, req);
+    // Net appointment dues against any purchase the clinic owes this patient.
+    if (req.body?.action === "completeAndSettle" && (await applyPurchaseSetoff(buildShopScope(req), updated.customer?.phone)) > 0) {
+      updated = (await Order.findById(updated._id)) || updated;
+    }
 
     // "Order Completed" WhatsApp goes out only for a customer-qr order
     // actually being settled here (not the live HTTP path's offline-sync

@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { revertPurchaseSetoff, applyPurchaseSetoff } = require("../services/setoffService");
 const { currencySignFor } = require("../services/currency");
 const IngredientPurchase = require("../models/IngredientPurchase");
 const Ingredient = require("../models/Ingredient");
@@ -226,6 +227,8 @@ exports.createPurchase = async (req, res) => {
     // recorded), the average is simply this batch's own rate - there's
     // nothing to average against yet.
     await applyPurchaseToIngredientStock(ingredient, qty, purchaseRate);
+    // Bought from a patient who owes the clinic for appointments: settle.
+    if (linkedCustomer?.phone && remaining > 0) await applyPurchaseSetoff(shopScope(req), linkedCustomer.phone);
 
     // Cash in Hand (Dashboard): a purchase batch has no cash/bank choice of
     // its own (CashRegister.js's own comment) - whatever was actually paid
@@ -585,6 +588,8 @@ exports.cancelPurchase = async (req, res) => {
     const wasReceived = purchase.status === "received";
     const { ingredientId, quantity, shopId } = purchase;
 
+    // Appointments this purchase had settled (set-off) are due again.
+    if (Number(purchase.setoffAmount || 0) > 0) await revertPurchaseSetoff(shopScope(req), purchase._id);
     purchase.status = "cancelled";
     purchase.cancelledAt = new Date();
     purchase.cancelledBy = user?.name || user?.username || "";

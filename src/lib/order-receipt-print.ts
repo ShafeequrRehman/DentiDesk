@@ -36,12 +36,13 @@ function money(value: number) {
 // order.advanceApplied / order.duesCollected come from the backend
 // (advanceService.js / completeAndSettle).
 export function accountBalanceLines(
-  order: Pick<SavedOrder, 'remainingAmount' | 'customer' | 'total' | 'paidAmount' | 'advanceApplied' | 'duesCollected'>,
+  order: Pick<SavedOrder, 'remainingAmount' | 'customer' | 'total' | 'paidAmount' | 'advanceApplied' | 'duesCollected' | 'setoffApplied'>,
   other: number,
 ) {
   const realPatient = !!order.customer?.phone && order.customer.phone !== WALKIN_PHONE;
   const fee = Number(order.total || 0);
   const adv = Number(order.advanceApplied || 0);
+  const setoff = Number(order.setoffApplied || 0);
   const remainingThis = Math.max(Number(order.remainingAmount || 0), 0);
   const otherNow = realPatient ? Number(other || 0) : 0;
   const collectedOthers = Number(order.duesCollected || 0);
@@ -49,14 +50,16 @@ export function accountBalanceLines(
   const creditUsed = prevBefore < 0 ? Math.min(-prevBefore, remainingThis) : 0;
   const advanceShown = adv + creditUsed;
   const oldDue = Math.max(prevBefore, 0);
-  const paidNow = Math.max(Number(order.paidAmount || 0) - adv, 0) + collectedOthers;
+  const paidNow = Math.max(Number(order.paidAmount || 0) - adv - setoff, 0) + collectedOthers;
   const left = remainingThis + otherNow;
 
   const lines: Array<{ label: string; value: string; bold?: boolean }> = [];
   lines.push({ label: 'APPOINTMENT FEE:', value: money(fee) });
   if (advanceShown > 0) lines.push({ label: 'ADVANCE ADJUSTED:', value: `-${money(advanceShown)}` });
+  // Settled against a purchase the clinic owed the patient - not paid now.
+  if (setoff > 0) lines.push({ label: 'PURCHASE ADJUSTED:', value: `-${money(setoff)}` });
   if (oldDue > 0) lines.push({ label: 'PREVIOUS DUE:', value: money(oldDue) });
-  lines.push({ label: 'TOTAL BILL:', value: money(fee - advanceShown + oldDue), bold: true });
+  lines.push({ label: 'TOTAL BILL:', value: money(fee - advanceShown - setoff + oldDue), bold: true });
   lines.push({ label: 'PAID:', value: money(paidNow) });
   if (left > 0) lines.push({ label: 'REMAINING DUE:', value: money(left), bold: true });
   else if (left < 0) lines.push({ label: 'ADVANCE BALANCE:', value: money(left), bold: true });

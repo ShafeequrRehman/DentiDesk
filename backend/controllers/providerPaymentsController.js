@@ -20,6 +20,7 @@ const { shopScope } = require("../middleware/attachShopScope");
 const { recordCashMovement } = require("./cashController");
 const { recordCustomerBankMovement } = require("./bankController");
 const { currencySignFor } = require("../services/currency");
+const { applyAllSetoffs } = require("../services/setoffService");
 
 const DAY_RE = /^\d{4}-\d{2}-\d{2}$/;
 const KARACHI_MS = 5 * 60 * 60 * 1000;
@@ -66,6 +67,8 @@ function paymentLines(order) {
 exports.getProviderPayments = async (req, res) => {
   try {
     const scope = shopScope(req);
+    // Settle appointment dues against purchases the clinic owes first.
+    await applyAllSetoffs(scope);
     const shopObjectId = new mongoose.Types.ObjectId(scope.shopId);
     const today = karachiDay(Date.now());
     const from = DAY_RE.test(String(req.query.from || "")) ? String(req.query.from) : today;
@@ -91,7 +94,7 @@ exports.getProviderPayments = async (req, res) => {
       if (!rows.has(key)) {
         rows.set(key, {
           name, type,
-          appointments: 0, billed: 0, collected: 0, recovered: 0, advanceUsed: 0, remainingDue: 0, advanceHeld: 0,
+          appointments: 0, billed: 0, collected: 0, recovered: 0, advanceUsed: 0, purchaseAdjusted: 0, remainingDue: 0, advanceHeld: 0,
           payments: [], appointmentsList: [], dues: [],
         });
       }
@@ -136,6 +139,7 @@ exports.getProviderPayments = async (req, res) => {
           if (!inRange(line.date)) continue;
           const value = line.amount * share;
           if (line.kind === "advance") row.advanceUsed += value;
+          else if (line.kind === "setoff") row.purchaseAdjusted += value;
           else {
             row.collected += value;
             if (line.kind === "recovery") row.recovered += value;
@@ -163,9 +167,10 @@ exports.getProviderPayments = async (req, res) => {
       collected: round2(row.collected),
       recovered: round2(row.recovered),
       advanceUsed: round2(row.advanceUsed),
+      purchaseAdjusted: round2(row.purchaseAdjusted),
       remainingDue: round2(row.remainingDue),
       advanceHeld: round2(row.advanceHeld),
-      net: round2(row.collected + row.advanceUsed),
+      net: round2(row.collected + row.advanceUsed + row.purchaseAdjusted),
       payments: row.payments.sort((a, b) => new Date(b.date) - new Date(a.date)),
       appointmentsList: row.appointmentsList.sort((a, b) => new Date(b.date) - new Date(a.date)),
       dues: row.dues.sort((a, b) => new Date(a.date) - new Date(b.date)),

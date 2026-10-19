@@ -109,7 +109,10 @@ const paymentEntrySchema = new mongoose.Schema(
   {
     date: { type: Date, default: Date.now },
     amount: { type: Number, required: true },
-    kind: { type: String, enum: ["payment", "recovery", "advance", "adjust"], default: "payment" },
+    // setoff = paid by netting against a purchase the clinic owes this
+    // patient (Unified Record) - see services/setoffService.js.
+    kind: { type: String, enum: ["payment", "recovery", "advance", "adjust", "setoff"], default: "payment" },
+    ref: { type: String, default: "" },
     method: { type: String, default: "Cash" },
     bankId: { type: mongoose.Schema.Types.ObjectId, ref: "Bank", default: null },
     note: { type: String, default: "" },
@@ -199,6 +202,9 @@ const orderSchema = new mongoose.Schema(
     // Part of the payment taken on this appointment that went to the
     // patient's older dues - lets the slip show the full bill.
     duesCollected: { type: Number, default: 0 },
+    // Part of paidAmount settled against a purchase the clinic owes the
+    // patient (purchase set-off).
+    setoffApplied: { type: Number, default: 0 },
     // Change-Return Calculation: the raw cash amount the customer actually
     // handed over at checkout - independent of paidAmount above, which is
     // always clamped to however much of this bill (plus any other dues)
@@ -432,6 +438,7 @@ orderSchema.methods.logOrderPayment = function logOrderPayment(amount, meta = {}
     bankId: meta.bankId || null,
     note: meta.note || "",
     createdBy: meta.createdBy || "",
+    ref: meta.ref || "",
   });
   this.$locals.loggedPaid = Number(this.$locals.loggedPaid || 0) + value;
 };

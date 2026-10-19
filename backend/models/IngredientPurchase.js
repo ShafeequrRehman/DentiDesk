@@ -81,6 +81,9 @@ const ingredientPurchaseSchema = new mongoose.Schema(
     totalAmount: { type: Number, default: 0, min: 0 },
     paidAmount: { type: Number, default: 0, min: 0 },
     remainingAmount: { type: Number, default: 0, min: 0 },
+    // Part of paidAmount settled by netting against the same contact's
+    // appointment dues (services/setoffService.js) - no cash moved.
+    setoffAmount: { type: Number, default: 0, min: 0 },
     purchaseDate: { type: Date, default: Date.now },
     // Dual-Status Stock Inventory Workflow: "pending" (Order Placed/
     // Dispatched - a Purchase Order has been raised with a supplier but

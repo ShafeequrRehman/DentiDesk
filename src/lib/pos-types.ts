@@ -1036,6 +1036,8 @@ export interface SavedOrder extends OrderPayload {
   // payment that went to older dues (backend advanceService / completeAndSettle).
   advanceApplied?: number;
   duesCollected?: number;
+  // Part of paidAmount settled against a purchase owed to the patient.
+  setoffApplied?: number;
   id: string;
   // Set by orderController.createOrder when the order itself saved fine but
   // the customer's contact info could not be synced to the Customers

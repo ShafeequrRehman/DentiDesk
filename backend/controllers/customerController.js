@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { applyPurchaseSetoff } = require("../services/setoffService");
 const Customer = require("../models/Customer");
 const Order = require("../models/Order");
 const IngredientPurchase = require("../models/IngredientPurchase");
@@ -438,6 +439,12 @@ exports.getCustomerOutstanding = async (req, res) => {
       return sum + remaining;
     }, 0);
 
+    // Settle appointment dues against purchases first, so the figures
+    // below (and every record) agree.
+    if ((await applyPurchaseSetoff(scope, phone)) > 0) {
+      const refreshed = await Order.find(orderQuery).lean();
+      orders.splice(0, orders.length, ...refreshed);
+    }
     const previousDues = Number(customer?.previousDues || 0);
 
     // Unified record (customer-supplier netting): what the clinic still
@@ -708,6 +715,7 @@ async function applySettleCustomerDues(scope, phone, body, createdBy) {
   });
 
   await customer.save();
+  await applyPurchaseSetoff(scope, phone);
   return amount;
 }
 

@@ -1,4 +1,5 @@
 const Product = require("../models/Product");
+const { applyPurchaseSetoff } = require("../services/setoffService");
 const { applyCustomerAdvance } = require("../services/advanceService");
 const { normalizeCurrency, poweredByOf } = require("../services/currency");
 const Order = require("../models/Order");
@@ -563,6 +564,7 @@ exports.createOrder = async (req, res) => {
     }
     // Use up the patient's advance on this appointment.
     if ((await applyCustomerAdvance(order, { shopId })) > 0) await order.save();
+    await applyPurchaseSetoff({ shopId }, customerPhone);
 
     res.status(201).json({
       id: String(order._id),

@@ -1472,7 +1472,7 @@ export interface ProviderPaymentLine {
   amount: number;
   full: number;
   share: number;
-  kind: 'payment' | 'recovery' | 'advance' | 'adjust';
+  kind: 'payment' | 'recovery' | 'advance' | 'adjust' | 'setoff';
   method: string;
   note: string;
   createdBy: string;
@@ -1490,6 +1490,8 @@ export interface ProviderPaymentRow {
   collected: number;
   recovered: number;
   advanceUsed: number;
+  // Settled against a purchase the clinic owed the patient.
+  purchaseAdjusted: number;
   remainingDue: number;
   advanceHeld: number;
   net: number;
