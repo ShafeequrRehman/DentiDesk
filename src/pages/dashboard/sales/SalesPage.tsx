@@ -1412,7 +1412,7 @@ export default function SalesPage() {
                           toast.error(problem);
                           return;
                         }
-                        void sendAppointmentSlip(selectedOrder, selectedOrder.status === 'pending' ? 'booked' : 'completed')
+                        void sendAppointmentSlip(selectedOrder, selectedOrder.status === 'pending' ? 'booked' : 'completed', { withPdf: true })
                           .then(() => toast.success('Slip sent to the patient on WhatsApp.'))
                           .catch((error) => toast.error(`Slip not sent: ${error instanceof Error ? error.message : 'failed'}`));
                       }}

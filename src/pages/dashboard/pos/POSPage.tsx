@@ -1300,8 +1300,8 @@ export default function POSPage() {
             shopToast.error(`Slip not sent on WhatsApp - ${savedOrder.customer?.name || 'the patient'}'s number is not correct.`);
           } else {
             void sendAppointmentSlip(savedOrder, 'booked')
-              .then(() => shopToast.success('Appointment slip sent to the patient on WhatsApp.'))
-              .catch((err) => shopToast.error(`Slip not sent on WhatsApp: ${err instanceof Error ? err.message : 'failed'}`));
+              .then(() => shopToast.success('Appointment confirmation sent to the patient on WhatsApp.'))
+              .catch((err) => shopToast.error(`Confirmation not sent on WhatsApp: ${err instanceof Error ? err.message : 'failed'}`));
           }
         }
       }

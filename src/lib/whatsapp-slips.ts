@@ -49,7 +49,7 @@ export type SlipKind = 'booked' | 'completed';
 
 // Short WhatsApp text that goes with the slip - like the online-ordering
 // confirmation: booked -> confirmation, completed -> thanks + payment.
-function slipMessage(order: SavedOrder, kind: SlipKind, previousDues: number) {
+function slipMessage(order: SavedOrder, kind: SlipKind, previousDues: number, withPdf: boolean) {
   const clinic = getStoreSettings().receiptHeader || 'Clinic';
   const withWhom = bookedWith(order);
   const remaining = typeof order.remainingAmount === 'number' ? order.remainingAmount : Math.max(Number(order.total || 0) - Number(order.paidAmount || 0), 0);
@@ -70,16 +70,18 @@ function slipMessage(order: SavedOrder, kind: SlipKind, previousDues: number) {
     if (balance > 0) lines.push(`Remaining due: *${money(balance)}*`);
     else if (balance < 0) lines.push(`Advance balance: *${money(-balance)}*`);
     else lines.push('Account: *CLEAR*');
-    lines.push('', 'Your slip is attached.');
+    if (withPdf) lines.push('', 'Your slip is attached.');
   } else {
-    lines.push('', 'Please arrive 10 minutes before your time. Your slip is attached.');
+    lines.push('', `Please arrive 10 minutes before your time.${withPdf ? ' Your slip is attached.' : ''}`);
   }
   return lines.join('\n');
 }
 
-// Appointment slip sent to the patient on WhatsApp: a confirmation text,
-// then the same slip the POS prints (receipt-pdf.tsx) as a PDF.
-export async function sendAppointmentSlip(order: SavedOrder, kind: SlipKind) {
+// Appointment on WhatsApp: a confirmation text, then (on payment, or when
+// sent by hand) the same slip the POS prints (receipt-pdf.tsx) as a PDF.
+// Saving an appointment sends only the confirmation text.
+export async function sendAppointmentSlip(order: SavedOrder, kind: SlipKind, options: { withPdf?: boolean } = {}) {
+  const withPdf = options.withPdf ?? kind === 'completed';
   const problem = slipPhoneProblem(order);
   if (problem) throw new Error(problem);
   let previousDues = 0;
@@ -89,8 +91,9 @@ export async function sendAppointmentSlip(order: SavedOrder, kind: SlipKind) {
   } catch {
     // balance is extra - the slip still goes without it
   }
-  const res = await sendWhatsappMessage(order.customer.phone, slipMessage(order, kind, previousDues));
+  const res = await sendWhatsappMessage(order.customer.phone, slipMessage(order, kind, previousDues, withPdf));
   if (res && res.success === false) throw new Error(res.error || 'WhatsApp message not sent.');
+  if (!withPdf) return;
   const { orderReceiptPdfBase64 } = await import('@/lib/receipt-pdf');
   const base64 = await orderReceiptPdfBase64(order, previousDues);
   await sendWhatsappDocument(order.customer.phone, base64, `Appointment_${appointmentNo(order)}_${fileSafe(order.customer?.name || '')}.pdf`);
