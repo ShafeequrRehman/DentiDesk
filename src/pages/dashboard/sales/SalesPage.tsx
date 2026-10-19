@@ -1049,42 +1049,18 @@ export default function SalesPage() {
   }
 
   async function sendCompletedReceiptOnWhatsApp(order: SavedOrder) {
-    // WhatsApp is online-only by design (same as order placement in
-    // POSPage.tsx) - skip both the local PDF creation and the send
-    // outright rather than let it fail after a timeout.
+    // WhatsApp is online-only - skip it offline rather than wait for a
+    // timeout. The patient gets the thank-you text + the POS slip PDF.
     if (isDesktopApp() && !isOnline) return;
     if (!hasCustomerPhone(order)) return;
-
-    const isElectron = typeof window !== 'undefined' && navigator.userAgent.includes('Electron');
-    if (!isElectron) {
-      console.warn('Patient receipt PDF WhatsApp send requires the Electron app.');
+    if (slipPhoneProblem(order)) {
+      setStatus({ tone: 'error', text: slipPhoneProblem(order) || '' });
       return;
     }
-
-    try {
-      const electronRequire = (window as ElectronWindow).require;
-      const { ipcRenderer } = electronRequire ? electronRequire('electron') : { ipcRenderer: null };
-      if (!ipcRenderer) throw new Error('Electron IPC is unavailable.');
-
-      const printLogo = localStorage.getItem('preferred-print-logo');
-      const receiptNumber = orderNumber(order);
-      // Same "Previous Dues" figure the cashier saw in the Complete Payment
-      // panel when they completed this order - see saveUpdate above.
-      // settings must be passed through here too, exactly like the
-      // print-cashier/print-kitchen calls above - without it this PDF's
-      // ReceiptPdf() has no receiptHeader to read and silently falls back
-      // to a hardcoded store name instead of whatever was configured in
-      // Settings -> Manage Receipt.
-      const result = await ipcRenderer.invoke('create-customer-receipt-pdf-data', { ...order, previousDues: customerDue }, `customer_receipt_${receiptNumber}`, printLogo, settings);
-      if (!isReceiptPdfResult(result) || !result.success || !result.fileBase64) {
-        throw new Error(isReceiptPdfResult(result) ? result.error || 'Patient receipt PDF was not created.' : 'Invalid receipt PDF response.');
-      }
-
-      await sendWhatsappDocument(order.customer.phone, result.fileBase64, `receipt-${receiptNumber}.pdf`);
-    } catch (error) {
-      console.error('Failed to send completed receipt PDF on WhatsApp:', error);
-      setStatus({ tone: 'error', text: t('sales.whatsappReceiptSendFailed') });
-    }
+    void sendAppointmentSlip(order, 'completed').catch((error) => {
+      console.error('Failed to send completed slip on WhatsApp:', error);
+      setStatus({ tone: 'error', text: error instanceof Error ? error.message : t('sales.whatsappReceiptSendFailed') });
+    });
   }
 
   function handleOrderCancelled(updated: SavedOrder) {

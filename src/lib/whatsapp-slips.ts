@@ -7,8 +7,8 @@
 // isn't linked or the number isn't on WhatsApp.
 import { cs } from '@/lib/currency';
 import { createElement } from 'react';
-import { fetchCustomerOutstanding, sendWhatsappDocument } from '@/lib/pos-api';
-import { accountBalanceLines } from '@/lib/order-receipt-print';
+import { fetchCustomerOutstanding, sendWhatsappDocument, sendWhatsappMessage } from '@/lib/pos-api';
+import { getStoreSettings } from '@/lib/pos-settings';
 import type { SavedOrder } from '@/lib/pos-types';
 import { formatAppointmentDate, formatSlot } from '@/lib/appointments';
 
@@ -47,57 +47,52 @@ function fileSafe(text: string) {
 
 export type SlipKind = 'booked' | 'completed';
 
-// Appointment slip as a PDF, sent to the patient on WhatsApp.
+// Short WhatsApp text that goes with the slip - like the online-ordering
+// confirmation: booked -> confirmation, completed -> thanks + payment.
+function slipMessage(order: SavedOrder, kind: SlipKind, previousDues: number) {
+  const clinic = getStoreSettings().receiptHeader || 'Clinic';
+  const withWhom = bookedWith(order);
+  const remaining = typeof order.remainingAmount === 'number' ? order.remainingAmount : Math.max(Number(order.total || 0) - Number(order.paidAmount || 0), 0);
+  const lines = [`*${clinic}*`, ''];
+  if (kind === 'booked') {
+    lines.push(`Dear ${order.customer?.name || 'Patient'}, your appointment is confirmed.`);
+  } else {
+    lines.push(`Dear ${order.customer?.name || 'Patient'}, thank you for your visit. Your payment is received.`);
+  }
+  lines.push(`Appointment No: *${appointmentNo(order)}*`);
+  if (withWhom) lines.push(`${withWhom.label}: ${withWhom.value}`);
+  if (order.appointmentDate) lines.push(`Date: ${formatAppointmentDate(order.appointmentDate)}`);
+  if (order.appointmentTime) lines.push(`Time: ${formatSlot(order.appointmentTime)}`);
+  lines.push(`Total: *${money(order.total)}*`);
+  if (kind === 'completed') {
+    lines.push(`Paid: *${money(order.paidAmount)}*`);
+    const balance = remaining + previousDues;
+    if (balance > 0) lines.push(`Remaining due: *${money(balance)}*`);
+    else if (balance < 0) lines.push(`Advance balance: *${money(-balance)}*`);
+    else lines.push('Account: *CLEAR*');
+    lines.push('', 'Your slip is attached.');
+  } else {
+    lines.push('', 'Please arrive 10 minutes before your time. Your slip is attached.');
+  }
+  return lines.join('\n');
+}
+
+// Appointment slip sent to the patient on WhatsApp: a confirmation text,
+// then the same slip the POS prints (receipt-pdf.tsx) as a PDF.
 export async function sendAppointmentSlip(order: SavedOrder, kind: SlipKind) {
   const problem = slipPhoneProblem(order);
   if (problem) throw new Error(problem);
-  const { ReportPdfDocument, pdfDocumentToBase64 } = await import('@/lib/pdf-export');
-  const withWhom = bookedWith(order);
-  const remaining = typeof order.remainingAmount === 'number' ? order.remainingAmount : Math.max(Number(order.total || 0) - Number(order.paidAmount || 0), 0);
-  const stats = [
-    { label: 'Appointment No', value: `#${appointmentNo(order)}` },
-    { label: 'Type', value: order.source === 'customer-qr' ? 'Online' : 'Clinic' },
-    { label: 'Patient', value: order.customer?.name || 'Patient' },
-    ...(withWhom ? [{ label: withWhom.label, value: withWhom.value }] : []),
-    ...(order.appointmentDate ? [{ label: 'Date', value: formatAppointmentDate(order.appointmentDate) }] : []),
-    ...(order.appointmentTime ? [{ label: 'Time', value: formatSlot(order.appointmentTime) }] : []),
-    { label: 'Total', value: money(order.total) },
-    { label: 'Paid', value: money(order.paidAmount) },
-    { label: remaining > 0 ? 'Due' : 'Status', value: remaining > 0 ? money(remaining) : 'Fully paid' },
-  ];
-  // The patient's whole account: previous due / advance and the total.
+  let previousDues = 0;
   try {
     const result = await fetchCustomerOutstanding(order.customer.phone, order.id);
-    const lines = accountBalanceLines({ ...order, remainingAmount: remaining }, Number(result?.outstanding ?? 0))
-      .filter((line) => line.label !== 'APPOINTMENT FEE:');
-    lines.forEach((line) => {
-      const label = line.label.replace(':', '').toLowerCase().replace(/(^|\s)\w/g, (c) => c.toUpperCase());
-      stats.push({ label, value: line.value });
-    });
+    previousDues = Number(result?.outstanding ?? 0) || 0;
   } catch {
     // balance is extra - the slip still goes without it
   }
-  const doc = createElement(ReportPdfDocument, {
-    title: kind === 'completed' ? 'Appointment Slip - Completed' : 'Appointment Slip - Booked',
-    subtitle: kind === 'completed' ? 'Thank you for your visit!' : 'Please arrive 10 minutes before your time.',
-    stats,
-    tables: [
-      {
-        title: 'Drs / Services',
-        columns: [
-          { label: 'Drs / Service', width: 2.4 },
-          { label: 'Price', width: 1, align: 'right' as const },
-        ],
-        rows: (order.items || []).map((item) => [
-          `${item.name}${item.variation && item.variation !== 'Standard' ? ` (${item.variation})` : ''}`,
-          money(Number(item.price || 0) * Number(item.quantity || 1)),
-        ]),
-        footer: ['Total', money(order.total)],
-        emptyMessage: 'No items.',
-      },
-    ],
-  });
-  const base64 = await pdfDocumentToBase64(doc);
+  const res = await sendWhatsappMessage(order.customer.phone, slipMessage(order, kind, previousDues));
+  if (res && res.success === false) throw new Error(res.error || 'WhatsApp message not sent.');
+  const { orderReceiptPdfBase64 } = await import('@/lib/receipt-pdf');
+  const base64 = await orderReceiptPdfBase64(order, previousDues);
   await sendWhatsappDocument(order.customer.phone, base64, `Appointment_${appointmentNo(order)}_${fileSafe(order.customer?.name || '')}.pdf`);
 }
 

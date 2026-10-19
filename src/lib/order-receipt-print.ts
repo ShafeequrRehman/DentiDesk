@@ -161,7 +161,15 @@ function paymentModeLabel(order: SavedOrder) {
   return method.toUpperCase();
 }
 
-function buildOrderReceiptBodyHtml(order: SavedOrder, previousDues = 0) {
+// The slip's content as plain lines - one source for the printed slip
+// (HTML below) and the WhatsApp PDF (receipt-pdf.tsx), so both always
+// look and read the same.
+export type ReceiptLine =
+  | { kind: 'text'; text: string; small?: boolean; indent?: boolean; spaceBefore?: boolean }
+  | { kind: 'row'; left: string; right: string; bold?: boolean }
+  | { kind: 'dashed' };
+
+export function buildOrderReceiptLines(order: SavedOrder, previousDues = 0): ReceiptLine[] {
   const itemsTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
   const billTotal = order.total ?? itemsTotal;
   const discountAmount = order.discount?.amount || 0;
@@ -171,45 +179,62 @@ function buildOrderReceiptBodyHtml(order: SavedOrder, previousDues = 0) {
   const date = order.createdAt ? new Date(order.createdAt) : null;
   const dateString = date ? date.toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' }).toUpperCase() : '--';
   const timeString = date ? date.toLocaleTimeString('en-US', { hour12: true, hour: '2-digit', minute: '2-digit', second: '2-digit' }) : '--:--:--';
-
-  const itemRows = order.items.map((item) => {
-    const itemTotal = (item.price * item.quantity).toFixed(2);
-    return `
-      <div class="row"><span>${item.quantity}x ${item.name.toUpperCase()} @ ${cs()}${item.price.toFixed(2)}</span><span>${cs()}${itemTotal}</span></div>
-      ${item.variation ? `<p style="margin-left:12px;font-size:10px;color:#444">- ${item.variation}</p>` : ''}
-    `;
-  }).join('');
-
   const hasRealCustomer = order.customer && order.customer.name && !['Walk-in Customer', 'Walk-in Patient'].includes(order.customer.name);
   const hasRealPhone = hasRealCustomer && order.customer.phone && order.customer.phone !== '03000000000';
 
-  return `
-    <p>DATE: ${dateString}</p>
-    <p>TIME: ${timeString}</p>
-    ${order.appointmentTime ? `<p>APPOINTMENT: ${appointmentSlotLabel(order.appointmentDate, order.appointmentTime)}</p>` : ''}
-    <p>TYPE: ${order.source === 'customer-qr' ? 'ONLINE' : 'CLINIC'}</p>
-    ${order.doctorName ? `<p>${/^dr\.?\s/i.test(order.doctorName) ? 'DR' : 'SERVICE'}: ${order.doctorName.toUpperCase()}</p>` : ''}
-    ${hasRealCustomer ? `<p>PATIENT: ${order.customer.name.toUpperCase()}</p>` : ''}
-    ${hasRealPhone ? `<p>PHONE: ${order.customer.phone}</p>` : ''}
-    ${order.customer?.address ? `<p>ADDRESS: ${order.customer.address}</p>` : ''}
-    ${order.billTid ? `<p>TID: ${order.billTid}</p>` : ''}
-    ${order.billName ? `<p>BILL NAME: ${order.billName}</p>` : ''}
-    ${order.cashRecipientName ? `<p>CASH GIVEN TO: ${order.cashRecipientName}</p>` : ''}
-    <div class="dashed"></div>
-    <p>Items:</p>
-    ${itemRows}
-    <div class="dashed"></div>
-    <div class="row"><span>Items Total:</span><span>${cs()}${itemsTotal.toFixed(2)}</span></div>
-    ${discountAmount > 0 ? `<div class="row"><span>Discount:</span><span>-${cs()}${discountAmount.toFixed(2)}</span></div>` : ''}
-    <div class="row bold"><span>TOTAL:</span><span>${cs()}${billTotal.toFixed(2)}</span></div>
-    <p style="margin-top:8px">PAYMENT MODE: ${paymentModeLabel(order)}</p>
-    ${cashReceived > 0 ? `
-      <div class="row bold"><span>TOTAL BILL:</span><span>${cs()}${billTotal.toFixed(2)}</span></div>
-      <div class="row"><span>CASH TENDERED/RECEIVED:</span><span>${cs()}${cashReceived.toFixed(2)}</span></div>
-      <div class="row bold"><span>CHANGE RETURNED:</span><span>${cs()}${changeReturned.toFixed(2)}</span></div>
-    ` : amountTendered !== undefined ? `<p>AMOUNT TENDERED: ${cs()}${amountTendered.toFixed(2)}</p>` : ''}
-    ${balanceHtml(order, previousDues)}
-  `;
+  const lines: ReceiptLine[] = [];
+  const text = (t: string, extra: Partial<{ small: boolean; indent: boolean; spaceBefore: boolean }> = {}) => lines.push({ kind: 'text', text: t, ...extra });
+  const row = (left: string, right: string, bold = false) => lines.push({ kind: 'row', left, right, bold });
+  text(`DATE: ${dateString}`);
+  text(`TIME: ${timeString}`);
+  if (order.appointmentTime) text(`APPOINTMENT: ${appointmentSlotLabel(order.appointmentDate, order.appointmentTime)}`);
+  text(`TYPE: ${order.source === 'customer-qr' ? 'ONLINE' : 'CLINIC'}`);
+  if (order.doctorName) text(`${/^dr\.?\s/i.test(order.doctorName) ? 'DR' : 'SERVICE'}: ${order.doctorName.toUpperCase()}`);
+  if (hasRealCustomer) text(`PATIENT: ${order.customer.name.toUpperCase()}`);
+  if (hasRealPhone) text(`PHONE: ${order.customer.phone}`);
+  if (order.customer?.address) text(`ADDRESS: ${order.customer.address}`);
+  if (order.billTid) text(`TID: ${order.billTid}`);
+  if (order.billName) text(`BILL NAME: ${order.billName}`);
+  if (order.cashRecipientName) text(`CASH GIVEN TO: ${order.cashRecipientName}`);
+  lines.push({ kind: 'dashed' });
+  text('Items:');
+  order.items.forEach((item) => {
+    row(`${item.quantity}x ${item.name.toUpperCase()} @ ${cs()}${item.price.toFixed(2)}`, `${cs()}${(item.price * item.quantity).toFixed(2)}`);
+    if (item.variation) text(`- ${item.variation}`, { small: true, indent: true });
+  });
+  lines.push({ kind: 'dashed' });
+  row('Items Total:', `${cs()}${itemsTotal.toFixed(2)}`);
+  if (discountAmount > 0) row('Discount:', `-${cs()}${discountAmount.toFixed(2)}`);
+  row('TOTAL:', `${cs()}${billTotal.toFixed(2)}`, true);
+  text(`PAYMENT MODE: ${paymentModeLabel(order)}`, { spaceBefore: true });
+  if (cashReceived > 0) {
+    row('TOTAL BILL:', `${cs()}${billTotal.toFixed(2)}`, true);
+    row('CASH TENDERED/RECEIVED:', `${cs()}${cashReceived.toFixed(2)}`);
+    row('CHANGE RETURNED:', `${cs()}${changeReturned.toFixed(2)}`, true);
+  } else if (amountTendered !== undefined) {
+    text(`AMOUNT TENDERED: ${cs()}${amountTendered.toFixed(2)}`);
+  }
+  const balance = accountBalanceLines(order, previousDues);
+  if (balance.length > 0) {
+    lines.push({ kind: 'dashed' });
+    balance.forEach((l) => row(l.label, l.value, !!l.bold));
+  }
+  return lines;
+}
+
+function escapeReceiptHtml(value: string) {
+  return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+}
+
+function buildOrderReceiptBodyHtml(order: SavedOrder, previousDues = 0) {
+  return buildOrderReceiptLines(order, previousDues)
+    .map((line) => {
+      if (line.kind === 'dashed') return '<div class="dashed"></div>';
+      if (line.kind === 'row') return `<div class="row${line.bold ? ' bold' : ''}"><span>${escapeReceiptHtml(line.left)}</span><span>${escapeReceiptHtml(line.right)}</span></div>`;
+      const style = [line.small ? 'font-size:10px;color:#444' : '', line.indent ? 'margin-left:12px' : '', line.spaceBefore ? 'margin-top:8px' : ''].filter(Boolean).join(';');
+      return `<p${style ? ` style="${style}"` : ''}>${escapeReceiptHtml(line.text)}</p>`;
+    })
+    .join('');
 }
 
 // Same shell/print technique, for a manual Dues Entry ("+ Paid Amount"/
