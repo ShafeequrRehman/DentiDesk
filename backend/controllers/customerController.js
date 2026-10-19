@@ -9,7 +9,6 @@ const { escapeRegex } = require("../utils/escapeRegex");
 const { recordCustomerBankMovement } = require("./bankController");
 const { recordCashMovement } = require("./cashController");
 const { currencySignFor } = require("../services/currency");
-const { clampTargets } = require("../services/advanceService");
 
 // The JWT (req.user) only ever carries id/role/shopId/permissions - never
 // a display name (see auth/tokenService.js) - so recording who made a
@@ -653,21 +652,13 @@ async function applySettleCustomerDues(scope, phone, body, createdBy) {
       left -= use;
     }
   }
-  if (left > 0) {
-    previousDues -= left;
-    if (target) {
-      const list = customer.advanceFor || [];
-      const existing = list.find((e) => e.name === target);
-      if (existing) existing.amount = Number(existing.amount || 0) + left;
-      else list.push({ name: target, amount: left });
-      customer.advanceFor = list;
-    }
-  }
+  // Anything extra is the patient's advance - not tied to any Dr.
+  if (left > 0) previousDues -= left;
   customer.previousDues = previousDues;
-  clampTargets(customer);
+  customer.advanceFor = [];
   const allocationNote = [
     appliedTo.length ? `Applied: ${appliedTo.join(", ")}` : "",
-    left > 0 ? `Advance ${sign.trim()}${left}${body.advanceFor ? ` for ${String(body.advanceFor).trim()}` : ""}` : "",
+    left > 0 ? `Advance ${sign.trim()}${left}` : "",
   ].filter(Boolean).join(" · ");
 
   // Move the bank's own money FIRST (if applicable) so its real name is

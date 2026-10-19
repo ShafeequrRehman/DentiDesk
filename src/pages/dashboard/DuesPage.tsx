@@ -1461,7 +1461,7 @@ function CustomerCard({ customer, banks, providerNames = [], onAddManual, onSett
             ))}
           </select>
         ) : null}
-        {providerNames.length > 0 ? (
+        {(customer.duesByProvider || []).length > 0 || providerNames.length > 0 ? (
           <div>
             <select
               value={advanceFor}
@@ -1473,20 +1473,15 @@ function CustomerCard({ customer, banks, providerNames = [], onAddManual, onSett
               {(customer.duesByProvider || []).map((d) => (
                 <option key={`due-${d.name}`} value={d.name}>Received for: {d.name} - {cs()}{d.due.toLocaleString()} due</option>
               ))}
-              {providerNames
-                .filter((name) => !(customer.duesByProvider || []).some((d) => d.name === name))
-                .map((name) => (
-                  <option key={name} value={name}>Advance for: {name}</option>
-                ))}
             </select>
             <p className="mt-1 text-[10px] font-semibold text-slate-400">
               {advanceFor
-                ? `"- Received" goes only to ${advanceFor}'s due appointments (oldest first); anything extra is kept as advance for ${advanceFor}.`
-                : '"- Received" clears old dues first, oldest first (each Dr / Service gets its share); anything extra is kept as general advance.'}
+                ? `"- Received" goes only to ${advanceFor}'s due appointments (oldest first); anything extra is kept as the patient's advance.`
+                : '"- Received" clears old dues first, oldest first (each Dr / Service gets its share); anything extra is kept as the patient\'s advance (used on any next appointment).'}
             </p>
-            {(customer.advanceFor || []).length > 0 ? (
-              <p className="mt-1 text-[10px] font-bold text-violet-600">
-                Advance kept: {(customer.advanceFor || []).map((a) => `${a.name} ${cs()}${a.amount.toLocaleString()}`).join(' · ')}
+            {(customer.duesByProvider || []).length > 0 ? (
+              <p className="mt-1 text-[10px] font-bold text-rose-600">
+                Due kept: {(customer.duesByProvider || []).map((d) => `${d.name} ${cs()}${d.due.toLocaleString()}`).join(' · ')}
               </p>
             ) : null}
           </div>

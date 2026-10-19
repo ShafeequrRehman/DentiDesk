@@ -153,13 +153,6 @@ exports.getProviderPayments = async (req, res) => {
       }
     }
 
-    for (const customer of customers) {
-      for (const entry of customer.advanceFor || []) {
-        const type = isDr(entry.name) ? "dr" : "service";
-        const row = rowFor(entry.name, type);
-        row.advanceHeld += Number(entry.amount || 0);
-      }
-    }
 
     const result = [...rows.values()].map((row) => ({
       ...row,

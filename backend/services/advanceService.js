@@ -48,28 +48,13 @@ async function applyCustomerAdvance(order, scope) {
     if (!(due > 0)) return 0;
     const customer = await Customer.findOne({ phone, ...scope });
     if (!customer || !(Number(customer.previousDues) < 0)) return 0;
-    clampTargets(customer);
+    // An advance belongs to the patient, not to one Dr / Service - plans
+    // change, so it is used on whichever appointment comes next. The Dr
+    // whose appointment uses it gets it as "advance used".
     const credit = -Number(customer.previousDues);
-    const targeted = (customer.advanceFor || []).reduce((sum, e) => sum + e.amount, 0);
-    const general = Math.max(credit - targeted, 0);
-    const names = namesOf(order);
-    const matching = (customer.advanceFor || []).filter((e) => names.has(e.name));
-    const matchingTotal = matching.reduce((sum, e) => sum + e.amount, 0);
-    const applied = round2(Math.min(due, matchingTotal + general));
+    const applied = round2(Math.min(due, credit));
     if (!(applied > 0)) return 0;
-
-    // Use the advance kept for this Dr / Service first, then the general one.
-    let fromTargets = Math.min(applied, matchingTotal);
-    customer.advanceFor = (customer.advanceFor || [])
-      .map((e) => {
-        if (fromTargets > 0 && names.has(e.name)) {
-          const use = Math.min(e.amount, fromTargets);
-          fromTargets -= use;
-          return { name: e.name, amount: round2(e.amount - use) };
-        }
-        return e;
-      })
-      .filter((e) => e.amount > 0);
+    customer.advanceFor = [];
 
     order.paidAmount = Number(order.paidAmount || 0) + applied;
     order.remainingAmount = Math.max(round2(due - applied), 0);
@@ -84,7 +69,6 @@ async function applyCustomerAdvance(order, scope) {
       balanceAfter: customer.previousDues,
       paymentMethod: "cash",
     });
-    clampTargets(customer);
     await customer.save();
     return applied;
   } catch (error) {

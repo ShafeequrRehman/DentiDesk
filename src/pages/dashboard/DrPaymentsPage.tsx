@@ -145,14 +145,13 @@ export default function DrPaymentsPage() {
         <span className="flex items-center gap-1 text-xs font-bold text-gray-400"><CalendarDays size={13} /> {range.label}</span>
       </div>
 
-      <div className="grid grid-cols-2 gap-3 md:grid-cols-4 xl:grid-cols-7">
+      <div className="grid grid-cols-2 gap-3 md:grid-cols-3 xl:grid-cols-6">
         <Stat label="Billed" value={money(totals.billed)} tone="text-gray-900" hint="Appointments in range" />
         <Stat label="Collected" value={money(totals.collected)} tone="text-emerald-600" hint="Cash + bank in range" />
         <Stat label="Due recovered" value={money(totals.recovered)} tone="text-sky-600" hint="Part of collected" />
         <Stat label="Advance used" value={money(totals.advanceUsed)} tone="text-violet-600" hint="From patients' advance" />
         <Stat label="Purchase adjusted" value={money(totals.purchaseAdjusted)} tone="text-teal-600" hint="Set off against purchases" />
         <Stat label="Remaining due" value={money(totals.remainingDue)} tone="text-rose-600" hint="Right now, all dates" />
-        <Stat label="Advance held" value={money(totals.advanceHeld)} tone="text-amber-600" hint="Kept for them" />
       </div>
 
       {error ? <div className="rounded-[20px] bg-rose-50 p-4 text-sm font-bold text-rose-700">{error}</div> : null}
@@ -173,7 +172,6 @@ export default function DrPaymentsPage() {
                   <th className="px-4 py-4 text-right">Due recovered</th>
                   <th className="px-4 py-4 text-right">Advance used</th>
                   <th className="px-4 py-4 text-right">Remaining due</th>
-                  <th className="px-4 py-4 text-right">Advance held</th>
                   <th className="px-6 py-4 text-right">Net</th>
                 </tr>
               </thead>
@@ -189,7 +187,6 @@ export default function DrPaymentsPage() {
                     <td className="px-4 py-4 text-right text-sm font-bold text-sky-600">{money(row.recovered)}</td>
                     <td className="px-4 py-4 text-right text-sm font-bold text-violet-600">{money(row.advanceUsed)}</td>
                     <td className={`px-4 py-4 text-right text-sm font-black ${row.remainingDue > 0.5 ? 'text-rose-600' : 'text-gray-300'}`}>{money(row.remainingDue)}</td>
-                    <td className={`px-4 py-4 text-right text-sm font-bold ${row.advanceHeld > 0 ? 'text-amber-600' : 'text-gray-300'}`}>{money(row.advanceHeld)}</td>
                     <td className="px-6 py-4 text-right text-base font-black text-gray-900">{money(row.net)}</td>
                   </tr>
                 ))}
@@ -235,6 +232,13 @@ function DetailModal({
   const [tab, setTab] = useState<DetailTab>('payments');
   const [downloading, setDownloading] = useState(false);
   const [payFor, setPayFor] = useState<ProviderPaymentRow['dues'][number] | null>(null);
+  // Find a patient by name or phone in the lists below.
+  const [search, setSearch] = useState('');
+  const q = search.trim().toLowerCase();
+  const hit = (patient: string, phone: string) => !q || patient.toLowerCase().includes(q) || phone.replace(/\D/g, '').includes(q.replace(/\D/g, '') || '\u0000');
+  const payments = row.payments.filter((p) => hit(p.patient, p.phone));
+  const dues = row.dues.filter((d) => hit(d.patient, d.phone));
+  const appointmentsList = row.appointmentsList.filter((a) => hit(a.patient, a.phone));
   useBackspaceToClose(onClose);
 
   async function downloadPdf() {
@@ -252,7 +256,6 @@ function DetailModal({
             { label: 'Advance used', value: money(row.advanceUsed) },
             { label: 'Purchase adjusted', value: money(row.purchaseAdjusted || 0) },
             { label: 'Remaining due', value: money(row.remainingDue) },
-            { label: 'Advance held', value: money(row.advanceHeld) },
             { label: 'Net', value: money(row.net) },
           ]}
           tables={[
@@ -338,14 +341,13 @@ function DetailModal({
           <Mini label="Net" value={money(row.net)} tone="text-gray-900" />
           <Mini label="Billed" value={money(row.billed)} tone="text-gray-700" />
           <Mini label="Remaining due" value={money(row.remainingDue)} tone="text-rose-600" />
-          <Mini label="Advance held" value={money(row.advanceHeld)} tone="text-amber-600" />
         </div>
 
         <div className="mt-5 flex gap-1 rounded-full bg-gray-100 p-1 text-xs font-black">
           {([
-            ['payments', `Payments (${row.payments.length})`],
-            ['dues', `Still due (${row.dues.length})`],
-            ['appointments', `Appointments (${row.appointmentsList.length})`],
+            ['payments', `Payments (${payments.length})`],
+            ['dues', `Still due (${dues.length})`],
+            ['appointments', `Appointments (${appointmentsList.length})`],
           ] as Array<[DetailTab, string]>).map(([key, label]) => (
             <button key={key} type="button" onClick={() => setTab(key)} className={`flex-1 rounded-full px-3 py-2 ${tab === key ? 'bg-white text-gray-900 shadow-sm' : 'text-gray-500'}`}>
               {label}
@@ -353,14 +355,21 @@ function DetailModal({
           ))}
         </div>
 
+        <input
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          placeholder="Search patient by name or phone..."
+          className="mt-3 w-full rounded-2xl border border-gray-200 bg-gray-50 px-4 py-2.5 text-sm font-semibold outline-none focus:border-[#00B0C7]"
+        />
+
         <div className="mt-3 max-h-[46vh] overflow-y-auto rounded-2xl border border-gray-100">
           {tab === 'payments' ? (
-            row.payments.length === 0 ? (
+            payments.length === 0 ? (
               <p className="p-5 text-sm font-bold text-gray-400">No payments in this period.</p>
             ) : (
               <table className="w-full text-left text-xs">
                 <tbody className="divide-y divide-gray-50">
-                  {row.payments.map((p, index) => (
+                  {payments.map((p, index) => (
                     <tr key={`${p.orderId}-${p.id || index}`}>
                       <td className="px-4 py-2.5 font-bold text-gray-500">{shortDate(p.date)}</td>
                       <td className="px-3 py-2.5 font-black text-gray-900">{p.label}</td>
@@ -379,12 +388,12 @@ function DetailModal({
               </table>
             )
           ) : tab === 'dues' ? (
-            row.dues.length === 0 ? (
+            dues.length === 0 ? (
               <p className="p-5 text-sm font-bold text-gray-400">Nothing due.</p>
             ) : (
               <table className="w-full text-left text-xs">
                 <tbody className="divide-y divide-gray-50">
-                  {row.dues.map((d) => (
+                  {dues.map((d) => (
                     <tr key={d.orderId}>
                       <td className="px-4 py-2.5 font-bold text-gray-500">{shortDate(d.date)}</td>
                       <td className="px-3 py-2.5 font-black text-gray-900">{d.label}</td>
@@ -400,12 +409,12 @@ function DetailModal({
                 </tbody>
               </table>
             )
-          ) : row.appointmentsList.length === 0 ? (
+          ) : appointmentsList.length === 0 ? (
             <p className="p-5 text-sm font-bold text-gray-400">No appointments in this period.</p>
           ) : (
             <table className="w-full text-left text-xs">
               <tbody className="divide-y divide-gray-50">
-                {row.appointmentsList.map((a) => (
+                {appointmentsList.map((a) => (
                   <tr key={a.orderId}>
                     <td className="px-4 py-2.5 font-bold text-gray-500">{shortDate(a.date)}</td>
                     <td className="px-3 py-2.5 font-black text-gray-900">{a.label}</td>
