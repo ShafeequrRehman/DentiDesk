@@ -629,8 +629,11 @@ exports.getDashboardSummary = async (req, res) => {
     for (const order of todaysOrders) {
       totalSaleToday += Number(order.total || 0);
       saleOnCredit += Number(order.remainingAmount || 0);
-      if (order.paymentMethod === "Bank") saleOnBank += Number(order.paidAmount || 0);
-      else saleOnCash += Number(order.paidAmount || 0);
+      // Advance used on the appointment was already counted when it was
+      // received - only the money taken for it now counts as a sale.
+      const takenNow = Math.max(Number(order.paidAmount || 0) - Number(order.advanceApplied || 0), 0);
+      if (order.paymentMethod === "Bank") saleOnBank += takenNow;
+      else saleOnCash += takenNow;
     }
 
     // Stock Value = every tracked Ingredient's own currentStock x
@@ -675,7 +678,7 @@ exports.getDashboardSummary = async (req, res) => {
       }
 
       for (const entry of customer.duesHistory || []) {
-        if (entry.type !== "settle") continue;
+        if (entry.type !== "settle" || /^Advance (used|returned)/.test(entry.note || "")) continue;
         const entryDate = entry.createdAt ? new Date(entry.createdAt) : null;
         if (entryDate && entryDate >= start && entryDate <= end) {
           totalRecoveryToday += Number(entry.amount || 0);
@@ -744,7 +747,7 @@ exports.getRecoveryHistory = async (req, res) => {
     const rows = [];
     for (const customer of customers) {
       for (const entry of customer.duesHistory || []) {
-        if (entry.type !== "settle") continue;
+        if (entry.type !== "settle" || /^Advance (used|returned)/.test(entry.note || "")) continue;
         const entryDate = entry.createdAt ? new Date(entry.createdAt) : null;
         if (!entryDate) continue;
         if (rangeStart && entryDate < rangeStart) continue;
@@ -910,17 +913,19 @@ exports.getSaleOnCashDetail = async (req, res) => {
       paidAmount: { $gt: 0 },
       createdAt: { $gte: start, $lte: end },
     })
-      .select("dailyOrderNumber customer paymentMethod paidAmount createdAt")
+      .select("dailyOrderNumber customer paymentMethod paidAmount advanceApplied createdAt")
       .sort({ createdAt: -1 })
       .lean();
 
-    const rows = orders.map((order) => ({
-      orderNumber: order.dailyOrderNumber || null,
-      customerName: order.customer?.name || "",
-      paymentMethod: order.paymentMethod,
-      amount: Number(order.paidAmount || 0),
-      createdAt: order.createdAt,
-    }));
+    const rows = orders
+      .map((order) => ({
+        orderNumber: order.dailyOrderNumber || null,
+        customerName: order.customer?.name || "",
+        paymentMethod: order.paymentMethod,
+        amount: Math.max(Number(order.paidAmount || 0) - Number(order.advanceApplied || 0), 0),
+        createdAt: order.createdAt,
+      }))
+      .filter((row) => row.amount > 0);
 
     res.json({ total: rows.reduce((sum, row) => sum + row.amount, 0), rows });
   } catch (error) {
@@ -1031,7 +1036,7 @@ exports.getLedgerTransactions = async (req, res) => {
 
     for (const customer of customers) {
       for (const entry of customer.duesHistory || []) {
-        if (entry.type !== "settle") continue;
+        if (entry.type !== "settle" || /^Advance (used|returned)/.test(entry.note || "")) continue;
         const entryDate = entry.createdAt ? new Date(entry.createdAt) : null;
         if (!entryDate || Number.isNaN(entryDate.getTime()) || entryDate < start || entryDate > end) continue;
         rows.push({

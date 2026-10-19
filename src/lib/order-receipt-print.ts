@@ -28,22 +28,38 @@ function money(value: number) {
   return `${cs()}${Math.round(Math.abs(value)).toLocaleString()}`;
 }
 
-// The patient's account after this slip: what's still due on this
-// appointment, what was due/advance before, and the total due - or the
-// advance left - overall. `previousDues` = everything else on the
-// account (other appointments + older dues; negative = advance).
-export function accountBalanceLines(order: Pick<SavedOrder, 'remainingAmount' | 'customer'>, previousDues: number) {
-  const remaining = Math.max(Number(order.remainingAmount || 0), 0);
+// The bill for this slip, the way the clinic explains it to a patient:
+//   fee - advance used (+ any old due) = total bill; paid; what's left
+//   (remaining due) or the advance still left over.
+// `other` = the rest of the patient's account right now, without this
+// appointment (other appointments + older dues; negative = advance).
+// order.advanceApplied / order.duesCollected come from the backend
+// (advanceService.js / completeAndSettle).
+export function accountBalanceLines(
+  order: Pick<SavedOrder, 'remainingAmount' | 'customer' | 'total' | 'paidAmount' | 'advanceApplied' | 'duesCollected'>,
+  other: number,
+) {
   const realPatient = !!order.customer?.phone && order.customer.phone !== WALKIN_PHONE;
+  const fee = Number(order.total || 0);
+  const adv = Number(order.advanceApplied || 0);
+  const remainingThis = Math.max(Number(order.remainingAmount || 0), 0);
+  const otherNow = realPatient ? Number(other || 0) : 0;
+  const collectedOthers = Number(order.duesCollected || 0);
+  const prevBefore = otherNow + collectedOthers;
+  const creditUsed = prevBefore < 0 ? Math.min(-prevBefore, remainingThis) : 0;
+  const advanceShown = adv + creditUsed;
+  const oldDue = Math.max(prevBefore, 0);
+  const paidNow = Math.max(Number(order.paidAmount || 0) - adv, 0) + collectedOthers;
+  const left = remainingThis + otherNow;
+
   const lines: Array<{ label: string; value: string; bold?: boolean }> = [];
-  if (remaining > 0) lines.push({ label: 'THIS APPOINTMENT DUE:', value: money(remaining) });
-  if (!realPatient) return lines;
-  const prev = Number(previousDues || 0);
-  if (prev > 0) lines.push({ label: 'PREVIOUS DUE:', value: money(prev) });
-  else if (prev < 0) lines.push({ label: 'PREVIOUS ADVANCE:', value: money(prev) });
-  const total = prev + remaining;
-  if (total > 0) lines.push({ label: 'TOTAL DUE BALANCE:', value: money(total), bold: true });
-  else if (total < 0) lines.push({ label: 'ADVANCE BALANCE:', value: money(total), bold: true });
+  lines.push({ label: 'APPOINTMENT FEE:', value: money(fee) });
+  if (advanceShown > 0) lines.push({ label: 'ADVANCE ADJUSTED:', value: `-${money(advanceShown)}` });
+  if (oldDue > 0) lines.push({ label: 'PREVIOUS DUE:', value: money(oldDue) });
+  lines.push({ label: 'TOTAL BILL:', value: money(fee - advanceShown + oldDue), bold: true });
+  lines.push({ label: 'PAID:', value: money(paidNow) });
+  if (left > 0) lines.push({ label: 'REMAINING DUE:', value: money(left), bold: true });
+  else if (left < 0) lines.push({ label: 'ADVANCE BALANCE:', value: money(left), bold: true });
   else lines.push({ label: 'BALANCE:', value: 'CLEAR', bold: true });
   return lines;
 }

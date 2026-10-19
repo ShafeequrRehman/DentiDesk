@@ -78,6 +78,30 @@ function buildStats(orders: SavedOrder[], products: Product[], tab: Tab): Earner
     const itemsTotal = order.items.reduce((sum, item) => sum + item.price * item.quantity, 0);
     const billTotal = Number(order.total ?? itemsTotal) || itemsTotal;
     const paid = Math.min(Number(order.paidAmount || 0), billTotal);
+    const historyRow = (billed: number, collected: number): HistoryRow => ({
+      orderId: order.id,
+      createdAt: order.createdAt,
+      appointmentNo: `#${String(order.dailyOrderNumber ?? order.id.slice(-3)).padStart(3, '0')}`,
+      patient: order.customer?.name || 'Patient',
+      phone: order.customer?.phone && order.customer.phone !== '03000000000' ? order.customer.phone : '',
+      slot: order.appointmentTime ? `${formatAppointmentDate(order.appointmentDate)} ${formatSlot(order.appointmentTime)}` : '',
+      method: paid > 0 ? (order.paymentMethod === 'Bank' && order.bankName ? `Bank - ${order.bankName}` : order.paymentMethod || 'Cash') : 'Unpaid',
+      source: order.source === 'customer-qr' ? 'Online' : 'Clinic',
+      billed,
+      collected,
+      status: order.status,
+    });
+    // Drs tab: the whole appointment goes to the Dr it was booked with -
+    // including a Service the Dr did (booked in that Dr's slot).
+    if (tab === 'drs' && order.doctorName && isDoctorName(order.doctorName)) {
+      const stat = byName.get(order.doctorName) || { name: order.doctorName, appointments: 0, billed: 0, collected: 0, history: [] };
+      stat.appointments += 1;
+      stat.billed += billTotal;
+      stat.collected += paid;
+      stat.history.push(historyRow(billTotal, paid));
+      byName.set(order.doctorName, stat);
+      return;
+    }
     order.items.forEach((item) => {
       const itemIsDoctor = isDoctorName(item.name);
       if ((tab === 'drs') !== itemIsDoctor) return;
@@ -190,7 +214,11 @@ export default function DrsServicesRevenue() {
 
       <div className="mb-3 flex items-center justify-between text-[11px] font-bold uppercase tracking-wide text-gray-400">
         <span className="flex items-center gap-1"><CalendarDays size={12} />{range.label}</span>
-        <span>Collected {money(totals.collected)} / Billed {money(totals.billed)}</span>
+        <span>
+          Collected <span className="text-emerald-600">{money(totals.collected)}</span>
+          {' · '}Due <span className="text-rose-600">{money(Math.max(totals.billed - totals.collected, 0))}</span>
+          {' · '}Billed {money(totals.billed)}
+        </span>
       </div>
 
       {error ? <p className="rounded-xl bg-rose-50 px-3 py-2 text-xs font-bold text-rose-600">{error}</p> : null}
@@ -212,9 +240,15 @@ export default function DrsServicesRevenue() {
                 <p className="truncate font-bold text-gray-900">{stat.name}</p>
                 <p className="text-[11px] font-semibold text-gray-400">{stat.appointments} appointment{stat.appointments === 1 ? '' : 's'} · billed {money(stat.billed)}</p>
               </div>
-              <div className="shrink-0 text-right">
-                <p className="font-black text-emerald-600">{money(stat.collected)}</p>
-                <p className="text-[10px] font-bold uppercase text-gray-400">collected</p>
+              <div className="flex shrink-0 gap-4 text-right">
+                <div>
+                  <p className="font-black text-emerald-600">{money(stat.collected)}</p>
+                  <p className="text-[10px] font-bold uppercase text-gray-400">collected</p>
+                </div>
+                <div>
+                  <p className={`font-black ${stat.billed - stat.collected > 0.5 ? 'text-rose-600' : 'text-gray-300'}`}>{money(Math.max(stat.billed - stat.collected, 0))}</p>
+                  <p className="text-[10px] font-bold uppercase text-gray-400">due</p>
+                </div>
               </div>
             </button>
           ))}

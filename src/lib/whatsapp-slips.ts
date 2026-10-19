@@ -69,7 +69,7 @@ export async function sendAppointmentSlip(order: SavedOrder, kind: SlipKind) {
   try {
     const result = await fetchCustomerOutstanding(order.customer.phone, order.id);
     const lines = accountBalanceLines({ ...order, remainingAmount: remaining }, Number(result?.outstanding ?? 0))
-      .filter((line) => line.label !== 'THIS APPOINTMENT DUE:');
+      .filter((line) => line.label !== 'APPOINTMENT FEE:');
     lines.forEach((line) => {
       const label = line.label.replace(':', '').toLowerCase().replace(/(^|\s)\w/g, (c) => c.toUpperCase());
       stats.push({ label, value: line.value });

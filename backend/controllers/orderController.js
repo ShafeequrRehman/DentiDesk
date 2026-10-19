@@ -1,4 +1,5 @@
 const mongoose = require("mongoose");
+const { applyCustomerAdvance } = require("../services/advanceService");
 const { currencySignFor } = require("../services/currency");
 const Customer = require("../models/Customer");
 const Order = require("../models/Order");
@@ -732,6 +733,11 @@ exports.createOrder = async (req, res) => {
     // a while precisely because nothing surfaced it anywhere.
     let customerSyncWarning = null;
 
+    // Use up the patient's advance on this appointment.
+    if (order.status !== "cancelled" && (await applyCustomerAdvance(order, buildShopScope(req))) > 0) {
+      await order.save();
+    }
+
     if (payload.customer?.phone && payload.customer.phone !== "03000000000") {
       const customerUpdate = {
         name: payload.customer.name,
@@ -1325,6 +1331,8 @@ async function applyOrderPatch(order, patch, req, options) {
     if (patch.action === "completeAndSettle") {
       if (patch.customer) order.customer = patch.customer;
       const customerPhone = order.customer?.phone;
+      // Any advance the patient has is used first.
+      await applyCustomerAdvance(order, buildShopScope(req));
       let paidTotal = Math.max(Number(patch.paidAmount) || 0, 0);
       // Cash-in-Hand / Balance-on-Bank dashboard routing: the FULL amount
       // actually collected right now (before it gets distributed below
@@ -1392,6 +1400,8 @@ async function applyOrderPatch(order, patch, req, options) {
           customerDoc.previousDues = previousDues;
           await customerDoc.save();
         }
+        // What of this payment went to older dues / other appointments.
+        order.duesCollected = Math.max(totalCollectedNow - appliedToThis - Math.max(paidTotal, 0), 0);
       }
 
       if (typeof patch.paymentMethod === "string") order.paymentMethod = patch.paymentMethod;
@@ -1706,7 +1716,29 @@ async function cancelOrderCore(orderId, key, reason, req) {
   // out of wherever it really landed: the same Bank (bankId) if it was a
   // Bank-method sale, otherwise Cash in Hand. Best-effort/non-fatal, same
   // as the stock restore above - never blocks a cancellation.
-  const refundAmount = Number(order.paidAmount || 0);
+  // The part paid from the patient's advance goes back to their advance
+  // (Dues), not out of the till.
+  const advanceBack = Math.min(Number(order.advanceApplied || 0), Number(order.paidAmount || 0));
+  if (advanceBack > 0 && order.customer?.phone) {
+    try {
+      const customer = await Customer.findOne({ phone: order.customer.phone, ...buildShopScope(req) });
+      if (customer) {
+        customer.previousDues = Number(customer.previousDues || 0) - advanceBack;
+        customer.duesHistory.push({
+          type: "settle",
+          amount: advanceBack,
+          note: `Advance returned - Appointment #${order.dailyOrderNumber ?? String(order._id).slice(-4)} cancelled`,
+          balanceAfter: customer.previousDues,
+          paymentMethod: "cash",
+          createdBy: user?.name || user?.username || "",
+        });
+        await customer.save();
+      }
+    } catch (error) {
+      console.error("Non-fatal: could not return the advance on cancel", error);
+    }
+  }
+  const refundAmount = Math.max(Number(order.paidAmount || 0) - advanceBack, 0);
   if (refundAmount > 0) {
     const refundLabel = order.dailyOrderNumber ?? order.shopSequenceNumber ?? String(order._id).slice(-4);
     const refundNote = `Refund - Appointment #${refundLabel} cancelled`;

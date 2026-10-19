@@ -1026,6 +1026,10 @@ export interface OrderPayload {
 }
 
 export interface SavedOrder extends OrderPayload {
+  // Part of paidAmount taken from the patient's advance, and part of the
+  // payment that went to older dues (backend advanceService / completeAndSettle).
+  advanceApplied?: number;
+  duesCollected?: number;
   id: string;
   // Set by orderController.createOrder when the order itself saved fine but
   // the customer's contact info could not be synced to the Customers

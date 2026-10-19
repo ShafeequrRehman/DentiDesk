@@ -172,6 +172,12 @@ const orderSchema = new mongoose.Schema(
     bankName: { type: String, default: "" },
     paidAmount: { type: Number, default: 0 },
     remainingAmount: { type: Number, default: 0 },
+    // Part of paidAmount that came from the patient's advance (paid
+    // earlier, already counted in cash then) - see advanceService.js.
+    advanceApplied: { type: Number, default: 0 },
+    // Part of the payment taken on this appointment that went to the
+    // patient's older dues - lets the slip show the full bill.
+    duesCollected: { type: Number, default: 0 },
     // Change-Return Calculation: the raw cash amount the customer actually
     // handed over at checkout - independent of paidAmount above, which is
     // always clamped to however much of this bill (plus any other dues)

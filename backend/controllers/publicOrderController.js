@@ -1,4 +1,5 @@
 const Product = require("../models/Product");
+const { applyCustomerAdvance } = require("../services/advanceService");
 const { normalizeCurrency, poweredByOf } = require("../services/currency");
 const Order = require("../models/Order");
 const Customer = require("../models/Customer");
@@ -560,6 +561,8 @@ exports.createOrder = async (req, res) => {
     } catch (customerError) {
       console.error("Non-fatal: patient contact-info sync failed for a public QR appointment", customerError);
     }
+    // Use up the patient's advance on this appointment.
+    if ((await applyCustomerAdvance(order, { shopId })) > 0) await order.save();
 
     res.status(201).json({
       id: String(order._id),
