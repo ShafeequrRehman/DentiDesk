@@ -979,6 +979,9 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   const [orderType] = useState<OrderType>('TakeAway');
   const [customerName, setCustomerName] = useState('');
   const [customerPhone, setCustomerPhone] = useState('');
+  // The number belongs to a saved patient: name comes from the clinic's
+  // records (locked), so one number never turns into two patients.
+  const [knownName, setKnownName] = useState('');
   const [customerAddress, setCustomerAddress] = useState('');
   const [note, setNote] = useState('');
   const [paymentMethod] = useState<'Cash' | 'Online' | 'JazzCash' | 'EasyPaisa'>('Cash');
@@ -1067,12 +1070,24 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   useEffect(() => {
     if (customerPhone.replace(/\D/g, '').length < 10) {
       setActiveOrderWarning(null);
+      if (knownName) {
+        setKnownName('');
+        setCustomerName('');
+      }
       return;
     }
     if (phoneCheckTimeoutRef.current) clearTimeout(phoneCheckTimeoutRef.current);
     phoneCheckTimeoutRef.current = setTimeout(async () => {
       try {
         const status = await fetchPublicCustomerStatus(shopId, customerPhone);
+        const saved = String(status.knownName || '').trim();
+        if (saved) {
+          setKnownName(saved);
+          setCustomerName(saved);
+        } else if (knownName) {
+          setKnownName('');
+          setCustomerName('');
+        }
         setActiveOrderWarning(
           status.hasActiveOrder && status.order
             ? { id: status.order.id, orderType: status.order.orderType, table: status.order.table, dailyOrderNumber: status.order.dailyOrderNumber }
@@ -1082,6 +1097,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
         setActiveOrderWarning(null);
       }
     }, 400);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [shopId, customerPhone]);
 
   const products = menu?.products || [];
@@ -1610,8 +1626,19 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
             ) : null}
 
             <div className="mt-5 space-y-3">
-              <input value={customerName} onChange={(e) => setCustomerName(e.target.value)} placeholder="Your name" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE]" />
-              <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/[^\d]/g, ''))} placeholder="Phone number" inputMode="numeric" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE]" />
+              <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/[^\d]/g, ''))} placeholder="Phone number (e.g. 03001234567)" inputMode="numeric" maxLength={13} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE]" />
+              <div>
+                <input
+                  value={customerName}
+                  onChange={(e) => setCustomerName(e.target.value)}
+                  readOnly={Boolean(knownName)}
+                  placeholder="Your name"
+                  className={`w-full rounded-xl border px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE] ${knownName ? 'border-emerald-200 bg-emerald-50 font-bold text-emerald-800' : 'border-gray-200 bg-gray-50'}`}
+                />
+                {knownName ? (
+                  <p className="mt-1.5 text-[11px] font-bold text-emerald-700">Welcome back! This number is saved with the clinic under this name. Not you? Use your own number.</p>
+                ) : null}
+              </div>
               {orderType === 'Delivery' ? (
                 <div>
                   <input value={customerAddress} onChange={(e) => setCustomerAddress(e.target.value)} placeholder="Delivery address" className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE]" />

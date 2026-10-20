@@ -76,6 +76,8 @@ export interface PublicCustomerStatus {
   // getCustomerStatus/createOrder (one active order per phone, any type).
   hasActiveOrder: boolean;
   order: { id: string; dailyOrderNumber: number; orderType: string; table: string; createdAt: string } | null;
+  // Saved patient with this number - their name, filled in for them.
+  knownName?: string;
 }
 
 export async function fetchPublicCustomerStatus(shopId: string, phone: string): Promise<PublicCustomerStatus> {

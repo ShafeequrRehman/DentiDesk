@@ -244,6 +244,10 @@ exports.getCustomerStatus = async (req, res) => {
   try {
     const phone = normalizePhone(req.query.phone);
     if (!phone) return res.json({ hasActiveOrder: false, order: null });
+    // A patient already saved with this number: their name is filled in
+    // for them (one number = one patient, no duplicate names).
+    const digits = phone.replace(/\D/g, "");
+    const known = digits.length >= 10 ? await Customer.findOne({ shopId: req.shop._id, phone }).select("name").lean() : null;
 
     const existing = await Order.findOne({
       shopId: req.shop._id,
@@ -255,6 +259,7 @@ exports.getCustomerStatus = async (req, res) => {
       .lean();
 
     res.json({
+      knownName: known?.name ? String(known.name) : "",
       hasActiveOrder: Boolean(existing),
       order: existing
         ? {
@@ -362,8 +367,11 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ message: "Choose Takeaway or Delivery.", reason: "invalid_order_type" });
     }
 
-    const customerName = String(payload.customer?.name || "").trim();
     const customerPhone = normalizePhone(payload.customer?.phone);
+    // Same number already a patient here -> the appointment goes under
+    // their saved name (no second "person" with that number).
+    const knownCustomer = customerPhone ? await Customer.findOne({ shopId: req.shop._id, phone: customerPhone }).select("name").lean() : null;
+    const customerName = String(knownCustomer?.name || payload.customer?.name || "").trim();
     const customerAddress = String(payload.customer?.address || payload.address || "").trim();
 
     if (customerName.length < 2) {
@@ -564,9 +572,14 @@ exports.createOrder = async (req, res) => {
 
     // Best-effort contact sync - never allowed to fail the order itself.
     try {
+      // New number -> saved as a new patient (the clinic's POS then finds
+      // them by number); a known patient keeps their saved name.
       await Customer.findOneAndUpdate(
         { phone: customerPhone, shopId },
-        { name: customerName, phone: customerPhone, address: customerAddress, shopId },
+        {
+          $setOnInsert: { name: customerName, phone: customerPhone, shopId },
+          ...(customerAddress ? { $set: { address: customerAddress } } : {}),
+        },
         { upsert: true, setDefaultsOnInsert: true },
       );
     } catch (customerError) {
