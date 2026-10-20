@@ -517,8 +517,10 @@ exports.updateOwnShop = async (req, res) => {
     const shop = await Shop.findById(req.user.shopId);
     if (!shop) return res.status(404).json({ message: "Clinic not found" });
 
-    const { name, phone, email, address, receiptAutoPrint, clinicStart, clinicEnd } = req.body;
+    const { name, phone, email, address, receiptAutoPrint, clinicStart, clinicEnd, hideOnlinePriceDrs, hideOnlinePriceServices } = req.body;
     if (name !== undefined) shop.name = name;
+    if (hideOnlinePriceDrs !== undefined) shop.hideOnlinePriceDrs = Boolean(hideOnlinePriceDrs);
+    if (hideOnlinePriceServices !== undefined) shop.hideOnlinePriceServices = Boolean(hideOnlinePriceServices);
     if (clinicStart !== undefined) shop.clinicStart = /^\d{2}:\d{2}$/.test(String(clinicStart)) ? String(clinicStart) : "";
     if (clinicEnd !== undefined) shop.clinicEnd = /^\d{2}:\d{2}$/.test(String(clinicEnd)) ? String(clinicEnd) : "";
     if (phone !== undefined) shop.phone = phone;

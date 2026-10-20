@@ -1,4 +1,5 @@
 const Product = require("../models/Product");
+const { priceHiddenFor, categoryLookup, itemPriceHidden, anyPriceHiddenSetting } = require("../services/onlinePrice");
 const { applyPurchaseSetoff } = require("../services/setoffService");
 const { applyCustomerAdvance } = require("../services/advanceService");
 const { normalizeCurrency, poweredByOf } = require("../services/currency");
@@ -60,8 +61,13 @@ function publicOrigin(req) {
   return `${req.protocol}://${req.get("host")}`;
 }
 
-function publicOrderShape(order) {
+// shop + categories given: prices the clinic hides online are sent as 0
+// (never the real number), and every total too once any line is hidden.
+function publicOrderShape(order, shop, categories) {
+  const hiddenLine = (item) => Boolean(shop) && itemPriceHidden(shop, item, categories);
+  const pricesHidden = (order.items || []).some(hiddenLine);
   return {
+    pricesHidden,
     id: String(order._id),
     dailyOrderNumber: order.dailyOrderNumber,
     orderType: order.orderType,
@@ -69,12 +75,12 @@ function publicOrderShape(order) {
     status: order.status,
     trackingStatus: order.trackingStatus,
     paymentStatus: order.paymentStatus,
-    subtotal: order.subtotal,
+    subtotal: pricesHidden ? 0 : order.subtotal,
     // Same "other charges" slot customerNotificationService.js's WhatsApp
     // templates use - no dedicated delivery-fee field exists yet, `tax` is
     // the only "extra line item" today (always 0 for now).
-    otherCharges: order.tax,
-    total: order.total,
+    otherCharges: pricesHidden ? 0 : order.tax,
+    total: pricesHidden ? 0 : order.total,
     paymentMethod: order.paymentMethod,
     createdAt: order.createdAt,
     address: order.address || "",
@@ -92,7 +98,8 @@ function publicOrderShape(order) {
     // this public API exposes.
     items: (order.items || []).map((item) => ({
       name: item.name,
-      price: item.price,
+      price: hiddenLine(item) ? 0 : item.price,
+      priceHidden: hiddenLine(item),
       quantity: item.quantity,
       variation: item.variation || "",
     })),
@@ -100,7 +107,7 @@ function publicOrderShape(order) {
       ? {
           addItems: (order.customerChangeRequest.addItems || []).map((item) => ({
             name: item.name,
-            price: item.price,
+            price: hiddenLine(item) ? 0 : item.price,
             quantity: item.quantity,
             variation: item.variation || "",
           })),
@@ -200,7 +207,9 @@ exports.getMenu = async (req, res) => {
       products: products.map((product) => ({
         id: String(product._id),
         name: product.name,
-        price: product.price,
+        // Hidden in Settings -> the real price never leaves the server.
+        price: priceHiddenFor(req.shop, product.name, product.category) ? 0 : product.price,
+        priceHidden: priceHiddenFor(req.shop, product.name, product.category),
         category: product.category || "General",
         variation: product.variation || "",
         image: product.image || "",
@@ -271,7 +280,8 @@ exports.getOrderStatus = async (req, res) => {
       )
       .lean();
     if (!order) return res.status(404).json({ message: "Appointment not found." });
-    res.json(publicOrderShape(order));
+    const categories = anyPriceHiddenSetting(req.shop) ? await categoryLookup(req.shop._id) : null;
+    res.json(publicOrderShape(order, req.shop, categories));
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
@@ -692,7 +702,7 @@ exports.requestOrderChange = async (req, res) => {
 
     res.json({
       message: "Request sent - waiting for the clinic to approve.",
-      customerChangeRequest: publicOrderShape(order).customerChangeRequest,
+      customerChangeRequest: publicOrderShape(order, req.shop, anyPriceHiddenSetting(req.shop) ? await categoryLookup(req.shop._id) : null).customerChangeRequest,
     });
   } catch (error) {
     res.status(500).json({ message: error.message });

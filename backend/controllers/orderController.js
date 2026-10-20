@@ -1906,7 +1906,7 @@ exports.updateTrackingStatus = async (req, res) => {
       // Both notifications reuse this one Shop lookup - name/phone/address
       // feed the customer's WhatsApp template (customerNotificationService),
       // riderPhones feeds the existing delivery-rider broadcast.
-      const shop = await Shop.findById(order.shopId).select("name phone address riderPhones").lean();
+      const shop = await Shop.findById(order.shopId).select("name phone address riderPhones currency hideOnlinePriceDrs hideOnlinePriceServices").lean();
       void notifyCustomerConfirmed(order, shop);
       if (order.orderType === "Delivery") {
         void notifyRiderForDelivery(order, shop);

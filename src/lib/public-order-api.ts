@@ -12,6 +12,8 @@ export interface PublicMenuProduct {
   id: string;
   name: string;
   price: number;
+  // The clinic hides this Dr's / Service's price online (price comes as 0).
+  priceHidden?: boolean;
   category: string;
   variation: string;
   image: string;
@@ -106,7 +108,9 @@ export interface PublicOrderStatus {
   // changing an already-placed order always goes through the
   // request-then-approve flow below, or staff editing it directly from
   // the Sales dashboard.
-  items: Array<{ name: string; price: number; quantity: number; variation: string }>;
+  items: Array<{ name: string; price: number; quantity: number; variation: string; priceHidden?: boolean }>;
+  // Some line's price is hidden by the clinic - totals come as 0 too.
+  pricesHidden?: boolean;
   customerChangeRequest: PublicChangeRequest | null;
 }
 

@@ -23,6 +23,10 @@ const shopSchema = new mongoose.Schema(
     poweredBy: { type: String, default: null },
     clinicStart: { type: String, default: "" },
     clinicEnd: { type: String, default: "" },
+    // Settings: hide Drs' / Services' prices from patients on the online
+    // appointment page and in their WhatsApp messages (POS still shows them).
+    hideOnlinePriceDrs: { type: Boolean, default: false },
+    hideOnlinePriceServices: { type: Boolean, default: false },
     status: {
       type: String,
       enum: ["active", "suspended"],

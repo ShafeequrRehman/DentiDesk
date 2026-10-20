@@ -4,7 +4,8 @@ import React, { ChangeEvent, useMemo, useRef, useState, useEffect } from 'react'
 import {
   Settings, Bell, Lock, Database,
   Store, Printer, Monitor, Save, Shield,
-  CreditCard, ImagePlus, Trash2, Package, Receipt, Eye, Users, QrCode
+  CreditCard, ImagePlus, Trash2, Package, Receipt, Eye, Users, QrCode,
+  EyeOff,
 } from 'lucide-react';
 import { PRINT_LOGO_STORAGE_KEY, persistPrintLogoToDisk } from '@/lib/print-logo';
 import { ProductManagementSection } from '@/components/ProductManagementSection';
@@ -41,6 +42,10 @@ export default function SettingsPage() {
   const [shopName, setShopName] = useState('');
   const [shopAddress, setShopAddress] = useState('');
   const [shopProfileLoading, setShopProfileLoading] = useState(true);
+  // Online appointment page: hide Drs' / Services' prices from patients
+  // (also left out of their WhatsApp messages). POS always shows prices.
+  const [hidePriceDrs, setHidePriceDrs] = useState(false);
+  const [hidePriceServices, setHidePriceServices] = useState(false);
 
   useEffect(() => {
     (async () => {
@@ -48,6 +53,8 @@ export default function SettingsPage() {
       const profile = await fetchShopProfile();
       if (profile?.name) setShopName(profile.name);
       if (profile?.address !== undefined) setShopAddress(profile.address);
+      setHidePriceDrs(Boolean(profile?.hideOnlinePriceDrs));
+      setHidePriceServices(Boolean(profile?.hideOnlinePriceServices));
       // Clinic hours live on the server (shared by every device and the
       // online page) - show those here.
       if (profile?.clinicStart || profile?.clinicEnd) {
@@ -115,6 +122,8 @@ export default function SettingsPage() {
       address: trimmedShopAddress,
       clinicStart: settings?.businessStartTime || '',
       clinicEnd: settings?.businessEndTime || '',
+      hideOnlinePriceDrs: hidePriceDrs,
+      hideOnlinePriceServices: hidePriceServices,
     });
     if (result) setClinicHours(settings?.businessStartTime, settings?.businessEndTime);
     setSavingSettings(false);
@@ -412,6 +421,14 @@ export default function SettingsPage() {
                   className="w-full p-4 bg-slate-50 rounded-2xl border-none font-bold outline-none" 
                 />
               </div>
+            </div>
+
+            {/* Online appointment page - price hiding for patients */}
+            <div className="pt-6 space-y-4">
+               <h3 className="text-sm font-black text-slate-900 mb-1">Online Appointment Page (patients)</h3>
+               <p className="text-[11px] font-bold text-slate-400 -mt-2">Hidden prices don't show on the online page or in the patient's WhatsApp message. POS still shows every price. Press Save Changes after changing.</p>
+               <ToggleItem icon={<EyeOff size={18}/>} label="Hide Drs' prices" description="Patients won't see the fee of any Dr online." enabled={hidePriceDrs} onToggle={v => setHidePriceDrs(v)} />
+               <ToggleItem icon={<EyeOff size={18}/>} label="Hide Services' prices" description="Patients won't see the price of any Service online." enabled={hidePriceServices} onToggle={v => setHidePriceServices(v)} />
             </div>
 
             {/* Toggle Sections */}

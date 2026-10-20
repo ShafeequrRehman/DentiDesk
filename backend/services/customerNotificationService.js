@@ -1,5 +1,6 @@
 const { getWhatsAppServiceForShop } = require("./whatsappService");
 const { currencySign } = require("./currency");
+const { categoryLookup, itemPriceHidden, anyPriceHiddenSetting } = require("./onlinePrice");
 
 // Automated WhatsApp status updates sent straight to the CUSTOMER (not the
 // rider/staff) at two points in a customer-qr (QR/online) order's
@@ -33,12 +34,14 @@ function formatDate(date) {
   });
 }
 
-function formatItems(items, C = "$") {
+// isHidden(item): the clinic hides this Dr's / Service's price from
+// patients (Settings) - the line then shows no amount.
+function formatItems(items, C = "$", isHidden = () => false) {
   const lines = (items || []).map((item) => {
     const qty = Number(item.quantity) || 0;
     const lineTotal = formatMoney((Number(item.price) || 0) * qty);
     const variation = item.variation ? ` (${item.variation})` : "";
-    return `- ${qty}x ${item.name}${variation} — ${C}${lineTotal}`;
+    return isHidden(item) ? `- ${qty}x ${item.name}${variation}` : `- ${qty}x ${item.name}${variation} — ${C}${lineTotal}`;
   });
   return lines.join("\n") || "-";
 }
@@ -68,9 +71,11 @@ function formatSlotDate(iso) {
 }
 
 // Sent when the clinic presses "Mark Confirmed" on an online appointment.
-function buildAppointmentConfirmedMessage(order, shop) {
+function buildAppointmentConfirmedMessage(order, shop, isHidden = () => false) {
   const shopName = shop?.name || "";
   const C = currencySign(shop);
+  // Any hidden price -> no totals either (they would give it away).
+  const hideMoney = (order.items || []).some(isHidden);
   const forLabel = /^dr\.?\s/i.test(order.doctorName || "") ? "Dr" : "Service";
   return [
     `*Your appointment is confirmed* ✅`,
@@ -84,9 +89,11 @@ function buildAppointmentConfirmedMessage(order, shop) {
     order.appointmentDate ? `Date: ${formatSlotDate(order.appointmentDate)}` : null,
     order.appointmentTime ? `Time: ${formatSlotTime(order.appointmentTime)}` : null,
     `Services:`,
-    formatItems(order.items, C),
-    `Total: ${C}${formatMoney(order.total)}`,
-    `Payment: ${Number(order.remainingAmount || 0) > 0 ? `${C}${formatMoney(order.remainingAmount)} to pay at the clinic` : "Paid"}`,
+    formatItems(order.items, C, isHidden),
+    hideMoney ? null : `Total: ${C}${formatMoney(order.total)}`,
+    hideMoney
+      ? `Payment: ${Number(order.remainingAmount || 0) > 0 ? "at the clinic" : "Paid"}`
+      : `Payment: ${Number(order.remainingAmount || 0) > 0 ? `${C}${formatMoney(order.remainingAmount)} to pay at the clinic` : "Paid"}`,
     `------------------------`,
     `Please arrive 10 minutes before your time.`,
     `${shop?.phone || ""}`,
@@ -97,9 +104,10 @@ function buildAppointmentConfirmedMessage(order, shop) {
     .join("\n");
 }
 
-function buildOrderPlacedMessage(order, shop) {
+function buildOrderPlacedMessage(order, shop, isHidden = () => false) {
   const shopName = shop?.name || "";
   const C = currencySign(shop);
+  const hideMoney = (order.items || []).some(isHidden);
   return [
     `Appointment Placed`,
     `Hello ${order.customer?.name || "there"}`,
@@ -110,12 +118,12 @@ function buildOrderPlacedMessage(order, shop) {
     `Appointment No: ${orderNumberOf(order)}`,
     `Date: ${formatDate(order.createdAt)}`,
     `Items:`,
-    formatItems(order.items, C),
-    `Subtotal: ${C}${formatMoney(order.subtotal)}`,
-    `Other Charges: ${C}${otherCharges(order)}`,
-    `Appointment Total: ${C}${formatMoney(order.total)}`,
+    formatItems(order.items, C, isHidden),
+    hideMoney ? null : `Subtotal: ${C}${formatMoney(order.subtotal)}`,
+    hideMoney ? null : `Other Charges: ${C}${otherCharges(order)}`,
+    hideMoney ? null : `Appointment Total: ${C}${formatMoney(order.total)}`,
     `Payment Status: Pending`,
-    `Amount: ${C}${formatMoney(order.paidAmount)}`,
+    hideMoney ? null : `Amount: ${C}${formatMoney(order.paidAmount)}`,
     `------------------------`,
     `Appointment Status: Processing`,
     `We appreciate your trust in ${shopName} and will keep you updated about your appointment.`,
@@ -124,7 +132,9 @@ function buildOrderPlacedMessage(order, shop) {
     `${shop?.address || "-"}`,
     `${shopName}`,
     `Quality - Trust - Service`,
-  ].join("\n");
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
 }
 
 function buildOrderCompletedMessage(order, shop) {
@@ -173,7 +183,17 @@ async function sendCustomerMessage(order, shop, message) {
 }
 
 async function notifyCustomerConfirmed(order, shop) {
-  return sendCustomerMessage(order, shop, order.appointmentTime ? buildAppointmentConfirmedMessage(order, shop) : buildOrderPlacedMessage(order, shop));
+  let isHidden = () => false;
+  try {
+    if (anyPriceHiddenSetting(shop)) {
+      const categories = await categoryLookup(order.shopId || shop._id);
+      isHidden = (item) => itemPriceHidden(shop, item, categories);
+    }
+  } catch {
+    // can't tell the categories - hide by the Dr name rule alone
+    isHidden = (item) => itemPriceHidden(shop, item, null);
+  }
+  return sendCustomerMessage(order, shop, order.appointmentTime ? buildAppointmentConfirmedMessage(order, shop, isHidden) : buildOrderPlacedMessage(order, shop, isHidden));
 }
 
 async function notifyCustomerCompleted(order, shop) {
