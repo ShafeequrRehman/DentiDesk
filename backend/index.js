@@ -36,6 +36,7 @@ ensureJwtSecret();
 
 const express = require("express");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
 const mongoose = require("mongoose");
 const { connectDB } = require("./config/db");
 const seedDefaults = require("./config/seed");
@@ -69,6 +70,27 @@ const sanitizeInput = require("./middleware/sanitizeInput");
 
 const app = express();
 
+// --- Security hardening -------------------------------------------------
+// No "X-Powered-By: Express" header telling attackers what we run.
+app.disable("x-powered-by");
+// Behind aaPanel's nginx (same machine): trust its X-Forwarded-For only
+// when the request really comes from the local proxy, so rate limits see
+// each visitor's real IP - and a direct caller can't fake one.
+app.set("trust proxy", "loopback");
+// Browser security headers: no MIME sniffing, no framing of the app on
+// another site (clickjacking), no full URLs leaked as Referer, HTTPS only.
+app.use((req, res, next) => {
+  res.setHeader("X-Content-Type-Options", "nosniff");
+  res.setHeader("X-Frame-Options", "SAMEORIGIN");
+  res.setHeader("Referrer-Policy", "strict-origin-when-cross-origin");
+  res.setHeader("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=()");
+  res.setHeader("Cross-Origin-Opener-Policy", "same-origin-allow-popups");
+  if (req.secure) res.setHeader("Strict-Transport-Security", "max-age=15552000; includeSubDomains");
+  // API answers (patient data, money) are never stored in shared caches.
+  if (req.path.startsWith("/api/")) res.setHeader("Cache-Control", "no-store");
+  next();
+});
+
 app.use(cors());
 // Default express.json() body limit is 100kb - too small for a product's
 // manually-uploaded photo (sent as a base64 data URI in Product.image, see
@@ -91,6 +113,37 @@ app.use((req, _res, next) => {
 // See sanitizeInput.js - strips Mongo operator keys ($ne, $gt, etc.) out
 // of every request body/query/params before any route handler runs.
 app.use(sanitizeInput);
+
+// One overall request cap per IP across the whole API - stops scripts from
+// hammering or scraping it. Normal use (several tills/phones behind one
+// clinic connection, live polling) stays far below this.
+app.use(
+  "/api",
+  rateLimit({
+    windowMs: 5 * 60 * 1000,
+    max: 3000,
+    standardHeaders: true,
+    legacyHeaders: false,
+    skip: (req) => req.path === "/health",
+    message: { message: "Too many requests - please wait a few minutes and try again." },
+  })
+);
+
+// Server errors (500) never send internal details (code paths, database
+// messages) to the browser - they are written to the server log instead.
+app.use((req, res, next) => {
+  const originalJson = res.json.bind(res);
+  res.json = (body) => {
+    if (res.statusCode === 500 && body && typeof body === "object") {
+      const detail = body.error || body.message;
+      if (detail) console.error(`[500] ${req.method} ${req.originalUrl}: ${detail}`);
+      const safe = "Something went wrong on the server. Please try again.";
+      return originalJson({ ...(body.success === false ? { success: false } : {}), ...(body.reason ? { reason: body.reason } : {}), error: safe, message: safe });
+    }
+    return originalJson(body);
+  };
+  next();
+});
 
 // Reachability check for the frontend's real online/offline indicator (see
 // src/lib/network-status.ts). The actual continuous checking happens in
@@ -117,13 +170,6 @@ app.use("/api/app-version", appVersionRoutes);
 // can log in.
 app.use("/apk", express.static(path.join(__dirname, "public", "apk")));
 
-// TEMPORARY DEBUG LOGGING - proves whether a request from the frontend
-// ever actually reaches this Express process at all. Remove once the
-// login issue is confirmed fixed.
-app.use((req, res, next) => {
-  console.log(`[HTTP] ${req.method} ${req.originalUrl}`);
-  next();
-});
 
 // With bufferCommands disabled (see config/db.js), a DB-touching route hit
 // while Atlas is unreachable now fails fast instead of hanging - but the
@@ -200,7 +246,9 @@ app.get("/", (req, res) => {
 app.use((err, req, res, next) => {
   console.error(`[HTTP ERROR] ${req.method} ${req.originalUrl}:`, err);
   const statusCode = err.statusCode || 500;
-  res.status(statusCode).json({ message: err.message || "Internal server error" });
+  // Body too big / bad JSON etc. keep their short message; real crashes
+  // never show internals to the browser.
+  res.status(statusCode).json({ message: statusCode >= 500 ? "Something went wrong on the server. Please try again." : err.message || "Request error" });
 });
 
 let serverInstance = null;

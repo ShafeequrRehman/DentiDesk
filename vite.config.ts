@@ -69,7 +69,15 @@ export default defineConfig({
   build: {
     outDir: 'dist',
     emptyOutDir: true,
+    // Live build: no source maps (the original source code can't be read
+    // from the browser's DevTools), and the code is minified.
+    sourcemap: false,
+    minify: 'esbuild',
   },
+  // Live build only: debug logs and debugger statements are stripped out.
+  esbuild: process.env.NODE_ENV === 'production' || process.argv.includes('build')
+    ? { drop: ['debugger'], pure: ['console.log', 'console.debug', 'console.info'], legalComments: 'none' }
+    : undefined,
   optimizeDeps: {
     // Force the `buffer` alias above into the dependency pre-bundle
     // upfront rather than waiting for Vite to discover it lazily on first

@@ -93,7 +93,8 @@ router.post("/send", canSendMessage, async (req, res) => {
     if (result.success) {
       res.json({ success: true });
     } else {
-      res.status(500).json(result);
+      // A send WhatsApp refused (not linked, bad number) - a clear message, not a crash.
+      res.status(400).json(result);
     }
   } catch (err) {
     res.status(500).json({ error: err.message });

@@ -35,12 +35,13 @@ function signAccessToken(user, permissions = []) {
       permissions: user.role === "employee" ? permissions : undefined,
     },
     process.env.JWT_SECRET,
-    { expiresIn: ACCESS_TOKEN_TTL }
+    { expiresIn: ACCESS_TOKEN_TTL, algorithm: "HS256" }
   );
 }
 
 function verifyAccessToken(token) {
-  return jwt.verify(token, process.env.JWT_SECRET);
+  // Only our own HS256 tokens are accepted (no "alg: none" / swapped-algorithm tricks).
+  return jwt.verify(token, process.env.JWT_SECRET, { algorithms: ["HS256"] });
 }
 
 function generateRefreshToken() {

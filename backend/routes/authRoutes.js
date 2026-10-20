@@ -16,7 +16,14 @@ const loginLimiter = rateLimit({
 router.post("/register", register);
 
 router.post("/login", loginLimiter, login);
-router.post("/refresh", refresh);
+// Refresh tokens are long random values, but still cap guessing attempts.
+const refreshLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000,
+    max: 300,
+    message: { message: "Too many requests, please try again later" }
+});
+
+router.post("/refresh", refreshLimiter, refresh);
 router.post("/logout", logout);
 router.get("/me", authenticate, me);
 
