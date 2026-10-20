@@ -70,3 +70,6 @@ yarn-error.log*
 /local-docs/
 # Testimonial pictures/videos uploaded by clinics (live data, not code)
 backend/uploads/
+
+# Temporary files left by the file sync (not code)
+.fuse_hidden*
