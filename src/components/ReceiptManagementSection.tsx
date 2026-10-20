@@ -83,7 +83,7 @@ export function ReceiptManagementSection({ settings, onChange, printLogo }: Prop
             type="text" 
             value={settings.receiptHeader || ''}
             onChange={e => onChange('receiptHeader', e.target.value)}
-            placeholder="e.g. The Heaven Slice"
+            placeholder="Your clinic name"
             className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 font-bold outline-none" 
           />
         </div>
@@ -94,7 +94,7 @@ export function ReceiptManagementSection({ settings, onChange, printLogo }: Prop
             type="text" 
             value={settings.receiptSubHeader || ''}
             onChange={e => onChange('receiptSubHeader', e.target.value)}
-            placeholder="e.g. Est. 2022"
+            placeholder="e.g. Since 2015 (optional)"
             className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 font-bold outline-none" 
           />
         </div>
@@ -105,7 +105,7 @@ export function ReceiptManagementSection({ settings, onChange, printLogo }: Prop
             rows={2}
             value={settings.receiptAddress || ''}
             onChange={e => onChange('receiptAddress', e.target.value)}
-            placeholder="e.g. Gojra Road Near Ali Merriage Hall"
+            placeholder="Your clinic address"
             className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 font-bold outline-none resize-none" 
           />
         </div>
@@ -116,7 +116,7 @@ export function ReceiptManagementSection({ settings, onChange, printLogo }: Prop
             type="text" 
             value={settings.receiptContact || ''}
             onChange={e => onChange('receiptContact', e.target.value)}
-            placeholder="e.g. 0300-0310275"
+            placeholder="Clinic phone number(s)"
             className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 font-bold outline-none" 
           />
         </div>
@@ -127,7 +127,7 @@ export function ReceiptManagementSection({ settings, onChange, printLogo }: Prop
             type="text" 
             value={settings.receiptPaymentInfo || ''}
             onChange={e => onChange('receiptPaymentInfo', e.target.value)}
-            placeholder="e.g. 0307 - 4798089 Jazzcash/EasyPaisa"
+            placeholder="JazzCash / EasyPaisa number (optional)"
             className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 font-bold outline-none" 
           />
         </div>

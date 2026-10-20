@@ -153,7 +153,13 @@ export default function SettingsPage() {
       // Patches the cached session so DashboardShell's sidebar picks this
       // up immediately (see auth.ts's own comment) - no re-login needed.
       updateCachedShopName(trimmedShopName);
-      toast.success('Settings saved - receipt and logo now apply on every laptop and phone of this clinic.');
+      // The server echoes the saved clinic back - no receiptSettings in it
+      // means the server is still running old code (backend not restarted).
+      if (receiptPayload && !(result as { receiptSettings?: unknown }).receiptSettings) {
+        toast.error('Saved on this device only - the server did not store the receipt. The server needs its backend restarted (aaPanel Stop, then Start).');
+      } else {
+        toast.success('Settings saved - receipt and logo now apply on every laptop and phone of this clinic.');
+      }
     } else {
       toast.error('Settings saved, but the clinic name/address failed to sync - check your connection and try again.');
     }
