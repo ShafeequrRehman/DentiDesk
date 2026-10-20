@@ -167,6 +167,20 @@ export function hasAnyPermission(keys: string[]): boolean {
   return keys.some((key) => hasPermission(key));
 }
 
+// Manage Staff > "Sidebar Pages": once an employee has ANY page ticked
+// (a "page.<key>" permission), they see ONLY the ticked pages. With none
+// ticked, the older rule applies (each page shows when its feature
+// permission is there). Owners / Super Admin are never restricted.
+export function isPageRestricted(): boolean {
+  return getAuthRole() === 'employee' && getPermissions().some((key) => key.startsWith('page.'));
+}
+
+export function canOpenPage(pageKey: string, permission?: string | string[]): boolean {
+  if (isPageRestricted()) return getPermissions().includes(`page.${pageKey}`);
+  if (!permission) return true;
+  return Array.isArray(permission) ? hasAnyPermission(permission) : hasPermission(permission);
+}
+
 // Unlike hasPermission, this is NOT role-gated - a Shop Owner is only
 // exempt from their own shop's role/permission rules, not from a Super
 // Admin's platform-level page toggle (see Shop.enabledPages). A null/

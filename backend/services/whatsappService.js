@@ -282,6 +282,18 @@ class ShopWhatsAppSession {
     };
   }
 
+  // "Disconnect" on the WhatsApp page: log this clinic's linked device out
+  // of WhatsApp (it disappears from the phone's Linked Devices too), then
+  // start fresh so a new QR shows.
+  async disconnect() {
+    try {
+      if (this.sock?.logout) await Promise.race([this.sock.logout(), new Promise((resolve) => setTimeout(resolve, 8000))]);
+    } catch {
+      // already logged out / offline - the saved session is wiped below anyway
+    }
+    return this.reset();
+  }
+
   // "Get a new QR" on the WhatsApp page: forget the saved session and
   // start over.
   async reset() {

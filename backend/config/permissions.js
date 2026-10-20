@@ -73,6 +73,57 @@ const PERMISSIONS = [
   { key: "manage.devices", label: "Manage Connect Devices", module: "Workspace Access", description: "View and manage the Connect Devices page - local network/offline sync setup." },
 ];
 
+// --- Sidebar Pages ---------------------------------------------------------
+// One tick per sidebar page (Manage Staff > role / employee permissions).
+// Once ANY page is ticked for an employee, they see ONLY the ticked pages.
+// Each page also brings the access that page needs to work (PAGE_GRANTS),
+// so ticking "Appointments" is enough - no need to also find "Create Sales".
+// Keys match src/lib/dashboard-pages.ts. Payroll / Manage Staff stay
+// Clinic-Owner-only and are not listed.
+const SIDEBAR_PAGES = [
+  ["dashboard", "Dashboard", ["view.dashboard"]],
+  ["pos", "POS", ["sales.create", "sales.print", "customers.manage"]],
+  ["sales", "Appointments", ["sales.create", "sales.edit", "sales.print", "customers.manage"]],
+  ["doctors", "Drs & Services", ["sales.create", "orders.record.view"]],
+  ["availability", "Dr Availability", ["sales.create", "orders.record.view"]],
+  ["accounting", "Accounting", ["expenses.manage"]],
+  ["purchase", "Purchase", ["purchases.manage", "suppliers.manage"]],
+  ["ingredient-stock", "Medicine Stock", ["stock.manage", "suppliers.manage"]],
+  ["medicine-setup", "Set Medicine", ["stock.manage"]],
+  ["dues", "Dues", ["dues.manage", "customers.manage"]],
+  ["dr-payments", "Dr Payments", ["dues.manage"]],
+  ["ledger", "Ledger", ["dues.manage"]],
+  ["bank", "Bank", ["dues.manage"]],
+  ["record", "Record", ["orders.record.view"]],
+  ["shifts", "Shifts", ["shop.session.manage"]],
+  ["offline", "Connect Devices", ["manage.devices"]],
+  ["reports", "Reports", ["reports.view"]],
+  ["settings", "Settings", ["settings.manage"]],
+  ["testimonials", "Testimonials", ["settings.manage"]],
+  ["whatsapp", "WhatsApp", ["whatsapp.manage"]],
+  ["post", "Post", ["whatsapp.manage"]],
+  ["help", "Help", []],
+];
+
+SIDEBAR_PAGES.forEach(([key, label]) => {
+  PERMISSIONS.push({
+    key: `page.${key}`,
+    label: `Page: ${label}`,
+    module: "Sidebar Pages",
+    description: `Show the "${label}" page in this employee's sidebar. Tick at least one page and they will see ONLY the ticked pages.`,
+  });
+});
+
+const PAGE_GRANTS = Object.fromEntries(SIDEBAR_PAGES.map(([key, , grants]) => [`page.${key}`, grants]));
+
+// An employee's final permission list: their keys + whatever each ticked
+// page needs to work.
+function expandPagePermissions(keys) {
+  const out = new Set(keys);
+  keys.forEach((key) => (PAGE_GRANTS[key] || []).forEach((grant) => out.add(grant)));
+  return Array.from(out);
+}
+
 const PERMISSION_KEYS = PERMISSIONS.map((permission) => permission.key);
 
 // Sensible starting permission sets for the default roles the migration /
@@ -112,4 +163,4 @@ const DEFAULT_ROLE_PRESETS = {
   "Stock Manager": ["stock.manage", "suppliers.manage", "reports.view.inventory", ...WORKSPACE_ACCESS_DEFAULTS],
 };
 
-module.exports = { PERMISSIONS, PERMISSION_KEYS, DEFAULT_ROLE_PRESETS, WORKSPACE_ACCESS_DEFAULTS };
+module.exports = { PERMISSIONS, PERMISSION_KEYS, DEFAULT_ROLE_PRESETS, WORKSPACE_ACCESS_DEFAULTS, SIDEBAR_PAGES, expandPagePermissions };

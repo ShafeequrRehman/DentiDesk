@@ -19,7 +19,7 @@ import { getBusinessWindow, filterOrdersInBusinessWindow, useShopSession, type B
 import { isDesktopApp } from '@/lib/api';
 import { useNetworkStatus } from '@/lib/network-status';
 import { loadOrdersFromLocalHub } from '@/lib/offline-order-helpers';
-import { getIsDashboardHidden, hasPermission } from '@/lib/auth';
+import { canOpenPage, getIsDashboardHidden, hasPermission } from '@/lib/auth';
 import { getFirstAccessiblePage } from '@/lib/dashboard-pages';
 import { useToast } from '@/lib/toast';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
@@ -60,7 +60,7 @@ type ServiceStats = {
 // run - never violates the Rules of Hooks, and never fires a network
 // request for a page about to be redirected away from anyway.
 export default function DashboardPageClient() {
-  if (getIsDashboardHidden() || !hasPermission('view.dashboard')) {
+  if (getIsDashboardHidden() || !canOpenPage('dashboard', 'view.dashboard')) {
     return <Navigate to={getFirstAccessiblePage()} replace />;
   }
   return <DashboardPageClientInner />;

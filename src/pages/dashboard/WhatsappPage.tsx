@@ -1,8 +1,8 @@
 
 import React, { useState, useEffect, useCallback } from 'react';
-import { fetchWhatsappStatus, fetchWhatsappQR, sendWhatsappMessage, fetchAllCustomers, resetWhatsapp } from '@/lib/pos-api';
+import { fetchWhatsappStatus, fetchWhatsappQR, sendWhatsappMessage, fetchAllCustomers, resetWhatsapp, disconnectWhatsapp } from '@/lib/pos-api';
 import { Customer } from '@/lib/pos-types';
-import { Send, Users, AlertCircle, CheckCircle2, Phone, MessageSquare, Loader2, RefreshCw } from 'lucide-react';
+import { Send, Users, AlertCircle, CheckCircle2, Phone, MessageSquare, Loader2, RefreshCw, Unlink } from 'lucide-react';
 import { useToast } from '@/lib/toast';
 
 interface WhatsAppStatus {
@@ -12,7 +12,8 @@ interface WhatsAppStatus {
 }
 
 export default function WhatsAppManager() {
-  const { toast } = useToast();
+  const { toast, confirm } = useToast();
+  const [disconnecting, setDisconnecting] = useState(false);
   const [status, setStatus] = useState<WhatsAppStatus>({ isConnected: false, hasQR: false, socketReady: false });
   const [qrCode, setQrCode] = useState<string | null>(null);
   const [resetting, setResetting] = useState(false);
@@ -154,6 +155,29 @@ export default function WhatsAppManager() {
               <p className="text-sm text-gray-500 text-center mt-4">
                 Your POS is securely linked to WhatsApp and ready to send receipts and promotions.
               </p>
+              <button
+                type="button"
+                disabled={disconnecting}
+                onClick={async () => {
+                  const ok = await confirm('Disconnect WhatsApp from this clinic? Slips and messages stop until you scan the new QR code (it is also removed from Linked Devices on the phone).', { title: 'Disconnect WhatsApp', confirmText: 'Disconnect', tone: 'danger' });
+                  if (!ok) return;
+                  setDisconnecting(true);
+                  setQrCode(null);
+                  try {
+                    await disconnectWhatsapp();
+                    setStatus((prev) => ({ ...prev, isConnected: false, hasQR: false }));
+                    toast.success('WhatsApp disconnected - a new QR code will appear in a few seconds.');
+                    setTimeout(() => void checkStatus(), 4000);
+                  } catch (error) {
+                    toast.error(error instanceof Error ? error.message : 'Could not disconnect WhatsApp.');
+                  } finally {
+                    setDisconnecting(false);
+                  }
+                }}
+                className="mt-5 flex items-center gap-2 rounded-lg border border-rose-200 bg-rose-50 px-4 py-2 text-sm font-bold text-rose-600 shadow-sm hover:bg-rose-100 disabled:opacity-50"
+              >
+                {disconnecting ? <Loader2 size={15} className="animate-spin" /> : <Unlink size={15} />} {disconnecting ? 'Disconnecting...' : 'Disconnect WhatsApp'}
+              </button>
             </div>
           ) : (
             <div className="flex flex-col items-center mt-4 w-full">

@@ -81,6 +81,18 @@ router.post("/reset", requireAnyPermission("whatsapp.manage"), async (req, res) 
   }
 });
 
+// DISCONNECT - unlink this clinic's WhatsApp (removed from the phone's
+// Linked Devices too) and show a fresh QR to link again.
+router.post("/disconnect", requireAnyPermission("whatsapp.manage"), async (req, res) => {
+  try {
+    const service = await getServiceForRequest(req);
+    await service.disconnect();
+    res.json({ ok: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // SEND MESSAGE - text only, no file involved, unaffected by where the
 // backend runs.
 router.post("/send", canSendMessage, async (req, res) => {

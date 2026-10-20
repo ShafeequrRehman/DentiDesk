@@ -8,7 +8,8 @@ import {
   Store, Lock, ClipboardList, Wifi, WifiOff, Download, RefreshCcw,
   Menu, X, Smartphone, Boxes, Landmark, Stethoscope, FlaskConical, CalendarPlus, CalendarCheck, CalendarOff, Megaphone, HandCoins, MessageSquareQuote
 } from 'lucide-react';
-import { clearAuthSession, getAuthRole, getAuthShop, hasPermission, hasAnyPermission, isPageEnabled, getIsDashboardHidden } from '@/lib/auth';
+import { canOpenPage, clearAuthSession, getAuthRole, getAuthShop, hasPermission, hasAnyPermission, isPageEnabled, getIsDashboardHidden, isPageRestricted } from '@/lib/auth';
+import { getFirstAccessiblePage } from '@/lib/dashboard-pages';
 import { DASHBOARD_PAGES } from '@/lib/dashboard-pages';
 import { useOfflineSync } from '@/lib/offline-sync';
 import { isDesktopApp, logoutRequest } from '@/lib/api';
@@ -88,9 +89,20 @@ export default function DashboardShell() {
     // this employee's assigned Role has "Hide Dashboard" checked - see
     // getIsDashboardHidden's own comment (never true for a Shop Owner).
     .filter((item) => item.key !== 'dashboard' || !getIsDashboardHidden())
-    .filter((item) => !item.permission || (Array.isArray(item.permission) ? hasAnyPermission(item.permission) : hasPermission(item.permission)))
+    .filter((item) => canOpenPage(item.key, item.permission))
     .filter((item) => isPageEnabled(item.key))
     .map((item) => ({ ...item, icon: PAGE_ICONS[item.key] }));
+
+  // An employee limited to ticked pages can't reach another page by typing
+  // its address either - sent to their first allowed page instead.
+  const blockedPage = isPageRestricted()
+    ? DASHBOARD_PAGES.filter((page) => page.key !== 'dashboard' && (pathname === page.href || pathname.startsWith(`${page.href}/`)))
+        .sort((a, b) => b.href.length - a.href.length)[0] || (pathname === '/dashboard' || pathname === '/dashboard/' ? DASHBOARD_PAGES[0] : undefined)
+    : undefined;
+  const pageBlocked = Boolean(blockedPage && !canOpenPage(blockedPage.key));
+  useEffect(() => {
+    if (pageBlocked) navigate(getFirstAccessiblePage(), { replace: true });
+  }, [pageBlocked, navigate]);
   // F1, F2, F3... in the exact order the sidebar shows them (after
   // Dashboard), so the badges always run in sequence for whatever pages
   // this user can see. Stops at F10 - F11/F12 belong to the browser.

@@ -1357,6 +1357,16 @@ export async function resetWhatsapp() {
   }
 }
 
+// Unlinks this clinic's WhatsApp (also from the phone's Linked Devices).
+export async function disconnectWhatsapp() {
+  try {
+    const response = await api.post<{ ok: boolean }>('/whatsapp/disconnect', {}, { baseURL: getSystemApiBaseUrl() });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
 export async function fetchWhatsappQR() {
   try {
     const response = await api.get<{ qr: string; message?: string }>('/whatsapp/qr', {

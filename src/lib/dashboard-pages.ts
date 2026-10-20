@@ -1,4 +1,4 @@
-import { getAuthRole, hasPermission, hasAnyPermission, isPageEnabled, getIsDashboardHidden } from '@/lib/auth';
+import { canOpenPage, getAuthRole, isPageEnabled, getIsDashboardHidden } from '@/lib/auth';
 
 // Single source of truth for the desktop sidebar's page list - shared by
 // DashboardShell.tsx (renders the nav, filtered by permission + this
@@ -123,7 +123,7 @@ export function getFirstAccessiblePage(): string {
   // their real first page immediately on login, instead of landing on
   // '/dashboard' first and only then being bounced by
   // DashboardPageClient.tsx's own route guard.
-  if (role !== 'employee' || (!getIsDashboardHidden() && hasPermission('view.dashboard'))) return '/dashboard';
+  if (role !== 'employee' || (!getIsDashboardHidden() && canOpenPage('dashboard', 'view.dashboard'))) return '/dashboard';
 
   const firstAllowed = DASHBOARD_PAGES.find((item) => {
     // role is narrowed to the literal 'employee' by the guard above, so
@@ -132,10 +132,7 @@ export function getFirstAccessiblePage(): string {
     // case that guard is ever loosened later.
     if ((item.key === 'employees' || item.key === 'payroll') && (role as string) !== 'shopowner') return false;
     if (item.key === 'dashboard') return false;
-    if (item.permission) {
-      const allowed = Array.isArray(item.permission) ? hasAnyPermission(item.permission) : hasPermission(item.permission);
-      if (!allowed) return false;
-    }
+    if (!canOpenPage(item.key, item.permission)) return false;
     return isPageEnabled(item.key);
   });
 

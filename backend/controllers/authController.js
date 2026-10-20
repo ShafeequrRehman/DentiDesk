@@ -5,6 +5,7 @@ const Shop = require("../models/Shop");
 const License = require("../models/License");
 const { isLicenseExpired } = License;
 const Role = require("../models/Role");
+const { expandPagePermissions } = require("../config/permissions");
 const {
   signAccessToken,
   generateRefreshToken,
@@ -45,7 +46,9 @@ async function resolveEmployeePermissions(user) {
   const base = role ? role.permissions : [];
   const extra = Array.isArray(user.extraPermissions) ? user.extraPermissions : [];
   const revoked = new Set(Array.isArray(user.revokedPermissions) ? user.revokedPermissions : []);
-  return Array.from(new Set([...base, ...extra])).filter((key) => !revoked.has(key));
+  const own = Array.from(new Set([...base, ...extra])).filter((key) => !revoked.has(key));
+  // A ticked sidebar page brings the access that page needs.
+  return expandPagePermissions(own);
 }
 
 // Dashboard Permission Gate: whether THIS employee's assigned Role has the
