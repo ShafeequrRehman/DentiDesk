@@ -8,6 +8,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { PRINT_LOGO_STORAGE_KEY, persistPrintLogoToDisk } from '@/lib/print-logo';
+import { applyServerReceipt, localPrintLogo, receiptSettingsPayload, RECEIPT_KEYS } from '@/lib/receipt-sync';
 import { ProductManagementSection } from '@/components/ProductManagementSection';
 import { ReceiptManagementSection } from '@/components/ReceiptManagementSection';
 import { SidebarPagesSection } from '@/components/SidebarPagesSection';
@@ -17,7 +18,15 @@ import { getStoreSettings, saveStoreSettings, StoreSettings, TIMEZONES } from '@
 import { fetchPrinters, fetchShopProfile, updateShopProfile } from '@/lib/pos-api';
 import { setClinicHours } from '@/lib/appointments';
 import { updateCachedShopName } from '@/lib/auth';
-import { useToast } from '@/lib/toast';
+import { useToast } from '@/lib/toast';
+
+function pickReceipt(settings: StoreSettings) {
+  const out: Partial<StoreSettings> = {};
+  RECEIPT_KEYS.forEach((key) => {
+    (out as Record<string, unknown>)[key] = settings[key];
+  });
+  return out;
+}
 
 export default function SettingsPage() {
   const { toast } = useToast();
@@ -51,6 +60,10 @@ export default function SettingsPage() {
     (async () => {
       setShopProfileLoading(true);
       const profile = await fetchShopProfile();
+      // Receipt settings + logo are the clinic's (server) - show those.
+      applyServerReceipt(profile);
+      setSettings((prev) => (prev ? { ...prev, ...pickReceipt(getStoreSettings()) } : prev));
+      setPrintLogo(localPrintLogo() || null);
       if (profile?.name) setShopName(profile.name);
       if (profile?.address !== undefined) setShopAddress(profile.address);
       setHidePriceDrs(Boolean(profile?.hideOnlinePriceDrs));
@@ -124,6 +137,9 @@ export default function SettingsPage() {
       clinicEnd: settings?.businessEndTime || '',
       hideOnlinePriceDrs: hidePriceDrs,
       hideOnlinePriceServices: hidePriceServices,
+      // Receipt + logo for every device of this clinic.
+      ...(settings ? { receiptSettings: receiptSettingsPayload(settings) } : {}),
+      printLogo: printLogo || '',
     });
     if (result) setClinicHours(settings?.businessStartTime, settings?.businessEndTime);
     setSavingSettings(false);
@@ -200,10 +216,25 @@ export default function SettingsPage() {
       return;
     }
 
+    // Shrunk to at most 400px (PNG keeps a transparent background) - the
+    // logo is saved for the whole clinic and sent to every device.
     const reader = new FileReader();
     reader.onload = () => {
       const result = typeof reader.result === 'string' ? reader.result : null;
-      persistLogo(result);
+      if (!result) return;
+      const img = new Image();
+      img.onload = () => {
+        const scale = Math.min(1, 400 / Math.max(img.width, img.height));
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.max(1, Math.round(img.width * scale));
+        canvas.height = Math.max(1, Math.round(img.height * scale));
+        const ctx = canvas.getContext('2d');
+        if (!ctx) return persistLogo(result);
+        ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+        persistLogo(canvas.toDataURL('image/png'));
+      };
+      img.onerror = () => persistLogo(result);
+      img.src = result;
     };
     reader.readAsDataURL(file);
 

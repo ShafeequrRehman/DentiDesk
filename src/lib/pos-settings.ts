@@ -67,11 +67,15 @@ export const defaultSettings: StoreSettings = {
   counterPrinter: "",
   businessStartTime: "10:00",
   businessEndTime: "02:00",
-  receiptHeader: "The Heaven Slice",
-  receiptSubHeader: "Est. 2022",
-  receiptAddress: "Gojra Road Near Ali Merriage Hall",
-  receiptContact: "0300-0310275",
-  receiptPaymentInfo: "0307 - 4798089 Jazzcash/EasyPaisa",
+  // Blank by default - the clinic fills these in once (Settings > Manage
+  // Receipt) and they are saved for the whole clinic on the server, so
+  // every laptop/phone prints the same slip. An empty header prints the
+  // clinic's own name.
+  receiptHeader: "",
+  receiptSubHeader: "",
+  receiptAddress: "",
+  receiptContact: "",
+  receiptPaymentInfo: "",
   receiptFooterMessage: "Thank You for your Appointment!",
   cashierReceiptTemplate: "classic",
   kitchenReceiptTemplate: "classic",
@@ -118,12 +122,23 @@ export function getStoreSettings(): StoreSettings {
       if (parsed.receiptFooterMessage === 'Thank You for your Order!') {
         parsed.receiptFooterMessage = defaultSettings.receiptFooterMessage;
       }
-      return { ...defaultSettings, ...parsed, ...sessionOverrides };
+      // Never-edited copies of the old built-in sample receipt (another
+      // business's name/address) - treat as empty.
+      if (parsed.receiptHeader === 'The Heaven Slice') {
+        const OLD_SAMPLE: Partial<StoreSettings> = { receiptSubHeader: 'Est. 2022', receiptAddress: 'Gojra Road Near Ali Merriage Hall', receiptContact: '0300-0310275', receiptPaymentInfo: '0307 - 4798089 Jazzcash/EasyPaisa' };
+        parsed.receiptHeader = '';
+        (Object.keys(OLD_SAMPLE) as Array<keyof StoreSettings>).forEach((key) => {
+          if (parsed[key] === OLD_SAMPLE[key]) (parsed as Record<string, unknown>)[key] = '';
+        });
+      }
+      const merged = { ...defaultSettings, ...parsed, ...sessionOverrides };
+      if (!merged.receiptHeader) merged.receiptHeader = sessionOverrides.shopName || '';
+      return merged;
     }
   } catch (err) {
     console.error('Failed to load settings:', err);
   }
-  return { ...defaultSettings, ...sessionOverrides };
+  return { ...defaultSettings, receiptHeader: sessionOverrides.shopName || '', ...sessionOverrides };
 }
 
 export function saveStoreSettings(settings: StoreSettings) {

@@ -1229,6 +1229,9 @@ export interface ShopProfile {
   clinicEnd?: string;
   hideOnlinePriceDrs?: boolean;
   hideOnlinePriceServices?: boolean;
+  // Settings > Manage Receipt for the whole clinic (see lib/receipt-sync.ts).
+  receiptSettings?: Record<string, unknown> | null;
+  printLogo?: string;
   _id?: string;
   name?: string;
   // Already stored/returned by the backend (Shop.phone, spread straight
@@ -1267,7 +1270,7 @@ export async function fetchShopProfile() {
 // Shop Name/Shop Address fields in Settings (Store Profile) - phone/email
 // are also accepted server-side but nothing in this app's UI edits those
 // through this call yet.
-export async function updateShopProfile(payload: { name?: string; address?: string; clinicStart?: string; clinicEnd?: string; hideOnlinePriceDrs?: boolean; hideOnlinePriceServices?: boolean; receiptAutoPrint?: Partial<{ dineIn: boolean; takeAway: boolean; delivery: boolean }> }) {
+export async function updateShopProfile(payload: { name?: string; address?: string; clinicStart?: string; clinicEnd?: string; hideOnlinePriceDrs?: boolean; hideOnlinePriceServices?: boolean; receiptSettings?: Record<string, unknown>; printLogo?: string; receiptAutoPrint?: Partial<{ dineIn: boolean; takeAway: boolean; delivery: boolean }> }) {
   try {
     const response = await api.patch<ShopProfile>('/shop/profile', payload);
     return response.data;

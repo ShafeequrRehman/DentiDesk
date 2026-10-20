@@ -27,6 +27,11 @@ const shopSchema = new mongoose.Schema(
     // appointment page and in their WhatsApp messages (POS still shows them).
     hideOnlinePriceDrs: { type: Boolean, default: false },
     hideOnlinePriceServices: { type: Boolean, default: false },
+    // Settings > Manage Receipt, saved for the whole clinic (not per
+    // laptop): header, address, footer, social links, QR on/off, template
+    // - and the receipt logo (a small data: image). null = never saved.
+    receiptSettings: { type: mongoose.Schema.Types.Mixed, default: null },
+    printLogo: { type: String, default: "" },
     status: {
       type: String,
       enum: ["active", "suspended"],

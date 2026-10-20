@@ -517,7 +517,28 @@ exports.updateOwnShop = async (req, res) => {
     const shop = await Shop.findById(req.user.shopId);
     if (!shop) return res.status(404).json({ message: "Clinic not found" });
 
-    const { name, phone, email, address, receiptAutoPrint, clinicStart, clinicEnd, hideOnlinePriceDrs, hideOnlinePriceServices } = req.body;
+    const { name, phone, email, address, receiptAutoPrint, clinicStart, clinicEnd, hideOnlinePriceDrs, hideOnlinePriceServices, receiptSettings, printLogo } = req.body;
+    // Receipt settings shared by every laptop/phone of this clinic - only
+    // the known fields, as short text (or true/false / a number).
+    if (receiptSettings && typeof receiptSettings === "object") {
+      const TEXT = ["receiptHeader", "receiptSubHeader", "receiptAddress", "receiptContact", "receiptPaymentInfo", "receiptFooterMessage", "receiptFacebook", "receiptInstagram", "receiptTiktok", "receiptYoutube", "receiptWebsite", "receiptWhatsapp", "cashierReceiptTemplate"];
+      const clean = {};
+      TEXT.forEach((key) => {
+        if (receiptSettings[key] !== undefined) clean[key] = String(receiptSettings[key] ?? "").slice(0, 500);
+      });
+      if (receiptSettings.receiptShowBookingQr !== undefined) clean.receiptShowBookingQr = Boolean(receiptSettings.receiptShowBookingQr);
+      if (receiptSettings.serviceChargePercent !== undefined) clean.serviceChargePercent = Math.max(0, Math.min(100, Number(receiptSettings.serviceChargePercent) || 0));
+      shop.receiptSettings = clean;
+      shop.markModified("receiptSettings");
+    }
+    if (printLogo !== undefined) {
+      const logo = String(printLogo || "");
+      if (logo && !/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(logo)) {
+        return res.status(400).json({ message: "The receipt logo must be a picture." });
+      }
+      if (logo.length > 1500000) return res.status(400).json({ message: "The receipt logo is too large - pick a smaller picture." });
+      shop.printLogo = logo;
+    }
     if (name !== undefined) shop.name = name;
     if (hideOnlinePriceDrs !== undefined) shop.hideOnlinePriceDrs = Boolean(hideOnlinePriceDrs);
     if (hideOnlinePriceServices !== undefined) shop.hideOnlinePriceServices = Boolean(hideOnlinePriceServices);
