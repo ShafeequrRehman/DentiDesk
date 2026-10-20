@@ -90,6 +90,8 @@ export const DASHBOARD_PAGES: DashboardPageDef[] = [
   { key: 'reports', label: 'Reports', href: '/dashboard/reports', permission: ['reports.view', 'reports.view.own_sales', 'reports.view.inventory'] },
   { key: 'employees', label: 'Manage Staff', href: '/dashboard/employees' },
   { key: 'settings', label: 'Settings', href: '/dashboard/settings', permission: 'settings.manage' },
+  // Patient pictures/videos shown on the online appointment page.
+  { key: 'testimonials', label: 'Testimonials', href: '/dashboard/testimonials', permission: 'settings.manage' },
   { key: 'whatsapp', label: 'WhatsApp', href: '/dashboard/whatsapp', permission: 'whatsapp.manage' },
   // One picture to every patient on WhatsApp.
   { key: 'post', label: 'Post', href: '/dashboard/post', permission: 'whatsapp.manage' },

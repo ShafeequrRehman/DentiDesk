@@ -1,10 +1,12 @@
 import React from 'react';
 import { CheckCircle2 } from 'lucide-react';
 import { StoreSettings } from '@/lib/pos-settings';
+import PatientSlipExtras from '@/components/PatientSlipExtras';
+import { SOCIAL_FIELDS, BOOKING_QR_CAPTION } from '@/lib/slip-extras';
 
 interface Props {
   settings: StoreSettings | null;
-  onChange: (field: keyof StoreSettings, value: string | number) => void;
+  onChange: (field: keyof StoreSettings, value: string | number | boolean) => void;
   printLogo: string | null;
 }
 
@@ -140,6 +142,37 @@ export function ReceiptManagementSection({ settings, onChange, printLogo }: Prop
             className="w-full p-4 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 font-bold outline-none" 
           />
         </div>
+
+        {/* Patient slips only (appointment, prescription, dues receipt) */}
+        <div className="space-y-3 rounded-3xl border border-slate-100 p-4">
+          <div>
+            <p className="text-xs font-black text-slate-700 uppercase tracking-widest">Social links &amp; booking QR</p>
+            <p className="text-[11px] font-bold text-slate-400">Printed on patient slips (appointment, prescription, dues receipt) and their WhatsApp PDFs. Leave a link empty to skip it.</p>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            {SOCIAL_FIELDS.map((field) => (
+              <div key={field.key} className="space-y-1">
+                <label className="text-[10px] font-black text-slate-400 uppercase tracking-widest ml-1">{field.label}</label>
+                <input
+                  type="text"
+                  value={String(settings[field.key] ?? '')}
+                  onChange={e => onChange(field.key, e.target.value)}
+                  placeholder={field.placeholder}
+                  className="w-full p-3 bg-slate-50 rounded-2xl border-none focus:ring-2 focus:ring-indigo-500 font-bold outline-none text-sm"
+                />
+              </div>
+            ))}
+          </div>
+          <label className="flex items-center gap-3 rounded-2xl bg-slate-50 p-3 cursor-pointer">
+            <input
+              type="checkbox"
+              checked={settings.receiptShowBookingQr !== false}
+              onChange={e => onChange('receiptShowBookingQr', e.target.checked)}
+              className="h-4 w-4"
+            />
+            <span className="text-sm font-bold text-slate-700">Print the online-booking QR code ("{BOOKING_QR_CAPTION}")</span>
+          </label>
+        </div>
       </div>
 
       {/* Preview Area - Right Side */}
@@ -201,6 +234,8 @@ export function ReceiptManagementSection({ settings, onChange, printLogo }: Prop
           
           <div className="border-t border-dashed border-slate-400 my-4"></div>
           
+          <PatientSlipExtras settings={settings} />
+
           {settings.receiptFooterMessage && (
             <p className="text-xs font-bold">{settings.receiptFooterMessage}</p>
           )}

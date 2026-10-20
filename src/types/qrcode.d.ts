@@ -12,6 +12,9 @@ declare module "qrcode" {
 
   export function toDataURL(text: string, options?: QRCodeToDataURLOptions): Promise<string>;
 
-  const QRCode: { toDataURL: typeof toDataURL };
+  // Synchronous QR matrix (used to draw slips' booking QR as SVG).
+  export function create(text: string, options?: { errorCorrectionLevel?: 'L' | 'M' | 'Q' | 'H' }): { modules: { size: number; get(row: number, col: number): number | boolean } };
+
+  const QRCode: { toDataURL: typeof toDataURL; create: typeof create };
   export default QRCode;
 }

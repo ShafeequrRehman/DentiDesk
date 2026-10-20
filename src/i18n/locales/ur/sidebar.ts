@@ -20,6 +20,7 @@ export const sidebar = {
   employees: "عملہ کا انتظام",
   settings: "ترتیبات",
   whatsapp: "واٹس ایپ",
-  post: "پوسٹ",
+  post: "پوسٹ",
+  testimonials: "تاثرات",
   help: "مدد",
 } as const;

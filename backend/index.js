@@ -65,6 +65,7 @@ const whatsappRoutes = require("./routes/whatsappRoutes");
 const printerRoutes = require("./routes/printerRoutes");
 const appVersionRoutes = require("./routes/appVersionRoutes");
 const publicOrderRoutes = require("./routes/publicOrderRoutes");
+const testimonialRoutes = require("./routes/testimonialRoutes");
 
 const sanitizeInput = require("./middleware/sanitizeInput");
 
@@ -170,6 +171,14 @@ app.use("/api/app-version", appVersionRoutes);
 // can log in.
 app.use("/apk", express.static(path.join(__dirname, "public", "apk")));
 
+// Testimonial pictures/videos uploaded on the Testimonials page - public,
+// they are shown on the online appointment page. Only plain files, no
+// folder listings, no hidden files.
+app.use(
+  "/media/testimonials",
+  express.static(path.join(__dirname, "uploads", "testimonials"), { dotfiles: "deny", index: false, maxAge: "7d" })
+);
+
 
 // With bufferCommands disabled (see config/db.js), a DB-touching route hit
 // while Atlas is unreachable now fails fast instead of hanging - but the
@@ -210,6 +219,7 @@ app.use("/api/purchases", purchaseRoutes);
 app.use("/api/expenses", expenseRoutes);
 app.use("/api/whatsapp", whatsappRoutes);
 app.use("/api/printers", printerRoutes);
+app.use("/api/testimonials", testimonialRoutes);
 // Customer-facing QR ordering (menu/tables/order-status/place-order/
 // payment) - no login, see requireShopOrderable.js/publicOrderController.js
 // for why every input there is treated as untrusted. Still mounted under

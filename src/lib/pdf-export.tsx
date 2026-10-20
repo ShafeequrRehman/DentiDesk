@@ -13,7 +13,7 @@
 // landscape A4 page, so this is one small, reusable document shape rather
 // than two near-identical hand-rolled ones.
 import type { ReactElement } from 'react';
-import { Document, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
+import { Document, Image, Page, Text, View, StyleSheet, pdf } from '@react-pdf/renderer';
 import { getAuthShop } from '@/lib/auth';
 import { playPrintSound } from '@/lib/audio-feedback';
 
@@ -140,11 +140,14 @@ export function ReportPdfDocument({
   subtitle,
   stats,
   tables,
+  extras,
 }: {
   title: string;
   subtitle?: string;
   stats?: PdfStat[];
   tables: PdfTable[];
+  // Patient PDFs: social links + online-booking QR (lib/slip-extras.ts).
+  extras?: { links: Array<{ label: string; value: string }>; qr?: string | null; caption?: string };
 }) {
   // Exact Current Date and Time of generation - computed once, right here,
   // at the moment this document is actually rendered (a download or a
@@ -182,6 +185,22 @@ export function ReportPdfDocument({
           </View>
         ) : null}
         {tables.map((table, index) => <TableBlock key={index} table={table} />)}
+        {extras && (extras.links.length > 0 || extras.qr) ? (
+          <View wrap={false} style={{ marginTop: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', borderTopWidth: 1, borderColor: '#E5E7EB', paddingTop: 10 }}>
+            <View style={{ flex: 1 }}>
+              {extras.links.length > 0 ? <Text style={{ fontSize: 10, fontFamily: 'Helvetica-Bold', marginBottom: 3 }}>Follow us</Text> : null}
+              {extras.links.map((link) => (
+                <Text key={link.label} style={{ fontSize: 9, color: '#374151', marginBottom: 1 }}>{link.label}: {link.value}</Text>
+              ))}
+            </View>
+            {extras.qr ? (
+              <View style={{ alignItems: 'center', width: 120 }}>
+                <Image src={extras.qr} style={{ width: 90, height: 90 }} />
+                <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', textAlign: 'center', marginTop: 2 }}>{extras.caption || ''}</Text>
+              </View>
+            ) : null}
+          </View>
+        ) : null}
         <PageFooter />
       </Page>
     </Document>

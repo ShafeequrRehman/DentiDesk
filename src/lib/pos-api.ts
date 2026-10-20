@@ -1530,3 +1530,52 @@ export async function removeProviderPayment(orderId: string, entryId: string) {
     handleApiError(error);
   }
 }
+
+// --- Testimonials (pictures / videos on the online appointment page) ---
+export interface Testimonial {
+  id: string;
+  kind: 'image' | 'video' | 'youtube';
+  url: string;
+  title: string;
+  createdAt: string;
+}
+
+export async function fetchTestimonials() {
+  try {
+    const response = await api.get<Testimonial[]>('/testimonials');
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+// The file goes up as-is (the request body IS the file).
+export async function uploadTestimonial(file: File, title: string) {
+  try {
+    const response = await api.post<Testimonial>(`/testimonials/upload?title=${encodeURIComponent(title)}`, file, {
+      headers: { 'Content-Type': file.type || 'application/octet-stream' },
+      timeout: 5 * 60 * 1000,
+    });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function addTestimonialLink(url: string, title: string) {
+  try {
+    const response = await api.post<Testimonial>('/testimonials/link', { url, title });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function deleteTestimonial(id: string) {
+  try {
+    await api.delete(`/testimonials/${id}`);
+    return true;
+  } catch (error) {
+    handleApiError(error);
+  }
+}

@@ -29,6 +29,8 @@ router.use("/:shopId", requireShopOrderable);
 router.get("/:shopId/manifest.json", readLimiter, ctrl.getManifest);
 router.get("/:shopId/menu", readLimiter, ctrl.getMenu);
 router.get("/:shopId/booked-slots", readLimiter, ctrl.getBookedSlots);
+// Patient testimonials (pictures/videos) under the Drs & Services.
+router.get("/:shopId/testimonials", readLimiter, require("../controllers/testimonialController").listPublic);
 router.get("/:shopId/customer-status", readLimiter, ctrl.getCustomerStatus);
 router.get("/:shopId/orders/:orderId", readLimiter, ctrl.getOrderStatus);
 router.post("/:shopId/orders", orderLimiter, ctrl.createOrder);

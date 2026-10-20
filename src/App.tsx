@@ -32,6 +32,7 @@ import EmployeesPage from '@/pages/dashboard/EmployeesPage';
 import SettingsPage from '@/pages/dashboard/SettingsPage';
 import WhatsappPage from '@/pages/dashboard/WhatsappPage';
 import PostPage from '@/pages/dashboard/PostPage';
+import TestimonialsPage from '@/pages/dashboard/TestimonialsPage';
 import HelpPage from '@/pages/dashboard/HelpPage';
 import SuperAdminShell from '@/pages/superadmin/components/SuperAdminShell';
 import OverviewPage from '@/pages/superadmin/OverviewPage';
@@ -155,6 +156,7 @@ export default function App() {
             <Route path="admin" element={<AdminPage />} />
             <Route element={<RequirePermission permission="settings.manage" />}>
               <Route path="settings" element={<SettingsPage />} />
+              <Route path="testimonials" element={<TestimonialsPage />} />
             </Route>
             <Route element={<RequirePermission permission="whatsapp.manage" />}>
               <Route path="whatsapp" element={<WhatsappPage />} />

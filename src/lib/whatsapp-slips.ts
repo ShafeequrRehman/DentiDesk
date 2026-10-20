@@ -108,7 +108,10 @@ export async function sendPrescriptionSlip(order: SavedOrder) {
   }
   const { ReportPdfDocument, pdfDocumentToBase64 } = await import('@/lib/pdf-export');
   const withWhom = bookedWith(order);
+  const { BOOKING_QR_CAPTION, bookingQrPng, socialLinks } = await import('@/lib/slip-extras');
+  const extras = { links: socialLinks(), qr: await bookingQrPng(), caption: BOOKING_QR_CAPTION };
   const doc = createElement(ReportPdfDocument, {
+    extras,
     title: 'Prescription',
     subtitle: order.checkedAt ? `Checked ${new Date(order.checkedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : undefined,
     stats: [

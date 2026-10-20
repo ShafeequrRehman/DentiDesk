@@ -52,6 +52,19 @@ export interface PublicMenuResponse {
   products: PublicMenuProduct[];
 }
 
+export interface PublicTestimonial {
+  id: string;
+  kind: 'image' | 'video' | 'youtube';
+  url: string;
+  title: string;
+}
+
+// Patient testimonials shown under the Drs & Services.
+export async function fetchPublicTestimonials(shopId: string): Promise<PublicTestimonial[]> {
+  const response = await api.get<PublicTestimonial[]>(`/public/${shopId}/testimonials`);
+  return Array.isArray(response.data) ? response.data : [];
+}
+
 export async function fetchPublicMenu(shopId: string): Promise<PublicMenuResponse> {
   const response = await api.get<PublicMenuResponse>(`/public/${shopId}/menu`);
   return response.data;

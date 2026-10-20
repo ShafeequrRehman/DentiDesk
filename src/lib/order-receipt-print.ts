@@ -20,6 +20,7 @@ import { cs, poweredByLine } from '@/lib/currency';
 import { SavedOrder, DuesHistoryEntry } from '@/lib/pos-types';
 import { getStoreSettings } from '@/lib/pos-settings';
 import { PRINT_LOGO_STORAGE_KEY } from '@/lib/print-logo';
+import { patientSlipExtrasHtml } from '@/lib/slip-extras';
 import { fetchCustomerOutstanding } from '@/lib/pos-api';
 
 const WALKIN_PHONE = '03000000000';
@@ -90,7 +91,9 @@ function balanceHtml(order: SavedOrder, previousDues: number) {
 // Purchase/reprinted-order slip built through this shared shell always
 // matches the live checkout slip's branding without each caller having
 // to remember to pass it.
-export function buildReceiptShellHtml(title: string, bodyHtml: string, titleSub?: string) {
+// options.patient: a patient's slip - adds the clinic's social links and
+// the online-booking QR (lib/slip-extras.ts) above the footer.
+export function buildReceiptShellHtml(title: string, bodyHtml: string, titleSub?: string, options: { patient?: boolean } = {}) {
   const settings = getStoreSettings();
   const logoSrc = typeof window === 'undefined' ? null : window.localStorage.getItem(PRINT_LOGO_STORAGE_KEY);
   return `<!DOCTYPE html><html><head><title>${title}</title>
@@ -122,6 +125,7 @@ export function buildReceiptShellHtml(title: string, bodyHtml: string, titleSub?
       </div>
       <div class="title-block"><h2>${title}</h2>${titleSub ? `<div class="title-sub">${titleSub}</div>` : ''}</div>
       ${bodyHtml}
+      ${options.patient ? patientSlipExtrasHtml() : ''}
       <div class="center" style="margin-top:16px">
         ${settings.receiptFooterMessage ? `<p style="font-weight:800">${settings.receiptFooterMessage}</p>` : ''}
         ${poweredByLine() ? `<p>${poweredByLine()}</p>` : ''}
@@ -275,7 +279,7 @@ export function writeDuesEntryReceiptToWindow(printWindow: Window, customerName:
     ${typeof balance === 'number' ? `<div class="dashed"></div><div class="row bold"><span>${balance > 0 ? 'REMAINING DUE:' : balance < 0 ? 'ADVANCE BALANCE:' : 'BALANCE:'}</span><span>${balance === 0 ? 'CLEAR' : money(balance)}</span></div>` : ''}
   `;
   printWindow.document.open();
-  printWindow.document.write(buildReceiptShellHtml('Dues Receipt', bodyHtml));
+  printWindow.document.write(buildReceiptShellHtml('Dues Receipt', bodyHtml, undefined, { patient: true }));
   printWindow.document.close();
   printWindow.focus();
   printWindow.print();
@@ -340,7 +344,7 @@ export function writeOrderReceiptToWindow(printWindow: Window, order: SavedOrder
     if (printWindow.closed) return;
     const bodyHtml = buildOrderReceiptBodyHtml(order, prev);
     printWindow.document.open();
-    printWindow.document.write(buildReceiptShellHtml('Appointment No.', bodyHtml, orderNumber));
+    printWindow.document.write(buildReceiptShellHtml('Appointment No.', bodyHtml, orderNumber, { patient: true }));
     printWindow.document.close();
     printWindow.focus();
     printWindow.print();

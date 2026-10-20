@@ -68,3 +68,5 @@ yarn-error.log*
 # local-only working docs (application-overview.md, test-seed.js) - kept
 # on-disk for local development reference only, never pushed to git
 /local-docs/
+# Testimonial pictures/videos uploaded by clinics (live data, not code)
+backend/uploads/

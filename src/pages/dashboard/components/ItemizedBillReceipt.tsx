@@ -1,3 +1,4 @@
+import PatientSlipExtras from '@/components/PatientSlipExtras';
 import { poweredByLine } from '@/lib/currency';
 import { accountBalanceLines } from '@/lib/order-receipt-print';
 import { useEffect, useState } from 'react';
@@ -248,6 +249,7 @@ export default function ItemizedBillReceipt({
 
       {/* Footer */}
       <div className="text-center mt-4 mb-2">
+        <PatientSlipExtras settings={settings} />
         {settings.receiptFooterMessage && <p className="font-bold">{settings.receiptFooterMessage}</p>}
         {poweredByLine() ? <p>{poweredByLine()}</p> : null}
       </div>

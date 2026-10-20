@@ -31,6 +31,15 @@ export type StoreSettings = {
   receiptContact?: string;
   receiptPaymentInfo?: string;
   receiptFooterMessage?: string;
+  // Patient slips (appointment, prescription, dues receipt): social links
+  // printed under the slip, and the online-booking QR code.
+  receiptFacebook?: string;
+  receiptInstagram?: string;
+  receiptTiktok?: string;
+  receiptYoutube?: string;
+  receiptWebsite?: string;
+  receiptWhatsapp?: string;
+  receiptShowBookingQr?: boolean;
   // Which printed layout to use for each receipt type - see
   // src/pages/dashboard/components/ReceiptRenderer.tsx for how these pick
   // between ThermalReceipt.tsx ("classic", the original template) and the

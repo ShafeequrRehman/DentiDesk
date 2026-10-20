@@ -8,6 +8,7 @@ import { getStoreSettings } from '@/lib/pos-settings';
 import { PRINT_LOGO_STORAGE_KEY } from '@/lib/print-logo';
 import { poweredByLine } from '@/lib/currency';
 import { buildOrderReceiptLines, type ReceiptLine } from '@/lib/order-receipt-print';
+import { BOOKING_QR_CAPTION, bookingQrPng, socialLinks } from '@/lib/slip-extras';
 
 const PAGE_WIDTH = 226; // 80mm
 const LINE = 11;
@@ -48,7 +49,7 @@ function estimateHeight(lines: ReceiptLine[], headerLines: number, hasLogo: bool
   return Math.ceil(h);
 }
 
-export function OrderReceiptPdf({ order, previousDues }: { order: SavedOrder; previousDues: number }) {
+export function OrderReceiptPdf({ order, previousDues, qr }: { order: SavedOrder; previousDues: number; qr?: string | null }) {
   const settings = getStoreSettings();
   let logo: string | null = null;
   try {
@@ -62,7 +63,9 @@ export function OrderReceiptPdf({ order, previousDues }: { order: SavedOrder; pr
   const footer = [settings.receiptFooterMessage, poweredByLine()].filter(Boolean) as string[];
   const lines = buildOrderReceiptLines(order, previousDues);
   const number = String(order.dailyOrderNumber ?? order.id.slice(-3)).padStart(3, '0');
-  const height = estimateHeight(lines, header.reduce((n, l) => n + wrapCount(l), 0), !!logo, footer.length);
+  const links = socialLinks(settings);
+  const extrasHeight = (links.length ? 16 + links.reduce((n, l) => n + wrapCount(`${l.label}: ${l.value}`), 0) * LINE : 0) + (qr ? 120 : 0) + (links.length || qr ? 12 : 0);
+  const height = estimateHeight(lines, header.reduce((n, l) => n + wrapCount(l), 0), !!logo, footer.length) + extrasHeight;
 
   return (
     <Document title={`Appointment ${number}`}>
@@ -100,6 +103,16 @@ export function OrderReceiptPdf({ order, previousDues }: { order: SavedOrder; pr
             </Text>
           );
         })}
+        {links.length || qr ? (
+          <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#000', marginTop: 8, paddingTop: 6, alignItems: 'center' }}>
+            {links.length ? <Text style={styles.bold}>FOLLOW US</Text> : null}
+            {links.map((l) => (
+              <Text key={l.label} style={{ fontSize: 7.5, textAlign: 'center' }}>{l.label}: {l.value}</Text>
+            ))}
+            {qr ? <Image src={qr} style={{ width: 90, height: 90, marginTop: 6 }} /> : null}
+            {qr ? <Text style={[styles.bold, { fontSize: 8 }]}>{BOOKING_QR_CAPTION}</Text> : null}
+          </View>
+        ) : null}
         <View style={styles.footer}>
           {footer.map((l, i) => (
             <Text key={i} style={[styles.center, i === 0 && settings.receiptFooterMessage ? styles.bold : {}]}>{l}</Text>
@@ -111,7 +124,8 @@ export function OrderReceiptPdf({ order, previousDues }: { order: SavedOrder; pr
 }
 
 export async function orderReceiptPdfBase64(order: SavedOrder, previousDues: number): Promise<string> {
-  const blob = await pdf(createElement(OrderReceiptPdf, { order, previousDues }) as Parameters<typeof pdf>[0]).toBlob();
+  const qr = await bookingQrPng();
+  const blob = await pdf(createElement(OrderReceiptPdf, { order, previousDues, qr }) as Parameters<typeof pdf>[0]).toBlob();
   return new Promise((resolve, reject) => {
     const reader = new FileReader();
     reader.onload = () => resolve(String(reader.result).split(',')[1] || '');

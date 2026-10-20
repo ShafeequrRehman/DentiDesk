@@ -389,7 +389,7 @@ export function printPrescription(order: SavedOrder) {
     <p style="margin-top:28px">Signature: ____________________</p>
   `;
   printWindow.document.open();
-  printWindow.document.write(buildReceiptShellHtml('Prescription', bodyHtml, appointmentNo));
+  printWindow.document.write(buildReceiptShellHtml('Prescription', bodyHtml, appointmentNo, { patient: true }));
   printWindow.document.close();
   printWindow.focus();
   printWindow.print();

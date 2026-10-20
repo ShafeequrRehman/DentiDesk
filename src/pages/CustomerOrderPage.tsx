@@ -19,6 +19,8 @@ import {
   type PublicChangeRequest,
 } from '@/lib/public-order-api';
 import { getApiBaseCandidates } from '@/lib/api';
+import TestimonialMedia from '@/components/TestimonialMedia';
+import { fetchPublicTestimonials, type PublicTestimonial } from '@/lib/public-order-api';
 import { clinicEnd, clinicStart, dayOpen, describeSchedule, drsForService, inToday, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, NO_EXTRA, scheduleOf, setClinicHours, slotOpen, todayISO, useTimeSlots, type ExtraDay, WEEKDAY_LONG, WEEKDAY_SHORT, weekdayOfISO } from '@/lib/appointments';
 
 // A plain numbered table ("5") still needs the "Table " prefix to read as
@@ -1432,6 +1434,8 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
         {visibleGroups.length === 0 ? <p className="col-span-full py-10 text-center text-sm text-gray-400">No items in this category.</p> : null}
       </div>
 
+      {shopId ? <TestimonialsSection shopId={shopId} /> : null}
+
       {variationPickerGroup ? (
         <VariationPickerSheet
           group={variationPickerGroup}
@@ -1655,5 +1659,39 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
         </div>
       ) : null}
     </div>
+  );
+}
+
+// Patient testimonials (pictures / videos) the clinic adds on its
+// Testimonials page - under the Drs & Services. Hidden when there are none.
+function TestimonialsSection({ shopId }: { shopId: string }) {
+  const [items, setItems] = useState<PublicTestimonial[]>([]);
+  useEffect(() => {
+    let cancelled = false;
+    fetchPublicTestimonials(shopId)
+      .then((list) => {
+        if (!cancelled) setItems(list);
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, [shopId]);
+  if (items.length === 0) return null;
+  return (
+    <section className="mt-8">
+      <h2 className="mb-1 text-lg font-black text-gray-900">What our patients say</h2>
+      <p className="mb-4 text-xs font-bold text-gray-400">Real pictures and videos from our patients.</p>
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+        {items.map((item) => (
+          <div key={item.id} className="overflow-hidden rounded-[22px] bg-white/70 shadow-sm ring-1 ring-white/60">
+            <div className="aspect-video bg-gray-100">
+              <TestimonialMedia kind={item.kind} url={item.url} title={item.title} />
+            </div>
+            {item.title ? <p className="p-3 text-sm font-black text-gray-800">{item.title}</p> : null}
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

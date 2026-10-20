@@ -1,3 +1,4 @@
+import PatientSlipExtras from '@/components/PatientSlipExtras';
 import { cs, poweredByLine } from '@/lib/currency';
 import { accountBalanceLines } from '@/lib/order-receipt-print';
 import React, { useEffect, useState } from 'react';
@@ -263,6 +264,7 @@ export default function ThermalReceipt({
 
       {/* Footer */}
       <div className="text-center mt-5 mb-2">
+        <PatientSlipExtras settings={settings} />
         {settings.receiptFooterMessage && <p className="font-bold">{settings.receiptFooterMessage}</p>}
         {poweredByLine() ? <p>{poweredByLine()}</p> : null}
         
