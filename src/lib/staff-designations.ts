@@ -6,6 +6,7 @@
 // dropdown, so keep those two spellings in sync with the backend if this
 // list ever changes.
 export const STAFF_DESIGNATIONS = [
+  "Doctor",
   "Chief",
   "Manager",
   "Cashier",
