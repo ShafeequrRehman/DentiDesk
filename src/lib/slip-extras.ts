@@ -8,6 +8,16 @@ import { getShopOrderingUrl } from '@/lib/public-order-api';
 import { getStoreSettings, type StoreSettings } from '@/lib/pos-settings';
 
 export const BOOKING_QR_CAPTION = 'For appointment please scan this';
+export const CALL_CAPTION = 'Appointment on call';
+
+// The clinic's Contact Number (Settings > Manage Receipt) - printed under
+// the QR as the second way to book: "Appointment on call".
+export function callNumbers(settings: StoreSettings = getStoreSettings()) {
+  return String(settings.receiptContact || '').trim();
+}
+
+// Small phone icon for the printed slips.
+export const PHONE_ICON_SVG = '<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" viewBox="0 0 24 24" fill="#000" style="vertical-align:-2px"><path d="M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z"/></svg>';
 
 export const SOCIAL_FIELDS: Array<{ key: keyof StoreSettings; label: string; placeholder: string }> = [
   { key: 'receiptFacebook', label: 'Facebook', placeholder: 'facebook.com/yourclinic' },
@@ -68,11 +78,13 @@ export function patientSlipExtrasHtml() {
   const settings = getStoreSettings();
   const links = socialLinks(settings);
   const qr = showBookingQr(settings) ? qrSvg(bookingUrl(), 120) : '';
-  if (!links.length && !qr) return '';
+  const call = callNumbers(settings);
+  if (!links.length && !qr && !call) return '';
   return `
     <div class="dashed"></div>
     <div class="center" style="margin-top:6px">
       ${links.length ? `<p style="font-weight:800;margin-bottom:3px">FOLLOW US</p>${links.map((l) => `<p style="font-size:11px;word-break:break-all">${escapeHtml(l.label)}: ${escapeHtml(l.value)}</p>`).join('')}` : ''}
       ${qr ? `<div style="margin:8px auto 2px;width:120px;height:120px">${qr}</div><p style="font-weight:800;font-size:12px">${BOOKING_QR_CAPTION}</p>` : ''}
+      ${call ? `<p style="font-weight:800;font-size:12px;margin-top:8px">${PHONE_ICON_SVG} ${CALL_CAPTION}</p><p style="font-size:12px">${escapeHtml(call)}</p>` : ''}
     </div>`;
 }

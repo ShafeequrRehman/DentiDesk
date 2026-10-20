@@ -1,14 +1,16 @@
 // The POS slip as a PDF - same clinic header, "APPOINTMENT NO." block,
 // lines and footer as the printed 80mm slip (order-receipt-print.ts), so
 // the patient gets on WhatsApp exactly what the clinic prints.
-import { Document, Image, Page, StyleSheet, Text, View, pdf } from '@react-pdf/renderer';
+import { Document, Image, Page, Path, StyleSheet, Svg, Text, View, pdf } from '@react-pdf/renderer';
 import { createElement } from 'react';
 import type { SavedOrder } from '@/lib/pos-types';
 import { getStoreSettings } from '@/lib/pos-settings';
 import { PRINT_LOGO_STORAGE_KEY } from '@/lib/print-logo';
 import { poweredByLine } from '@/lib/currency';
 import { buildOrderReceiptLines, type ReceiptLine } from '@/lib/order-receipt-print';
-import { BOOKING_QR_CAPTION, bookingQrPng, socialLinks } from '@/lib/slip-extras';
+import { BOOKING_QR_CAPTION, CALL_CAPTION, bookingQrPng, callNumbers, socialLinks } from '@/lib/slip-extras';
+
+const PHONE_PATH = 'M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z';
 
 const PAGE_WIDTH = 226; // 80mm
 const LINE = 11;
@@ -64,7 +66,8 @@ export function OrderReceiptPdf({ order, previousDues, qr }: { order: SavedOrder
   const lines = buildOrderReceiptLines(order, previousDues);
   const number = String(order.dailyOrderNumber ?? order.id.slice(-3)).padStart(3, '0');
   const links = socialLinks(settings);
-  const extrasHeight = (links.length ? 16 + links.reduce((n, l) => n + wrapCount(`${l.label}: ${l.value}`), 0) * LINE : 0) + (qr ? 120 : 0) + (links.length || qr ? 12 : 0);
+  const call = callNumbers(settings);
+  const extrasHeight = (links.length ? 16 + links.reduce((n, l) => n + wrapCount(`${l.label}: ${l.value}`), 0) * LINE : 0) + (qr ? 120 : 0) + (call ? 20 + wrapCount(call) * LINE : 0) + (links.length || qr || call ? 12 : 0);
   const height = estimateHeight(lines, header.reduce((n, l) => n + wrapCount(l), 0), !!logo, footer.length) + extrasHeight;
 
   return (
@@ -103,7 +106,7 @@ export function OrderReceiptPdf({ order, previousDues, qr }: { order: SavedOrder
             </Text>
           );
         })}
-        {links.length || qr ? (
+        {links.length || qr || call ? (
           <View style={{ borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#000', marginTop: 8, paddingTop: 6, alignItems: 'center' }}>
             {links.length ? <Text style={styles.bold}>FOLLOW US</Text> : null}
             {links.map((l) => (
@@ -111,6 +114,13 @@ export function OrderReceiptPdf({ order, previousDues, qr }: { order: SavedOrder
             ))}
             {qr ? <Image src={qr} style={{ width: 90, height: 90, marginTop: 6 }} /> : null}
             {qr ? <Text style={[styles.bold, { fontSize: 8 }]}>{BOOKING_QR_CAPTION}</Text> : null}
+            {call ? (
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 6 }}>
+                <Svg width={9} height={9} viewBox="0 0 24 24"><Path d={PHONE_PATH} fill="#000" /></Svg>
+                <Text style={[styles.bold, { fontSize: 8, marginLeft: 3 }]}>{CALL_CAPTION}</Text>
+              </View>
+            ) : null}
+            {call ? <Text style={{ fontSize: 8, textAlign: 'center' }}>{call}</Text> : null}
           </View>
         ) : null}
         <View style={styles.footer}>

@@ -6,7 +6,7 @@ import { getStoreSettings } from '@/lib/pos-settings';
 import { PRINT_LOGO_STORAGE_KEY } from '@/lib/print-logo';
 import { poweredByLine } from '@/lib/currency';
 import { formatAppointmentDate, formatSlot } from '@/lib/appointments';
-import { BOOKING_QR_CAPTION, bookingUrl, qrSvg, showBookingQr, socialLinks } from '@/lib/slip-extras';
+import { BOOKING_QR_CAPTION, CALL_CAPTION, PHONE_ICON_SVG, bookingUrl, callNumbers, qrSvg, showBookingQr, socialLinks } from '@/lib/slip-extras';
 
 export function escapeHtml(value: string) {
   return String(value ?? '').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -37,6 +37,7 @@ export function buildPrescriptionA4Html(order: SavedOrder) {
   const logo = typeof window === 'undefined' ? null : window.localStorage.getItem(PRINT_LOGO_STORAGE_KEY);
   const links = socialLinks(settings);
   const qr = showBookingQr(settings) ? qrSvg(bookingUrl(), 110) : '';
+  const call = callNumbers(settings);
   const contact = [settings.receiptAddress, settings.receiptContact].filter(Boolean).map((v) => escapeHtml(String(v)));
   const info = (label: string, value: string) => (value ? `<div class="info"><span>${label}</span><b>${escapeHtml(value)}</b></div>` : '');
 
@@ -109,9 +110,9 @@ export function buildPrescriptionA4Html(order: SavedOrder) {
 
     <div class="sign"><div>Doctor's Signature</div></div>
 
-    ${links.length || qr ? `<div class="foot">
+    ${links.length || qr || call ? `<div class="foot">
       <div class="links">${links.length ? `<p class="t">Follow us</p>${links.map((l) => `<p>${escapeHtml(l.label)}: ${escapeHtml(l.value)}</p>`).join('')}` : ''}</div>
-      ${qr ? `<div class="qr">${qr}<p>${BOOKING_QR_CAPTION}</p></div>` : ''}
+      ${qr || call ? `<div class="qr">${qr ? `${qr}<p>${BOOKING_QR_CAPTION}</p>` : ''}${call ? `<p style="margin-top:6px">${PHONE_ICON_SVG} ${CALL_CAPTION}</p><p style="font-weight:400">${escapeHtml(call)}</p>` : ''}</div>` : ''}
     </div>` : ''}
     <div class="bottom">
       ${settings.receiptFooterMessage ? `<b>${escapeHtml(settings.receiptFooterMessage)}</b><br/>` : ''}

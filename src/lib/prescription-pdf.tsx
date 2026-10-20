@@ -1,12 +1,14 @@
 // WhatsApp prescription PDF - A4 portrait, same layout as the printed
 // prescription (prescription-a4.ts).
-import { Document, Image, Page, StyleSheet, Text, View } from '@react-pdf/renderer';
+import { Document, Image, Page, Path, StyleSheet, Svg, Text, View } from '@react-pdf/renderer';
 import type { SavedOrder } from '@/lib/pos-types';
 import { getStoreSettings } from '@/lib/pos-settings';
 import { PRINT_LOGO_STORAGE_KEY } from '@/lib/print-logo';
 import { poweredByLine } from '@/lib/currency';
 import { prescriptionData } from '@/lib/prescription-a4';
-import { BOOKING_QR_CAPTION, socialLinks } from '@/lib/slip-extras';
+import { BOOKING_QR_CAPTION, CALL_CAPTION, callNumbers, socialLinks } from '@/lib/slip-extras';
+
+const PHONE_PATH = 'M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z';
 
 const TEAL = '#0e7490';
 const styles = StyleSheet.create({
@@ -44,6 +46,7 @@ export function PrescriptionPdf({ order, qr }: { order: SavedOrder; qr?: string 
   const settings = getStoreSettings();
   const data = prescriptionData(order);
   const links = socialLinks(settings);
+  const call = callNumbers(settings);
   let logo: string | null = null;
   try {
     const raw = typeof window === 'undefined' ? null : window.localStorage.getItem(PRINT_LOGO_STORAGE_KEY);
@@ -107,7 +110,7 @@ export function PrescriptionPdf({ order, qr }: { order: SavedOrder; qr?: string 
           <Text style={{ fontSize: 9, textAlign: 'center', color: '#374151' }}>Doctor&apos;s Signature</Text>
         </View>
 
-        {links.length || qr ? (
+        {links.length || qr || call ? (
           <View style={styles.foot} wrap={false}>
             <View style={{ flex: 1 }}>
               {links.length ? <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', marginBottom: 2 }}>FOLLOW US</Text> : null}
@@ -115,10 +118,17 @@ export function PrescriptionPdf({ order, qr }: { order: SavedOrder; qr?: string 
                 <Text key={l.label} style={{ fontSize: 9, color: '#374151' }}>{l.label}: {l.value}</Text>
               ))}
             </View>
-            {qr ? (
-              <View style={{ alignItems: 'center', width: 130 }}>
-                <Image src={qr} style={{ width: 80, height: 80 }} />
-                <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', marginTop: 2, textAlign: 'center' }}>{BOOKING_QR_CAPTION}</Text>
+            {qr || call ? (
+              <View style={{ alignItems: 'center', width: 150 }}>
+                {qr ? <Image src={qr} style={{ width: 80, height: 80 }} /> : null}
+                {qr ? <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', marginTop: 2, textAlign: 'center' }}>{BOOKING_QR_CAPTION}</Text> : null}
+                {call ? (
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
+                    <Svg width={9} height={9} viewBox="0 0 24 24"><Path d={PHONE_PATH} fill="#000" /></Svg>
+                    <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', marginLeft: 3 }}>{CALL_CAPTION}</Text>
+                  </View>
+                ) : null}
+                {call ? <Text style={{ fontSize: 8, textAlign: 'center' }}>{call}</Text> : null}
               </View>
             ) : null}
           </View>
