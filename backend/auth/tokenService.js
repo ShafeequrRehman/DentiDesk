@@ -33,6 +33,8 @@ function signAccessToken(user, permissions = []) {
       shopId: user.shopId ? String(user.shopId) : null,
       employeeRoleId: user.employeeRoleId ? String(user.employeeRoleId) : null,
       permissions: user.role === "employee" ? permissions : undefined,
+      // Dr's own login - limited to this Dr (see User.linkedDoctor).
+      linkedDoctor: user.role === "employee" && user.linkedDoctor ? user.linkedDoctor : undefined,
     },
     process.env.JWT_SECRET,
     { expiresIn: ACCESS_TOKEN_TTL, algorithm: "HS256" }

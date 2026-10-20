@@ -2076,6 +2076,8 @@ exports.getAppointments = async (req, res) => {
     const from = String(req.query.from || "").trim();
     const status = String(req.query.status || "").trim();
     if (doctor) query.doctorName = doctor;
+    // A Dr's own login only ever gets that Dr's appointments.
+    if (req.user?.linkedDoctor) query.doctorName = req.user.linkedDoctor;
     if (/^\d{4}-\d{2}-\d{2}$/.test(date)) query.appointmentDate = date;
     else if (/^\d{4}-\d{2}-\d{2}$/.test(from)) query.appointmentDate = { $gte: from };
     if (status === "done") query.checkupStatus = "done";
@@ -2099,6 +2101,9 @@ exports.completeCheckup = async (req, res) => {
   try {
     const order = await Order.findOne({ _id: req.params.id, ...buildShopScope(req) });
     if (!order) return res.status(404).json({ error: "Appointment not found" });
+    if (req.user?.linkedDoctor && order.doctorName !== req.user.linkedDoctor) {
+      return res.status(403).json({ error: "This appointment belongs to another Dr." });
+    }
     if (order.status === "cancelled") {
       return res.status(400).json({ error: "This appointment was cancelled." });
     }

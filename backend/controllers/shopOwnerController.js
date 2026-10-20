@@ -46,7 +46,7 @@ exports.createEmployee = async (req, res) => {
     const {
       name, username, password, email, phone, roleId,
       designation, idCardNumber, address, vehicleNumber, reference, comment, monthlySalary,
-      extraPermissions, revokedPermissions,
+      extraPermissions, revokedPermissions, linkedDoctor,
     } = req.body;
     if (!username || !password || !roleId) {
       return res.status(400).json({ message: "username, password, and roleId are required", reason: "validation_error" });
@@ -99,6 +99,7 @@ exports.createEmployee = async (req, res) => {
       monthlySalary: Number(monthlySalary) || 0,
       extraPermissions: Array.isArray(extraPermissions) ? extraPermissions : [],
       revokedPermissions: Array.isArray(revokedPermissions) ? revokedPermissions : [],
+      linkedDoctor: String(linkedDoctor || "").trim().slice(0, 120),
     });
 
     res.status(201).json({ ...safeUser(employee), roleName: role.name, permissions: role.permissions });
@@ -116,7 +117,7 @@ exports.updateEmployee = async (req, res) => {
     const {
       name, email, phone, roleId, isActive, username,
       designation, idCardNumber, address, vehicleNumber, reference, comment, monthlySalary,
-      extraPermissions, revokedPermissions,
+      extraPermissions, revokedPermissions, linkedDoctor,
     } = req.body;
 
     if (extraPermissions !== undefined && !validatePermissionKeys(extraPermissions)) {
@@ -144,6 +145,7 @@ exports.updateEmployee = async (req, res) => {
     if (monthlySalary !== undefined) employee.monthlySalary = Number(monthlySalary) || 0;
     if (extraPermissions !== undefined) employee.extraPermissions = extraPermissions;
     if (revokedPermissions !== undefined) employee.revokedPermissions = revokedPermissions;
+    if (linkedDoctor !== undefined) employee.linkedDoctor = String(linkedDoctor || "").trim().slice(0, 120);
 
     if (roleId) {
       const role = await Role.findOne({ _id: roleId, shopId: req.user.shopId }).lean();

@@ -21,7 +21,8 @@ import { formatAppointmentDate, formatSlot, isDoctorProduct, loadAppointments, p
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { sendPrescriptionSlip, slipPhoneProblem } from '@/lib/whatsapp-slips';
 
-import { Paged } from '@/components/Paged';
+import { Paged } from '@/components/Paged';import { getLinkedDoctor } from '@/lib/auth';
+
 
 // Prescription on WhatsApp (PDF) - one shared helper for the row button
 // and the checkup pad. A missing/wrong number says so.
@@ -72,6 +73,8 @@ export default function DoctorsPage() {
   const toastRef = useRef(toast);
   toastRef.current = toast;
   const [tab, setTab] = useState<Tab>('drs');
+  // A Dr's own login: only this Dr, opened straight away.
+  const myDoctor = getLinkedDoctor();
   const [products, setProducts] = useState<Product[]>([]);
   const [catalogLoading, setCatalogLoading] = useState(true);
   const [catalogError, setCatalogError] = useState<string | null>(null);
@@ -131,10 +134,16 @@ export default function DoctorsPage() {
   }, [services]);
 
   const visibleDoctors = useMemo(() => {
-    const source = tab === 'drs' ? doctors : serviceCards;
+    const source = myDoctor ? doctors.filter((d) => d.name === myDoctor) : tab === 'drs' ? doctors : serviceCards;
     const q = doctorSearch.trim().toLowerCase();
     return q ? source.filter((d) => d.name.toLowerCase().includes(q)) : source;
-  }, [tab, doctors, serviceCards, doctorSearch]);
+  }, [tab, doctors, serviceCards, doctorSearch, myDoctor]);
+  useEffect(() => {
+    if (myDoctor && selectedDoctor !== myDoctor) {
+      setTab('drs');
+      setSelectedDoctor(myDoctor);
+    }
+  }, [myDoctor, selectedDoctor]);
   const kindLabel = tab === 'drs' ? 'Dr' : 'Service';
 
   // Today's waiting count per Dr, shown on each Dr card.
@@ -225,11 +234,13 @@ export default function DoctorsPage() {
         </div>
         <div className="flex gap-2 rounded-full bg-white p-1.5 shadow-sm">
           <button type="button" onClick={() => { setTab('drs'); setSelectedDoctor(null); setDoctorSearch(''); }} className={`rounded-full px-5 py-2 text-sm font-black ${tab === 'drs' ? 'bg-black text-white' : 'text-gray-500'}`}>
-            Drs ({doctors.length})
+            {myDoctor ? 'My appointments' : `Drs (${doctors.length})`}
           </button>
-          <button type="button" onClick={() => { setTab('services'); setSelectedDoctor(null); setDoctorSearch(''); }} className={`rounded-full px-5 py-2 text-sm font-black ${tab === 'services' ? 'bg-black text-white' : 'text-gray-500'}`}>
-            Services ({services.length})
-          </button>
+          {myDoctor ? null : (
+            <button type="button" onClick={() => { setTab('services'); setSelectedDoctor(null); setDoctorSearch(''); }} className={`rounded-full px-5 py-2 text-sm font-black ${tab === 'services' ? 'bg-black text-white' : 'text-gray-500'}`}>
+              Services ({services.length})
+            </button>
+          )}
         </div>
       </div>
 

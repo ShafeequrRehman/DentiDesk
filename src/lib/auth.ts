@@ -23,6 +23,9 @@ export interface SessionUser {
   email?: string;
   role?: Role;
   shopId?: string | null;
+  // A Dr's own login (Manage Staff) - sees only this Dr on Drs & Services
+  // and Dr Availability.
+  linkedDoctor?: string;
 }
 
 export interface SessionShop {
@@ -286,4 +289,9 @@ export function clearAuthSession() {
 
 export function isAuthenticated() {
   return Boolean(getAuthToken());
+}
+
+// The Dr this login belongs to ("" for everyone else) - see SessionUser.
+export function getLinkedDoctor(): string {
+  return getAuthRole() === 'employee' ? String(getAuthUser()?.linkedDoctor || '') : '';
 }

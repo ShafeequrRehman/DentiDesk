@@ -24,6 +24,8 @@ export interface EmployeeSummary {
   reference?: string;
   comment?: string;
   monthlySalary?: number;
+  // A Dr's own login - only sees this Dr (Drs & Services, Dr Availability).
+  linkedDoctor?: string;
   // Dynamic Permissions: per-account overrides on top of employeeRoleId's
   // own permission set - see backend/models/User.js's own comment.
   // extraPermissions grants a key the role doesn't have; revokedPermissions

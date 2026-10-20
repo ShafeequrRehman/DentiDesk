@@ -4,6 +4,8 @@ import { useBackspaceToClose } from "@/lib/keyboard-shortcuts";
 import { Plus, KeyRound, Trash2, X, ShieldCheck, ShieldPlus, RefreshCcw, Pencil, WifiOff, Eye } from "lucide-react";
 import { shopApi, type EmployeeSummary, type RoleSummary, type PermissionDef } from "@/lib/shop-api";
 import { STAFF_DESIGNATIONS } from "@/lib/staff-designations";
+import { fetchProducts } from "@/lib/pos-api";
+import { isDoctorProduct } from "@/lib/appointments";
 import { useToast } from "@/lib/toast";
 import { isDesktopApp } from "@/lib/api";
 import { useNetworkStatus } from "@/lib/network-status";
@@ -428,7 +430,15 @@ function StaffFormModal({
     reference: employee?.reference || "",
     comment: employee?.comment || "",
     monthlySalary: employee?.monthlySalary ? String(employee.monthlySalary) : "",
+    linkedDoctor: employee?.linkedDoctor || "",
   });
+  // Drs for the "This is a Dr's login" picker.
+  const [drNames, setDrNames] = useState<string[]>([]);
+  useEffect(() => {
+    void fetchProducts()
+      .then((data) => setDrNames([...new Set((data?.products || []).filter((p) => isDoctorProduct(p)).map((p) => p.name))]))
+      .catch(() => undefined);
+  }, []);
   const [useCustomDesignation, setUseCustomDesignation] = useState(
     Boolean(employee?.designation) && !STAFF_DESIGNATIONS.includes(employee?.designation as any)
   );
@@ -458,6 +468,7 @@ function StaffFormModal({
       reference: form.reference,
       comment: form.comment,
       monthlySalary: form.monthlySalary ? Number(form.monthlySalary) : 0,
+      linkedDoctor: form.linkedDoctor,
     };
     try {
       if (isEdit && employee) {
@@ -519,6 +530,18 @@ function StaffFormModal({
             <option value="">Select a role</option>
             {roles.map((r) => <option key={r._id} value={r._id}>{r.name}</option>)}
           </select>
+        </div>
+
+        <div className="rounded-lg border border-indigo-100 bg-indigo-50/50 p-3">
+          <label className="mb-1 block text-xs font-semibold text-indigo-700">Dr&apos;s own login (optional)</label>
+          <select value={form.linkedDoctor} onChange={(e) => setForm({ ...form, linkedDoctor: e.target.value })} className="w-full rounded-lg border border-gray-300 bg-white px-3 py-2">
+            <option value="">Not a Dr - normal staff</option>
+            {drNames.map((name) => <option key={name} value={name}>{name}</option>)}
+            {form.linkedDoctor && !drNames.includes(form.linkedDoctor) ? <option value={form.linkedDoctor}>{form.linkedDoctor}</option> : null}
+          </select>
+          <p className="mt-1 text-[11px] text-gray-500">
+            Pick a Dr and this login sees ONLY that Dr on Drs &amp; Services (appointments, checkups) and Dr Availability - never the other Drs. Give the role the pages &quot;Drs &amp; Services&quot; and &quot;Dr Availability&quot;.
+          </p>
         </div>
 
         <div>

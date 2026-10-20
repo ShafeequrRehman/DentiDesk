@@ -63,6 +63,10 @@ const userSchema = new mongoose.Schema(
     // override at all - effective permissions are exactly the role's own).
     extraPermissions: { type: [String], default: [] },
     revokedPermissions: { type: [String], default: [] },
+    // A Dr's own login (Manage Staff): the Dr's name exactly as on Drs &
+    // Services. Such an employee only sees / changes THIS Dr's
+    // appointments, checkups and availability. "" = not a Dr account.
+    linkedDoctor: { type: String, default: "", trim: true },
     // Staff directory fields (Manage Staff page) - only meaningful for
     // role: "employee". `designation` is the job title shown throughout
     // the app (Chief, Manager, Cashier, Order Taker, Waiter, etc.) and is

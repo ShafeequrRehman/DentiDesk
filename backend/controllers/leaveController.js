@@ -13,6 +13,8 @@ exports.getLeaves = async (req, res) => {
     const from = String(req.query.from || "").trim();
     const to = String(req.query.to || "").trim();
     if (name) query.name = name;
+    // A Dr's own login only sees their own leave / availability.
+    if (req.user?.linkedDoctor) query.name = req.user.linkedDoctor;
     if (DATE_RE.test(date)) query.date = date;
     else if (DATE_RE.test(from) || DATE_RE.test(to)) {
       query.date = {};
@@ -35,6 +37,9 @@ exports.saveLeave = async (req, res) => {
     const name = String(req.body?.name || "").trim();
     const date = String(req.body?.date || "").trim();
     if (!name) return res.status(400).json({ error: "Pick a Dr or Service." });
+    if (req.user?.linkedDoctor && name !== req.user.linkedDoctor) {
+      return res.status(403).json({ error: "You can only change your own availability." });
+    }
     if (!DATE_RE.test(date)) return res.status(400).json({ error: "Pick a date." });
     const fullDay = req.body?.fullDay === true;
     const times = fullDay
@@ -66,7 +71,7 @@ exports.saveLeave = async (req, res) => {
 // DELETE /api/leaves/:id
 exports.deleteLeave = async (req, res) => {
   try {
-    await Leave.deleteOne({ _id: req.params.id, ...shopScope(req) });
+    await Leave.deleteOne({ _id: req.params.id, ...shopScope(req), ...(req.user?.linkedDoctor ? { name: req.user.linkedDoctor } : {}) });
     res.json({ ok: true });
   } catch (error) {
     res.status(error.statusCode || 500).json({ error: error.message });

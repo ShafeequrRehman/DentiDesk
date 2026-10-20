@@ -13,7 +13,8 @@ import { deleteLeave, fetchLeaves, fetchProducts, saveLeave, type LeaveEntry } f
 import type { Product } from '@/lib/pos-types';
 import { resolveProductImage } from '@/lib/food-images';
 import { describeSchedule, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, scheduleOf, slotInHours, todayISO, useTimeSlots, WEEKDAY_LONG, WEEKDAY_SHORT, weekdayOfISO, worksOnDate } from '@/lib/appointments';
-import { useToast } from '@/lib/toast';
+import { useToast } from '@/lib/toast';import { getLinkedDoctor } from '@/lib/auth';
+
 
 type Tab = 'drs' | 'services';
 // What a tap on a time slot marks: leave, or extra availability.
@@ -39,6 +40,8 @@ export default function AvailabilityPage() {
   toastRef.current = toast;
 
   const [tab, setTab] = useState<Tab>('drs');
+  // A Dr's own login: only their own availability.
+  const myDoctor = getLinkedDoctor();
   const [search, setSearch] = useState('');
   const [products, setProducts] = useState<Product[]>([]);
   const [leaves, setLeaves] = useState<LeaveEntry[]>([]);
@@ -92,10 +95,10 @@ export default function AvailabilityPage() {
   const drs = useMemo(() => toCards(products.filter((p) => isDoctorProduct(p))), [products, toCards]);
   const services = useMemo(() => toCards(products.filter((p) => !isDoctorProduct(p))), [products, toCards]);
   const list = useMemo(() => {
-    const source = tab === 'drs' ? drs : services;
+    const source = myDoctor ? drs.filter((c) => c.name === myDoctor) : tab === 'drs' ? drs : services;
     const q = search.trim().toLowerCase();
     return q ? source.filter((c) => c.name.toLowerCase().includes(q)) : source;
-  }, [tab, drs, services, search]);
+  }, [tab, drs, services, search, myDoctor]);
 
   const leavesByName = useMemo(() => {
     const map = new Map<string, LeaveEntry[]>();
@@ -159,6 +162,12 @@ export default function AvailabilityPage() {
     setSelected(name);
     loadEditor(name, date, leaves);
   }
+
+  // Dr's own login: open their own card as soon as the data is in.
+  useEffect(() => {
+    if (myDoctor && !loading && selected !== myDoctor && drs.some((c) => c.name === myDoctor)) void pickCard(myDoctor);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [myDoctor, loading, drs]);
 
   async function pickDate(value: string) {
     const next = value || todayISO();
@@ -316,11 +325,13 @@ export default function AvailabilityPage() {
           </button>
           <div className="flex gap-2 rounded-full bg-white p-1.5 shadow-sm">
             <button type="button" onClick={() => void switchTab('drs')} className={`rounded-full px-5 py-2 text-sm font-black ${tab === 'drs' ? 'bg-black text-white' : 'text-gray-500'}`}>
-              Drs ({drs.length})
+              {myDoctor ? 'My availability' : `Drs (${drs.length})`}
             </button>
-            <button type="button" onClick={() => void switchTab('services')} className={`rounded-full px-5 py-2 text-sm font-black ${tab === 'services' ? 'bg-black text-white' : 'text-gray-500'}`}>
-              Services ({services.length})
-            </button>
+            {myDoctor ? null : (
+              <button type="button" onClick={() => void switchTab('services')} className={`rounded-full px-5 py-2 text-sm font-black ${tab === 'services' ? 'bg-black text-white' : 'text-gray-500'}`}>
+                Services ({services.length})
+              </button>
+            )}
           </div>
         </div>
       </div>
