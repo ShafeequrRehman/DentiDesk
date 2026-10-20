@@ -255,9 +255,9 @@ function buildShopScope(req) {
 
 // --- Clinic medicine stock ----------------------------------------------
 // The medicines/disposables set on each Dr or Service (Set Medicine page)
-// come off Medicine Stock when the appointment is FINISHED - the Dr marks
-// the checkup done, or the appointment is completed (paid), whichever
-// happens first - never when it is only booked. Runs once per appointment;
+// come off Medicine Stock only when the Dr marks the CHECKUP done (Check
+// up -> complete) - never when it is only booked or paid, because the
+// medicine is used at the checkup. Runs once per appointment;
 // a later cancellation hands it all back (cancelOrderCore ->
 // restoreStockForOrder). Older orders that were already deducted at
 // booking time have stockDeductions filled in, so they count as done.
@@ -700,10 +700,10 @@ exports.createOrder = async (req, res) => {
 
     const totals = recalculateTotals(payload.items || [], payload.discount, payload.deliveryFee);
 
-    // Medicine stock only comes off when the appointment is finished (see
-    // applyStockOnFinish) - so only an appointment saved as already
-    // completed is deducted here. Never blocks the save.
-    const finishedNow = payload.status === "completed";
+    // Medicine stock only comes off at checkup done (see
+    // applyStockOnFinish) - an appointment saved, or even paid, is not
+    // deducted here. Never blocks the save.
+    const finishedNow = payload.checkupStatus === "done";
     const stockResult = finishedNow ? await deductStockForItems(payload.items || [], req.user.shopId) : NO_STOCK_RESULT;
 
     const order = await Order.create({
@@ -1012,9 +1012,9 @@ exports.importOfflineOrders = async (req, res) => {
 
         const totals = recalculateTotals(payload.items || [], payload.discount, payload.deliveryFee);
 
-        // Same rule as createOrder above: only an appointment that was
-        // already completed on the till takes medicine stock off now.
-        const finishedOffline = payload.status === "completed";
+        // Same rule as createOrder above: only an appointment whose
+        // checkup is already done takes medicine stock off now.
+        const finishedOffline = payload.checkupStatus === "done";
         const stockResult = finishedOffline ? await deductStockForItems(payload.items || [], req.user.shopId) : NO_STOCK_RESULT;
         if (stockResult.warning) {
           console.warn(`Stock shortage importing offline appointment ${entry.localOrderId}:`, stockResult.warning);
@@ -1388,7 +1388,6 @@ async function applyOrderPatch(order, patch, req, options) {
             });
             if (other.remainingAmount === 0) {
               other.status = "completed";
-              await applyStockOnFinish(other);
             }
             other.version = Number(other.version || 0) + 1;
             await other.save();
@@ -1411,7 +1410,7 @@ async function applyOrderPatch(order, patch, req, options) {
       order.remainingAmount = Math.max(thisOrderDue - appliedToThis, 0);
       order.logOrderPayment(appliedToThis, { kind: "payment", method: payMethod, bankId: payBankId, createdBy: collector });
       order.status = "completed";
-      await applyStockOnFinish(order);
+      // Medicine stock is NOT taken here - only at checkup done.
       paidTotal -= appliedToThis;
       // What of this payment went to older dues / other appointments.
       order.duesCollected = Number(order.duesCollected || 0) + appliedToOthers;
