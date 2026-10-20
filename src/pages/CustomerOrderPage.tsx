@@ -1,7 +1,7 @@
 import { cs, setClinicMoney } from '@/lib/currency';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { ShoppingCart, Plus, X, CheckCircle2, AlertCircle, MapPin, Download, UtensilsCrossed, Share, RotateCcw, Edit3, Clock, Check, Bike, Phone } from 'lucide-react';
+import { ShoppingCart, Plus, X, CheckCircle2, AlertCircle, MapPin, Download, UtensilsCrossed, Share, RotateCcw, Edit3, Clock, Check, Bike, Phone, Heart, Quote, Star } from 'lucide-react';
 import { getProductImageUrl } from '@/lib/asset-path';
 import {
   createPublicOrder,
@@ -1679,17 +1679,49 @@ function TestimonialsSection({ shopId }: { shopId: string }) {
   }, [shopId]);
   if (items.length === 0) return null;
   return (
-    <section className="mt-8">
-      <h2 className="mb-1 text-lg font-black text-gray-900">What our patients say</h2>
-      <p className="mb-4 text-xs font-bold text-gray-400">Real pictures and videos from our patients.</p>
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2 lg:grid-cols-3">
+    <section className="relative mt-12 overflow-hidden rounded-[32px] bg-gradient-to-b from-[#EBFAFC] via-white/70 to-white/40 px-4 py-10 shadow-[inset_0_1px_0_rgba(255,255,255,0.8)] ring-1 ring-white/70 sm:px-8">
+      {/* soft background glow */}
+      <div className="pointer-events-none absolute -top-24 left-1/2 h-48 w-[70%] -translate-x-1/2 rounded-full bg-[#14BCD1]/20 blur-3xl" />
+
+      <div className="relative mx-auto max-w-2xl text-center">
+        <span className="inline-flex items-center gap-1.5 rounded-full bg-white/80 px-4 py-1.5 text-[11px] font-black uppercase tracking-[0.18em] text-[#007F90] shadow-sm ring-1 ring-[#A8E9F1]">
+          <Heart size={12} className="fill-[#14BCD1] text-[#14BCD1]" /> Testimonials
+        </span>
+        <h2 className="mt-4 text-3xl font-black tracking-tight text-gray-900 sm:text-4xl">
+          What Our <span className="bg-gradient-to-r from-[#00B0C7] to-[#007F90] bg-clip-text text-transparent">Patients Say</span>
+        </h2>
+        <div className="mt-3 flex items-center justify-center gap-1">
+          {[0, 1, 2, 3, 4].map((i) => (
+            <Star key={i} size={18} className="fill-amber-400 text-amber-400" />
+          ))}
+        </div>
+        <p className="mt-3 text-sm font-semibold text-gray-500">Real smiles, real stories - see how our patients feel after their treatment.</p>
+      </div>
+
+      <div className="relative mt-8 flex flex-wrap justify-center gap-5">
         {items.map((item) => (
-          <div key={item.id} className="overflow-hidden rounded-[22px] bg-white/70 shadow-sm ring-1 ring-white/60">
-            <div className="aspect-video bg-gray-100">
+          <article
+            key={item.id}
+            className="group w-full overflow-hidden rounded-[26px] bg-white p-2 shadow-[0_10px_30px_-12px_rgba(0,127,144,0.35)] ring-1 ring-[#A8E9F1]/60 transition duration-300 hover:-translate-y-1 hover:shadow-[0_18px_40px_-14px_rgba(0,127,144,0.45)] sm:w-[calc(50%-10px)] lg:w-[calc(33.333%-14px)]"
+          >
+            <div className="relative aspect-video overflow-hidden rounded-[20px] bg-gray-100">
               <TestimonialMedia kind={item.kind} url={item.url} title={item.title} />
+              {item.kind === 'image' ? <div className="pointer-events-none absolute inset-0 bg-gradient-to-t from-black/25 via-transparent to-transparent opacity-0 transition group-hover:opacity-100" /> : null}
             </div>
-            {item.title ? <p className="p-3 text-sm font-black text-gray-800">{item.title}</p> : null}
-          </div>
+            <div className="flex items-start gap-3 px-3 pb-3 pt-4">
+              <span className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] text-white shadow-inner">
+                <Quote size={16} className="fill-white" />
+              </span>
+              <div className="min-w-0">
+                <p className="text-sm font-black leading-snug text-gray-800">{item.title || (item.kind === 'image' ? 'A happy smile from our clinic' : 'Patient video review')}</p>
+                <div className="mt-1 flex items-center gap-0.5">
+                  {[0, 1, 2, 3, 4].map((i) => (
+                    <Star key={i} size={11} className="fill-amber-400 text-amber-400" />
+                  ))}
+                </div>
+              </div>
+            </div>
+          </article>
         ))}
       </div>
     </section>
