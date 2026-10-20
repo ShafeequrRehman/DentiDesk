@@ -79,7 +79,9 @@ export default function POSPage() {
   const [slotsLoading, setSlotsLoading] = useState(false);
   const [slotsRefreshKey, setSlotsRefreshKey] = useState(0);
   const [viewMode, setViewMode] = useState<'grid' | 'list'>('grid');
-  const [selectedPaymentMethod, setSelectedPaymentMethod] = useState<'Cash' | 'Card' | 'E-Wallet'>('Cash');
+  // No payment-mode buttons at checkout any more - the payment (Cash or
+  // Bank) is chosen when the appointment is completed.
+  const selectedPaymentMethod = 'Cash' as const;
   const [statusMessage, setStatusMessage] = useState<{ tone: 'success' | 'error' | 'info'; text: string } | null>(null);
   const [isLoadingProducts, setIsLoadingProducts] = useState(true);
   const [taxRate, setTaxRate] = useState(0);
@@ -770,7 +772,6 @@ export default function POSPage() {
     setSelectedCustomerId(null);
     setIsManualEntry(false);
     setShowSuggestions(false);
-    setSelectedPaymentMethod('Cash');
     setAppointmentTime('');
   }
 
@@ -1821,11 +1822,6 @@ export default function POSPage() {
           </div>
 
           <div className="space-y-3 rounded-b-[24px] border-t border-white/40 bg-white/25 p-4">
-            <div className="grid grid-cols-3 gap-2">
-              <PaymentButton icon={<Banknote size={16} />} label={t('pos.paymentCash')} active={selectedPaymentMethod === 'Cash'} onClick={() => setSelectedPaymentMethod('Cash')} />
-              <PaymentButton icon={<CreditCard size={16} />} label={t('pos.paymentCard')} active={selectedPaymentMethod === 'Card'} onClick={() => setSelectedPaymentMethod('Card')} />
-              <PaymentButton icon={<Wallet size={16} />} label={t('pos.paymentEWallet')} active={selectedPaymentMethod === 'E-Wallet'} onClick={() => setSelectedPaymentMethod('E-Wallet')} />
-            </div>
             <div className="space-y-1.5 rounded-[20px] bg-white/50 p-3 shadow-inner">
               <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500"><span>{t('pos.itemsTotal')}</span><span>{cs()}{subtotal}</span></div>
               <div className="flex items-center justify-between text-[11px] font-semibold text-gray-500"><span>{t('pos.taxLabel', { rate: taxRate })}</span><span>{cs()}{Math.round(tax)}</span></div>

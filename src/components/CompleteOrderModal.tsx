@@ -31,11 +31,11 @@ import { openPrintFrame } from '@/lib/print-frame';
 type PaymentModeKey = 'cash' | 'card' | 'ewallet' | 'bank';
 
 // Payment modes the cashier can pick when completing an appointment -
-// saved on the order as paymentMethod and printed on the slip.
+// saved on the order as paymentMethod and printed on the slip. Only Cash
+// and Bank (Card / E-Wallet were removed; an old order saved with one of
+// those opens on Cash).
 const PAYMENT_MODES: Array<{ key: PaymentModeKey; value: 'Cash' | 'Card' | 'E-Wallet' | 'Bank'; labelKey: string }> = [
   { key: 'cash', value: 'Cash', labelKey: 'record.completeOrder.cash' },
-  { key: 'card', value: 'Card', labelKey: 'record.completeOrder.card' },
-  { key: 'ewallet', value: 'E-Wallet', labelKey: 'record.completeOrder.eWallet' },
   { key: 'bank', value: 'Bank', labelKey: 'record.completeOrder.bank' },
 ];
 
@@ -283,7 +283,7 @@ export default function CompleteOrderModal({
             orderController.js's applyOrderPatch completeAndSettle branch). */}
         <div className="mt-4">
           <label className="text-[10px] font-black uppercase tracking-[0.16em] text-gray-400">{t('record.completeOrder.paymentMethod')}</label>
-          <div className="mt-1.5 grid grid-cols-4 gap-2">
+          <div className="mt-1.5 grid grid-cols-2 gap-2">
             {PAYMENT_MODES.map((mode) => (
               <button
                 key={mode.key}
