@@ -1413,6 +1413,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
               ) : (
                 <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-gray-500"><Clock size={11} className="text-[#007F90]" /> Days differ per option - tap Select</p>
               )}
+              <CardDetails text={group.description || group.variations.find((v) => v.description)?.description || ''} />
               <p className="text-[11px] text-gray-400">{hasVariations ? `${group.variations.length} sizes/options` : single.variation}</p>
               {(hasVariations ? pricedOptions.length === 0 : single.priceHidden) ? null : (
                 <p className="mt-1 text-sm font-black text-gray-900">{hasVariations ? `From ${cs()}${formatter.format(cheapest)}` : `${cs()}${formatter.format(single.price)}`}</p>
@@ -1725,5 +1726,25 @@ function TestimonialsSection({ shopId }: { shopId: string }) {
         ))}
       </div>
     </section>
+  );
+}
+
+// The Dr's / Service's "Note / extra details" (Manage Appointments) on its
+// card - a "Details" heading and the text; long notes fold to 3 lines.
+function CardDetails({ text }: { text: string }) {
+  const [open, setOpen] = useState(false);
+  const value = text.trim();
+  if (!value) return null;
+  const long = value.length > 110;
+  return (
+    <div className="mt-2 rounded-xl bg-white/60 px-2.5 py-2 text-left ring-1 ring-[#A8E9F1]/60">
+      <p className="text-[10px] font-black uppercase tracking-[0.14em] text-[#007F90]">Details</p>
+      <p className={`mt-0.5 whitespace-pre-line text-[11px] font-semibold leading-snug text-gray-600 ${long && !open ? 'line-clamp-3' : ''}`}>{value}</p>
+      {long ? (
+        <button type="button" onClick={() => setOpen((v) => !v)} className="mt-0.5 text-[10px] font-black text-[#007F90] hover:underline">
+          {open ? 'Show less' : 'Read more'}
+        </button>
+      ) : null}
+    </div>
   );
 }

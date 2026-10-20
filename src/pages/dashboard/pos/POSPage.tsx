@@ -1492,9 +1492,8 @@ export default function POSPage() {
                           })()}
                         </div>
                       </div>
-                      {viewMode === 'list' ? (
-                        <p className="mb-2 line-clamp-1 text-[10px] text-gray-500">{group.description}</p>
-                      ) : null}
+                      {/* The Dr's/Service's "Note / extra details" is for patients
+                          (online appointment page) only - not shown on POS. */}
 
                       {/* Deal Content Responsiveness: capped height + its own
                           scrollbar - a 2-item deal and a 12-item deal render

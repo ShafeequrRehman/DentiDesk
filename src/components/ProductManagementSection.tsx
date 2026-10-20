@@ -115,6 +115,9 @@ export function ProductManagementSection({
   // POSPage.tsx's product-code entry box.
   const [productCode, setProductCode] = useState("");
   const [workAs, setWorkAs] = useState("");
+  // Note / extra details - shown to patients on the online appointment
+  // page only (the card's "Details"). Saved as Product.description.
+  const [notes, setNotes] = useState("");
   // Weekly schedule - days (0=Sun..6=Sat, none = every day) and hours.
   const [workDays, setWorkDays] = useState<number[]>([]);
   const [workStart, setWorkStart] = useState("");
@@ -194,6 +197,7 @@ export function ProductManagementSection({
     setVariation("Standard");
     setProductCode("");
     setWorkAs("");
+    setNotes("");
     setWorkDays([]);
     setWorkStart("");
     setWorkEnd("");
@@ -218,7 +222,7 @@ export function ProductManagementSection({
       // Preserved as-is from whatever was already on the product being
       // edited (or the "not a deal" defaults for a brand new product) -
       // there's no UI here to change these anymore, see preservedDealFields.
-      description: preservedDealFields.description,
+      description: notes.trim(),
       isDeal: preservedDealFields.isDeal,
       dealItems: preservedDealFields.dealItems,
     };
@@ -287,6 +291,7 @@ export function ProductManagementSection({
     setImage(product.image || "");
     setProductCode(product.productCode || "");
     setWorkAs(product.workAs || "");
+    setNotes(product.description || "");
     setWorkDays(product.workDays || []);
     setWorkStart(product.workStart || "");
     setWorkEnd(product.workEnd || "");
@@ -466,6 +471,20 @@ export function ProductManagementSection({
               className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
             />
             <p className="text-[10px] font-bold text-slate-400 ml-1">{t("productManagement.fields.workAsHint")}</p>
+          </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">
+              Note / Extra details
+            </label>
+            <textarea
+              value={notes}
+              maxLength={600}
+              rows={3}
+              onChange={(e) => setNotes(e.target.value)}
+              placeholder="e.g. 10+ years experience, braces & implants specialist, please bring old X-rays"
+              className="w-full resize-y rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+            />
+            <p className="text-[10px] font-bold text-slate-400 ml-1">Shown only to patients on the online appointment page, under &quot;Details&quot; on this card. Not printed on any slip.</p>
           </div>
           {/* For a Service: the Drs who can do it. On POS and the online page
               the patient picks one of them, and the appointment is booked
