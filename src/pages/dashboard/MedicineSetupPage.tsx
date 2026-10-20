@@ -342,9 +342,9 @@ export default function MedicineSetupPage() {
       <div className="flex items-start gap-3 rounded-[24px] border border-[#00B0C7]/30 bg-[#EBFAFC] p-4 text-sm text-gray-700">
         <Info size={18} className="mt-0.5 shrink-0 text-[#009AAE]" />
         <p>
-          These amounts come off <b>Medicine Stock</b> automatically when an appointment is <b>finished</b> - when the Dr marks the checkup done on
-          Drs &amp; Services, or when the appointment is completed on Sales (whichever happens first). Booking alone takes nothing off. If the
-          appointment is cancelled later, everything is put back. A Dr&apos;s list and its Services&apos; lists are both taken off.
+          These amounts come off <b>Medicine Stock</b> automatically when the Dr marks the <b>checkup done</b> on Drs &amp; Services. Booking or
+          payment alone takes nothing off. <b>Uncheck</b> or cancelling the appointment puts everything back. A Dr&apos;s list and its Services&apos;
+          lists are both taken off.
         </p>
       </div>
 

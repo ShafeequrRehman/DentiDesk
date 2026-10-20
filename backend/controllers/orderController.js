@@ -213,7 +213,7 @@ function mergeStockDeductionsAdd(existingDeductions, additions) {
     const key = String(entry.ingredientId);
     const existing = map.get(key);
     if (existing) {
-      existing.quantity += entry.quantity;
+      existing.quantity = Math.round((existing.quantity + Number(entry.quantity || 0)) * 1000) / 1000;
     } else {
       map.set(key, { ingredientId: entry.ingredientId, quantity: entry.quantity });
     }
@@ -261,18 +261,33 @@ function buildShopScope(req) {
 // a later cancellation hands it all back (cancelOrderCore ->
 // restoreStockForOrder). Older orders that were already deducted at
 // booking time have stockDeductions filled in, so they count as done.
+// "Applied" = something really came off the shelf for this appointment.
+// (A bare stockDeducted flag is not enough: older paid appointments got
+// the flag with nothing taken off - e.g. Set Medicine was filled in later
+// - and then the checkup never took the medicine off.)
 function isStockApplied(order) {
-  return !!order.stockDeducted || (Array.isArray(order.stockDeductions) && order.stockDeductions.length > 0);
+  return Array.isArray(order.stockDeductions) && order.stockDeductions.some((entry) => Number(entry?.quantity) > 0);
 }
 
 async function applyStockOnFinish(order) {
   if (!order || order.status === "cancelled" || isStockApplied(order)) return null;
   const result = await deductStockForItems(order.items || [], order.shopId);
-  order.stockDeductions = mergeStockDeductionsAdd(order.stockDeductions, result.deductions);
-  order.costPrice = Math.round((Number(order.costPrice || 0) + result.costPrice) * 100) / 100;
+  order.stockDeductions = result.deductions.filter((entry) => Number(entry.quantity) > 0);
+  order.costPrice = Math.round(Number(result.costPrice || 0) * 100) / 100;
   order.grossProfit = Math.round((Number(order.total || 0) - order.costPrice) * 100) / 100;
-  order.stockDeducted = true;
+  order.stockDeducted = order.stockDeductions.length > 0;
   return result.warning || null;
+}
+
+// Checkup un-done (Uncheck): everything this appointment took off Medicine
+// Stock goes back, so a later checkup takes it off again (no double).
+async function undoStockOnUncheck(order) {
+  if (!order || !isStockApplied(order)) return;
+  await restoreStockForOrder(order);
+  order.stockDeductions = [];
+  order.stockDeducted = false;
+  order.costPrice = 0;
+  order.grossProfit = Math.round(Number(order.total || 0) * 100) / 100;
 }
 
 const NO_STOCK_RESULT = { deductions: [], warning: null, costPrice: 0 };
@@ -721,7 +736,7 @@ exports.createOrder = async (req, res) => {
       paidAmount: payload.paidAmount || 0,
       remainingAmount: typeof payload.remainingAmount === "number" ? payload.remainingAmount : totals.total,
       stockDeductions: stockResult.deductions,
-      stockDeducted: finishedNow,
+      stockDeducted: stockResult.deductions.some((entry) => Number(entry.quantity) > 0),
       costPrice: stockResult.costPrice,
       grossProfit: Math.round((totals.total - stockResult.costPrice) * 100) / 100,
     });
@@ -1035,7 +1050,7 @@ exports.importOfflineOrders = async (req, res) => {
           paidAmount: payload.paidAmount || 0,
           remainingAmount: typeof payload.remainingAmount === "number" ? payload.remainingAmount : totals.total,
           stockDeductions: stockResult.deductions,
-          stockDeducted: finishedOffline,
+          stockDeducted: stockResult.deductions.some((entry) => Number(entry.quantity) > 0),
           costPrice: stockResult.costPrice,
           grossProfit: Math.round((totals.total - stockResult.costPrice) * 100) / 100,
           createdOffline: true,
@@ -2111,6 +2126,7 @@ exports.completeCheckup = async (req, res) => {
       order.checkupStatus = "waiting";
       order.checkedAt = null;
       order.checkedBy = "";
+      await undoStockOnUncheck(order);
     }
     await order.save();
     res.json({ ...order.toObject(), id: String(order._id), stockWarning });
