@@ -13,7 +13,7 @@ import { DASHBOARD_PAGES } from '@/lib/dashboard-pages';
 import { useOfflineSync } from '@/lib/offline-sync';
 import { isDesktopApp, logoutRequest } from '@/lib/api';
 import { closeShopSession, fetchShopProfile, openShopSession, updateShopProfile } from '@/lib/pos-api';
-import { applyServerReceipt } from '@/lib/receipt-sync';
+import { applyServerReceipt, receiptUploadPayload } from '@/lib/receipt-sync';
 import { setClinicHours } from '@/lib/appointments';
 import { setClinicMoney } from '@/lib/currency';
 import { useNetworkStatus } from '@/lib/network-status';
@@ -111,17 +111,28 @@ export default function DashboardShell() {
   // Admin - re-render once if they changed since the cached copy.
   const [, setMoneyVersion] = useState(0);
   useEffect(() => {
-    void fetchShopProfile()
-      .then((profile) => {
-        if (profile?.clinicStart || profile?.clinicEnd) setClinicHours(profile.clinicStart, profile.clinicEnd);
-        if (profile && setClinicMoney(profile.currency, profile.poweredBy)) setMoneyVersion((v) => v + 1);
-        // The clinic's receipt (header, logo, links...) is the same on
-        // every device - take the server's copy; a device that already had
-        // one set up fills an empty server once.
-        const seed = applyServerReceipt(profile);
-        if (seed) void updateShopProfile(seed).catch(() => undefined);
-      })
-      .catch(() => undefined);
+    const syncProfile = () =>
+      void fetchShopProfile()
+        .then((profile) => {
+          if (profile?.clinicStart || profile?.clinicEnd) setClinicHours(profile.clinicStart, profile.clinicEnd);
+          if (profile && setClinicMoney(profile.currency, profile.poweredBy)) setMoneyVersion((v) => v + 1);
+          // The clinic's receipt (header, logo, links...) is the same on
+          // every device - take the server's copy; a device that already had
+          // one set up fills an empty server once.
+          const seed = applyServerReceipt(profile);
+          if (seed?.needsUpload) void receiptUploadPayload().then((payload) => updateShopProfile(payload)).catch(() => undefined);
+        })
+        .catch(() => undefined);
+    syncProfile();
+    // Coming back to this tab/app picks up a change made on another device.
+    let last = Date.now();
+    const onFocus = () => {
+      if (Date.now() - last < 30000) return;
+      last = Date.now();
+      syncProfile();
+    };
+    window.addEventListener('focus', onFocus);
+    return () => window.removeEventListener('focus', onFocus);
   }, []);
 
   // Keyboard Shortcuts - Core Navigation: every DASHBOARD_PAGES entry that

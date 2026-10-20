@@ -536,8 +536,9 @@ exports.updateOwnShop = async (req, res) => {
       if (logo && !/^data:image\/(png|jpe?g|webp|gif);base64,/i.test(logo)) {
         return res.status(400).json({ message: "The receipt logo must be a picture." });
       }
-      if (logo.length > 1500000) return res.status(400).json({ message: "The receipt logo is too large - pick a smaller picture." });
-      shop.printLogo = logo;
+      // A too-big logo is skipped (the rest still saves) - the app shrinks
+      // logos to ~400px before sending, so this only guards odd uploads.
+      if (logo.length <= 3000000) shop.printLogo = logo;
     }
     if (name !== undefined) shop.name = name;
     if (hideOnlinePriceDrs !== undefined) shop.hideOnlinePriceDrs = Boolean(hideOnlinePriceDrs);

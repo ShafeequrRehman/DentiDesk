@@ -59,10 +59,39 @@ function hasLocalReceipt(settings: StoreSettings) {
   return Boolean(settings.receiptAddress || settings.receiptContact || settings.receiptSubHeader || localPrintLogo());
 }
 
+// Logos are sent shrunk to at most 400px PNG (an old full-size upload
+// could be several MB - too big for the server / web proxy to accept).
+export function shrinkLogo(dataUrl: string, maxSide = 400): Promise<string> {
+  if (!dataUrl || !dataUrl.startsWith('data:image/')) return Promise.resolve(dataUrl || '');
+  return new Promise((resolve) => {
+    const img = new Image();
+    img.onload = () => {
+      if (Math.max(img.width, img.height) <= maxSide && dataUrl.length < 400000) return resolve(dataUrl);
+      const scale = Math.min(1, maxSide / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.max(1, Math.round(img.width * scale));
+      canvas.height = Math.max(1, Math.round(img.height * scale));
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return resolve(dataUrl);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/png'));
+    };
+    img.onerror = () => resolve(dataUrl);
+    img.src = dataUrl;
+  });
+}
+
+// What Settings' Save sends: every receipt field + the (shrunk) logo.
+export async function receiptUploadPayload(settings: StoreSettings = getStoreSettings(), logo: string = localPrintLogo()) {
+  const small = await shrinkLogo(logo);
+  if (small !== logo) setLocalLogo(small);
+  return { receiptSettings: receiptSettingsPayload(settings), printLogo: small };
+}
+
 // Called with the clinic profile right after login / page load.
 // Returns the payload to upload when the server has no receipt yet but this
 // device does (first laptop seeds the server); otherwise null.
-export function applyServerReceipt(profile: ShopProfile | undefined | null) {
+export function applyServerReceipt(profile: ShopProfile | undefined | null): { needsUpload: boolean } | null {
   if (!profile) return null;
   const local = getStoreSettings();
   const server = profile.receiptSettings;
@@ -75,8 +104,6 @@ export function applyServerReceipt(profile: ShopProfile | undefined | null) {
     if ((profile.printLogo || '') !== localPrintLogo()) setLocalLogo(profile.printLogo || '');
     return null;
   }
-  if (hasLocalReceipt(local)) {
-    return { receiptSettings: receiptSettingsPayload(local), printLogo: localPrintLogo() };
-  }
+  if (hasLocalReceipt(local)) return { needsUpload: true };
   return null;
 }

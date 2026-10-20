@@ -8,7 +8,7 @@ import {
   EyeOff,
 } from 'lucide-react';
 import { PRINT_LOGO_STORAGE_KEY, persistPrintLogoToDisk } from '@/lib/print-logo';
-import { applyServerReceipt, localPrintLogo, receiptSettingsPayload, RECEIPT_KEYS } from '@/lib/receipt-sync';
+import { applyServerReceipt, localPrintLogo, receiptUploadPayload, RECEIPT_KEYS } from '@/lib/receipt-sync';
 import { ProductManagementSection } from '@/components/ProductManagementSection';
 import { ReceiptManagementSection } from '@/components/ReceiptManagementSection';
 import { SidebarPagesSection } from '@/components/SidebarPagesSection';
@@ -130,6 +130,9 @@ export default function SettingsPage() {
     }
 
     setSavingSettings(true);
+    // Receipt + logo for every device of this clinic (logo shrunk first).
+    const receiptPayload = settings ? await receiptUploadPayload(settings, printLogo || '') : null;
+    if (receiptPayload && receiptPayload.printLogo !== (printLogo || '')) setPrintLogo(receiptPayload.printLogo || null);
     const result = await updateShopProfile({
       name: trimmedShopName,
       address: trimmedShopAddress,
@@ -137,9 +140,10 @@ export default function SettingsPage() {
       clinicEnd: settings?.businessEndTime || '',
       hideOnlinePriceDrs: hidePriceDrs,
       hideOnlinePriceServices: hidePriceServices,
-      // Receipt + logo for every device of this clinic.
-      ...(settings ? { receiptSettings: receiptSettingsPayload(settings) } : {}),
-      printLogo: printLogo || '',
+      ...(receiptPayload || {}),
+    }).catch((error: unknown) => {
+      toast.error(error instanceof Error ? error.message : 'Could not save to the server.');
+      return undefined;
     });
     if (result) setClinicHours(settings?.businessStartTime, settings?.businessEndTime);
     setSavingSettings(false);
@@ -149,7 +153,7 @@ export default function SettingsPage() {
       // Patches the cached session so DashboardShell's sidebar picks this
       // up immediately (see auth.ts's own comment) - no re-login needed.
       updateCachedShopName(trimmedShopName);
-      toast.success('Settings saved.');
+      toast.success('Settings saved - receipt and logo now apply on every laptop and phone of this clinic.');
     } else {
       toast.error('Settings saved, but the clinic name/address failed to sync - check your connection and try again.');
     }
