@@ -34,6 +34,8 @@ import { writePurchaseReceiptToWindow } from "@/lib/order-receipt-print";
 
 import { Paged } from '@/components/Paged';
 
+import { openPrintFrame } from '@/lib/print-frame';
+
 // Expiry: days left until the expiry date (negative = expired), and
 // whether it's inside the alert window set for this medicine.
 function formatMoney(amount: number) {
@@ -644,7 +646,7 @@ export function IngredientStockSection({
     // uses (see order-receipt-print.ts's own comment) - the shop owner
     // asked for a slip to print the instant a purchase is confirmed, not
     // as a separate manual step.
-    const printWindow = window.open('', '_blank', 'width=420,height=600');
+    const printWindow = openPrintFrame();
     if (!printWindow) {
       popup({ tone: "error", title: t('ingredientStock.toasts.logPurchaseFailedTitle'), message: "Could not open the print window - check your browser's popup blocker." });
     } else {

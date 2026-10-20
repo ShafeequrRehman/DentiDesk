@@ -12,6 +12,8 @@ import { useToast } from '@/lib/toast';
 import { hasPermission } from '@/lib/auth';
 import { useLanguage } from '@/i18n';
 
+import { openPrintFrame } from '@/lib/print-frame';
+
 function formatMoney(amount: number) {
   return `${cs()}${Math.round(amount).toLocaleString()}`;
 }
@@ -344,7 +346,7 @@ function DayEndReportView() {
       return;
     }
     // Opened now (before any await) so the popup blocker allows the slip.
-    const slipWindow = window.open('', '_blank', 'width=420,height=640');
+    const slipWindow = openPrintFrame();
     slipWindow?.document.write('<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;color:#888">Preparing slip...</body></html>');
     try {
       setIsSavingExpense(true);

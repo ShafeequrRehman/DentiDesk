@@ -26,6 +26,8 @@ import { ToastLike } from '@/lib/print-notify';
 import { writeOrderReceiptToWindow } from '@/lib/order-receipt-print';
 import { isValidWhatsappNumber, sendAppointmentSlip } from '@/lib/whatsapp-slips';
 
+import { openPrintFrame } from '@/lib/print-frame';
+
 type PaymentModeKey = 'cash' | 'card' | 'ewallet' | 'bank';
 
 // Payment modes the cashier can pick when completing an appointment -
@@ -190,7 +192,7 @@ export default function CompleteOrderModal({
     // instant an order is completed from this popup (Confirm Payment,
     // Pay Full, or Put in Pending), not just as the separate on-demand
     // printer icon/button.
-    const printWindow = window.open('', '_blank', 'width=420,height=650');
+    const printWindow = openPrintFrame();
     if (!printWindow) {
       toast.error("Could not open the print window - check your browser's popup blocker.");
     } else {

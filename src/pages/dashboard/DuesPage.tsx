@@ -33,6 +33,8 @@ import DuesHistoryDetailModal from '@/components/DuesHistoryDetailModal';
 
 import { Paged } from '@/components/Paged';
 
+import { openPrintFrame } from '@/lib/print-frame';
+
 
 // This page used to source its list from fetchAllCustomers(), which only
 // ever carries the OLD, manually-set lump-sum Customer.previousDues field -
@@ -1001,7 +1003,7 @@ function CustomerCard({ customer, banks, providerNames = [], onAddManual, onSett
   // printed the instant the order (and its previous-dues arrears figure)
   // finish loading - see order-receipt-print.ts's own comment.
   async function handlePrintOrder(orderId: string) {
-    const printWindow = window.open('', '_blank', 'width=420,height=650');
+    const printWindow = openPrintFrame();
     if (!printWindow) {
       toast.error('Could not open the print window - check your browser\'s popup blocker.');
       return;
@@ -1061,7 +1063,7 @@ function CustomerCard({ customer, banks, providerNames = [], onAddManual, onSett
   // PurchaseDetailModal) and hands it straight to the browser's own print
   // dialog - no new backend page needed for what's just a one-off record.
   function handlePrintPurchase(purchase: LedgerPurchase) {
-    const printWindow = window.open('', '_blank', 'width=420,height=600');
+    const printWindow = openPrintFrame();
     if (!printWindow) {
       toast.error('Could not open the print window - check your browser\'s popup blocker.');
       return;
@@ -1092,7 +1094,7 @@ function CustomerCard({ customer, banks, providerNames = [], onAddManual, onSett
   // auto-print in DuesPage's handleAddManualDue/handleSettlePayment now
   // calls directly, so both stay in sync from one definition.
   function handlePrintDuesEntry(entry: DuesHistoryEntry) {
-    const printWindow = window.open('', '_blank', 'width=380,height=500');
+    const printWindow = openPrintFrame();
     if (!printWindow) {
       toast.error('Could not open the print window - check your browser\'s popup blocker.');
       return;
@@ -1497,7 +1499,7 @@ function CustomerCard({ customer, banks, providerNames = [], onAddManual, onSett
               // this replaced. Handed straight to onAddManual, which
               // fills it in once the reload lands (DuesPage level, so it
               // survives this card moving sections/unmounting).
-              const printWindow = window.open('', '_blank', 'width=380,height=500');
+              const printWindow = openPrintFrame();
               if (printWindow) {
                 printWindow.document.write('<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;color:#888">Preparing receipt...</body></html>');
               } else {
@@ -1519,7 +1521,7 @@ function CustomerCard({ customer, banks, providerNames = [], onAddManual, onSett
           </button>
           <button
             onClick={async () => {
-              const printWindow = window.open('', '_blank', 'width=380,height=500');
+              const printWindow = openPrintFrame();
               if (printWindow) {
                 printWindow.document.write('<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;color:#888">Preparing receipt...</body></html>');
               } else {
@@ -1544,7 +1546,7 @@ function CustomerCard({ customer, banks, providerNames = [], onAddManual, onSett
             onClick={async () => {
               const confirmed = await confirm(`Record a full payment of ${cs()}${totalDue} for this patient?`, { title: 'Clear dues', confirmText: 'Clear', tone: 'danger' });
               if (!confirmed) return;
-              const printWindow = window.open('', '_blank', 'width=380,height=500');
+              const printWindow = openPrintFrame();
               if (printWindow) {
                 printWindow.document.write('<!DOCTYPE html><html><body style="font-family:sans-serif;padding:24px;color:#888">Preparing receipt...</body></html>');
               } else {

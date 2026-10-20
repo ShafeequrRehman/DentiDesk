@@ -6,6 +6,7 @@ import { sendWhatsappDocument } from '@/lib/pos-api';
 import { buildReceiptShellHtml } from '@/lib/order-receipt-print';
 import { isValidWhatsappNumber } from '@/lib/whatsapp-slips';
 import type { StaffPayment } from '@/lib/shop-api';
+import { openPrintFrame } from '@/lib/print-frame';
 
 export interface SalarySlipInfo {
   payment: StaffPayment;
@@ -55,7 +56,7 @@ function slipRows(info: SalarySlipInfo): Array<[string, string]> {
 }
 
 export function printSalarySlip(info: SalarySlipInfo) {
-  const printWindow = window.open('', '_blank', 'width=420,height=640');
+  const printWindow = openPrintFrame();
   if (!printWindow) return false;
   const rows = slipRows(info)
     .map(([label, value]) => `<div class="row"><span>${escapeHtml(label)}</span><span style="text-align:right">${escapeHtml(value)}</span></div>`)

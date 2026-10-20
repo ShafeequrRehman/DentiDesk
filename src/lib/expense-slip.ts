@@ -3,6 +3,7 @@
 import { cs } from '@/lib/currency';
 import { buildReceiptShellHtml } from '@/lib/order-receipt-print';
 import type { Expense } from '@/lib/pos-types';
+import { openPrintFrame } from '@/lib/print-frame';
 
 function escapeHtml(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -35,7 +36,7 @@ function slipHtml(expense: Expense) {
 // Pass a window opened during the click (before any await) so the
 // browser's popup blocker allows it.
 export function printExpenseSlip(expense: Expense, target?: Window | null) {
-  const printWindow = target && !target.closed ? target : window.open('', '_blank', 'width=420,height=640');
+  const printWindow = target && !target.closed ? target : openPrintFrame();
   if (!printWindow) return false;
   printWindow.document.open();
   printWindow.document.write(slipHtml(expense));

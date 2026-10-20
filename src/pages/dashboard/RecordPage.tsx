@@ -19,6 +19,8 @@ import { useToast } from '@/lib/toast';
 import CompleteOrderModal from '@/components/CompleteOrderModal';
 import OrderDetailModal, { StatusBadge } from '@/components/OrderDetailModal';
 import { downloadExcelWorkbook, ExcelCell, ExcelCellStyle, ExcelSheet } from '@/lib/excel-export';
+
+import { openPrintFrame } from '@/lib/print-frame';
 // NOTE: intentionally NOT a static top-level import - see the matching
 // comment in LedgerPage.tsx. @react-pdf/renderer (imported by
 // @/lib/pdf-export) crashes the whole app at startup if it's pulled into
@@ -65,7 +67,7 @@ async function printCustomerReceipt(order: SavedOrder, customerDue: number, toas
       // Falls through to the plain-window path below.
     }
   }
-  const printWindow = window.open('', '_blank', 'width=420,height=650');
+  const printWindow = openPrintFrame();
   if (!printWindow) {
     toast.error('Could not open the print window - check your browser\'s popup blocker.');
     return;

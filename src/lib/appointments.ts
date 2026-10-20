@@ -13,6 +13,8 @@ import { loadOrdersFromLocalHub } from '@/lib/offline-order-helpers';
 import { buildReceiptShellHtml } from '@/lib/order-receipt-print';
 import type { SavedOrder } from '@/lib/pos-types';
 
+import { openPrintFrame } from '@/lib/print-frame';
+
 // Default clinic hours and slot length. The real hours come from Settings
 // (Business Start / End Time, saved on the server) - see setClinicHours.
 export const SLOT_DAY_START = '09:00';
@@ -361,7 +363,7 @@ function escapeHtml(value: string) {
 // Prints the Dr's medicine details for one appointment on the receipt
 // printer (same 80mm layout and clinic header as the patient receipt).
 export function printPrescription(order: SavedOrder) {
-  const printWindow = window.open('', '_blank', 'width=420,height=640');
+  const printWindow = openPrintFrame();
   if (!printWindow) return false;
   const appointmentNo = String(order.dailyOrderNumber ?? order.id.slice(-3)).padStart(3, '0');
   const patientName = order.customer?.name || 'Patient';
