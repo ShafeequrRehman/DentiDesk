@@ -141,6 +141,9 @@ const PERMISSION_KEYS = PERMISSIONS.map((permission) => permission.key);
 const WORKSPACE_ACCESS_DEFAULTS = ["view.dashboard", "manage.devices"];
 
 const DEFAULT_ROLE_PRESETS = {
+  // A Dr's own login: only their appointments/checkups and their own
+  // availability (pick the Dr in Manage Staff > "Dr's own login").
+  Doctor: ["page.doctors", "page.availability"],
   Cashier: ["sales.create", "sales.print", "customers.manage", ...WORKSPACE_ACCESS_DEFAULTS],
   Manager: [
     "sales.create", "sales.edit", "sales.delete", "sales.refund", "sales.print",

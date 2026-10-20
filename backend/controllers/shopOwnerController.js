@@ -393,7 +393,7 @@ exports.deletePayment = async (req, res) => {
 // the first time this shop's owner opens the Roles tab after upgrading.
 async function ensureDefaultRolesSeeded(shopId) {
   const namesToSeed = Object.keys(DEFAULT_ROLE_PRESETS).filter((name) =>
-    ["Receptionist", "Stock Manager"].includes(name)
+    ["Receptionist", "Stock Manager", "Doctor"].includes(name)
   );
   const existing = await Role.find({ shopId, name: { $in: namesToSeed } }).select("name").lean();
   const existingNames = new Set(existing.map((role) => role.name));
