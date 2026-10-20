@@ -1,7 +1,8 @@
 
 import { cs } from '@/lib/currency';
 import { useEffect, useMemo, useState } from 'react';
-import { Navigate } from 'react-router-dom';
+import { Link, Navigate } from 'react-router-dom';
+import { expiryStatus } from '@/lib/medicine-expiry';
 import {
   LineChart, Line, XAxis, YAxis, ResponsiveContainer, Tooltip,
   AreaChart, Area
@@ -10,6 +11,7 @@ import {
   Target, Users, CheckCircle2, Clock,
   RotateCcw, XCircle, Wallet, Landmark, Package, Truck,
   ShoppingBag, Receipt, HandCoins, PiggyBank, Pencil, History as HistoryIcon, List, Eraser, Undo2, Trash2,
+  AlertTriangle, CalendarClock,
 } from 'lucide-react';
 import { adjustCash, adjustDashboardTile, clearCash, clearDashboardTile, deleteCashEntry, deleteDashboardAdjustment, undoCashEntry, undoDashboardAdjustment, fetchCashSummary, fetchDashboardAdjustmentHistory, fetchDashboardSummary, fetchIngredients, fetchOrdersSummary, fetchProducts, fetchRecoveryHistory, fetchShopSessionHistory, fetchStockValueDetail, fetchVendorBalanceDetail, fetchSaleOnCashDetail, type OrderSummary } from '@/lib/pos-api';
 import { CashTransaction, DashboardAdjustmentHistoryEntry, DashboardAdjustmentKey, DashboardSummary, Product, RecoveryHistoryRow, SaleOnCashDetailRow, SavedOrder, ShopSession, StockValueDetailRow, VendorBalanceDetailRow } from '@/lib/pos-types';
@@ -23,7 +25,7 @@ import { useToast } from '@/lib/toast';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import DrsServicesRevenue from '@/components/DrsServicesRevenue';
 
-type InventoryItem = { id: string | number; name: string; stock: number; unit?: string };
+type InventoryItem = { id: string | number; name: string; stock: number; unit?: string; lowStockThreshold?: number; expiryDate?: string; expiryAlertDays?: number };
 // Extends the shared window (src/lib/shop-session.ts - the single source
 // of truth for the actual date-math, shared with Record/Sales) with the
 // display label this page renders in the header, which is presentation
@@ -153,7 +155,7 @@ function DashboardPageClientInner() {
       return;
     }
     fetchIngredients()
-      .then((list) => setMedicines((list || []).filter((i) => i.isActive !== false).map((i) => ({ id: i.id, name: i.name, stock: Number(i.currentStock) || 0, unit: i.unit }))))
+      .then((list) => setMedicines((list || []).filter((i) => i.isActive !== false).map((i) => ({ id: i.id, name: i.name, stock: Number(i.currentStock) || 0, unit: i.unit, lowStockThreshold: Number(i.lowStockThreshold) || 0, expiryDate: i.expiryDate, expiryAlertDays: i.expiryAlertDays }))))
       .catch(() => setMedicines([]));
   }, []);
 
@@ -378,9 +380,7 @@ function DashboardPageClientInner() {
     // Drs/Services names are left out (older ones had a stock entry of their own).
     const productNames = new Set(products.map((p) => p.name.trim().toLowerCase()));
     return medicines
-      .filter((m) => !productNames.has(m.name.trim().toLowerCase()))
-      .sort((left, right) => left.stock - right.stock)
-      .slice(0, 3);
+      .filter((m) => !productNames.has(m.name.trim().toLowerCase()));
   }, [medicines, products]);
 
   const formatter = new Intl.NumberFormat('en-PK', { maximumFractionDigits: 0 });
@@ -516,9 +516,10 @@ function DashboardPageClientInner() {
             </div>
           </div>
 
-          <InventoryCard products={lowStockProducts} />
         </div>
       </div>
+
+      <StockAlertsSection items={lowStockProducts} />
 
       {showAdjustCash ? (
         <AdjustCashModal
@@ -1944,42 +1945,84 @@ function StatusRing({ stats }: { stats: ServiceStats }) {
   );
 }
 
-function InventoryCard({ products }: { products: InventoryItem[] | null }) {
-  const colors = ['bg-red-400', 'bg-orange-400', 'bg-blue-400'];
+// Stock Alerts: medicines that are expired / near expiry (inside their
+// "alert days") and medicines that are low (below their low-stock level)
+// or finished - two lists side by side.
+function StockAlertsSection({ items }: { items: InventoryItem[] | null }) {
+  const expiring = (items || [])
+    .map((item) => ({ item, expiry: expiryStatus(item) }))
+    .filter((row): row is { item: InventoryItem; expiry: NonNullable<ReturnType<typeof expiryStatus>> } => !!row.expiry && row.expiry.alert)
+    .sort((a, b) => a.expiry.daysLeft - b.expiry.daysLeft);
+  const low = (items || [])
+    .filter((item) => item.stock <= 0 || ((item.lowStockThreshold || 0) > 0 && item.stock < (item.lowStockThreshold || 0)))
+    .sort((a, b) => a.stock - b.stock);
+  const qty = (n: number, unit?: string) => `${Math.round(n * 1000) / 1000}${unit ? ` ${unit}` : ''}`;
   return (
     <div className="rounded-[32px] bg-white p-6 shadow-sm">
-      <div className="mb-6 flex items-center justify-between">
-        <h3 className="font-bold">Low Inventory Alert</h3>
-        <span className="text-[10px] font-bold uppercase text-gray-400">Stock</span>
+      <div className="mb-5 flex flex-wrap items-center justify-between gap-2">
+        <h3 className="font-bold text-gray-800">Stock Alerts</h3>
+        <Link to="/dashboard/ingredient-stock" className="text-[11px] font-bold text-[#009AAE] hover:underline">Open Medicine Stock</Link>
       </div>
-      <div className="space-y-5">
-        {products === null ? (
-          <p className="text-xs font-bold text-gray-400">Loading...</p>
-        ) : products.length === 0 ? (
-          <p className="text-xs font-bold text-gray-400">No medicines or materials in Medicine Stock yet.</p>
-        ) : (
-          products.map((product, index) => (
-            <InventoryBar key={String(product.id)} label={product.name} color={colors[index % 3]} value={Math.max(5, product.stock || 0)} total={product.stock || 0} unit={product.unit} />
-          ))
-        )}
-      </div>
-    </div>
-  );
-}
-
-function InventoryBar({ color, value, total, label, unit }: { color: string; value: number; total: number; label: string; unit?: string }) {
-  const widthVal = Math.min(100, Math.max(5, value));
-  return (
-    <div>
-      <div className="mb-1.5 flex justify-between truncate px-1 text-[10px] font-bold text-gray-400">
-        <span className="truncate">{label}</span>
-        <span>{Math.round(total * 1000) / 1000}{unit ? ` ${unit}` : ''} Left</span>
-      </div>
-      <div className="flex items-center gap-4">
-        <div className="flex h-3 flex-1 overflow-hidden rounded-lg bg-gray-100">
-          <div className={`${color} h-full transition-all duration-500`} style={{ width: `${widthVal}%` }} />
+      {items === null ? (
+        <p className="text-xs font-bold text-gray-400">Loading...</p>
+      ) : (
+        <div className="grid grid-cols-1 gap-6 md:grid-cols-2">
+          <div className="min-w-0">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="rounded-full bg-red-50 p-1.5 text-red-500"><CalendarClock size={14} /></span>
+              <span className="text-sm font-bold text-gray-700">Expiry</span>
+              <span className="rounded-full bg-red-100 px-2 py-0.5 text-[10px] font-black text-red-600">{expiring.length}</span>
+            </div>
+            {expiring.length === 0 ? (
+              <p className="rounded-2xl bg-gray-50 px-4 py-3 text-xs font-bold text-gray-400">No medicine is expired or near expiry.</p>
+            ) : (
+              <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                {expiring.map(({ item, expiry }) => {
+                  const expired = expiry.daysLeft < 0;
+                  return (
+                    <li key={String(item.id)} className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 ${expired ? 'border-red-200 bg-red-50' : 'border-orange-200 bg-orange-50'}`}>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-gray-800">{item.name}</p>
+                        <p className="text-[10px] font-semibold text-gray-500">Exp {expiry.dateText} · {qty(item.stock, item.unit)} in stock</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black ${expired ? 'bg-red-600 text-white' : 'bg-orange-500 text-white'}`}>
+                        {expired ? 'EXPIRED' : expiry.daysLeft === 0 ? 'TODAY' : `${expiry.daysLeft} day${expiry.daysLeft === 1 ? '' : 's'} left`}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
+          <div className="min-w-0">
+            <div className="mb-3 flex items-center gap-2">
+              <span className="rounded-full bg-amber-50 p-1.5 text-amber-500"><AlertTriangle size={14} /></span>
+              <span className="text-sm font-bold text-gray-700">Low Stock</span>
+              <span className="rounded-full bg-amber-100 px-2 py-0.5 text-[10px] font-black text-amber-700">{low.length}</span>
+            </div>
+            {low.length === 0 ? (
+              <p className="rounded-2xl bg-gray-50 px-4 py-3 text-xs font-bold text-gray-400">No medicine is low on stock.</p>
+            ) : (
+              <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
+                {low.map((item) => {
+                  const out = item.stock <= 0;
+                  return (
+                    <li key={String(item.id)} className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 ${out ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
+                      <div className="min-w-0">
+                        <p className="truncate text-xs font-bold text-gray-800">{item.name}</p>
+                        <p className="text-[10px] font-semibold text-gray-500">{item.lowStockThreshold ? `Alert below ${qty(item.lowStockThreshold, item.unit)}` : 'No alert level set'}</p>
+                      </div>
+                      <span className={`shrink-0 rounded-full px-2.5 py-1 text-[10px] font-black text-white ${out ? 'bg-red-600' : 'bg-amber-500'}`}>
+                        {out ? 'OUT OF STOCK' : `${qty(item.stock, item.unit)} left`}
+                      </span>
+                    </li>
+                  );
+                })}
+              </ul>
+            )}
+          </div>
         </div>
-      </div>
+      )}
     </div>
   );
 }
