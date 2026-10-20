@@ -6,7 +6,7 @@ import { sendWhatsappDocument } from '@/lib/pos-api';
 import { buildReceiptShellHtml } from '@/lib/order-receipt-print';
 import { isValidWhatsappNumber } from '@/lib/whatsapp-slips';
 import type { StaffPayment } from '@/lib/shop-api';
-import { openPrintFrame } from '@/lib/print-frame';
+import { openPrintFrame, printWhenReady } from '@/lib/print-frame';
 
 export interface SalarySlipInfo {
   payment: StaffPayment;
@@ -72,8 +72,7 @@ export function printSalarySlip(info: SalarySlipInfo) {
   printWindow.document.open();
   printWindow.document.write(buildReceiptShellHtml(`${TYPE_LABEL[info.payment.type] || 'Salary'} Slip`, bodyHtml));
   printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
+  printWhenReady(printWindow);
   return true;
 }
 

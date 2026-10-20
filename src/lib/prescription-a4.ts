@@ -42,13 +42,14 @@ export function buildPrescriptionA4Html(order: SavedOrder) {
 
   return `<!DOCTYPE html><html><head><title>Prescription ${data.appointmentNo}</title>
   <style>
-    @page { size: A4 portrait; margin: 12mm; }
+    /* margin 0 = the browser prints no date/title/link at the page edges */
+    @page { size: A4 portrait; margin: 0; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: #fff; color: #111827; font-family: 'Segoe UI', Arial, sans-serif; }
-    .page { width: 100%; min-height: 270mm; display: flex; flex-direction: column; }
+    .page { width: 210mm; min-height: 285mm; padding: 14mm 14mm 10mm; display: flex; flex-direction: column; }
     .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 12px; border-bottom: 3px solid #0e7490; }
     .brand { display: flex; align-items: center; gap: 14px; }
-    .brand img { max-height: 70px; max-width: 120px; object-fit: contain; }
+    .brand img { max-height: 80px; max-width: 140px; object-fit: contain; }
     .clinic { font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #0e7490; margin: 0; }
     .sub { font-size: 12px; color: #4b5563; margin: 2px 0 0; }
     .doc { text-align: right; }

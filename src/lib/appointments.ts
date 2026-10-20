@@ -13,7 +13,7 @@ import { loadOrdersFromLocalHub } from '@/lib/offline-order-helpers';
 import { buildReceiptShellHtml } from '@/lib/order-receipt-print';
 import type { SavedOrder } from '@/lib/pos-types';
 
-import { openPrintFrame } from '@/lib/print-frame';
+import { openPrintFrame, printWhenReady } from '@/lib/print-frame';
 import { buildPrescriptionA4Html } from '@/lib/prescription-a4';
 
 // Default clinic hours and slot length. The real hours come from Settings
@@ -369,7 +369,6 @@ export function printPrescription(order: SavedOrder) {
   printWindow.document.open();
   printWindow.document.write(buildPrescriptionA4Html(order));
   printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
+  printWhenReady(printWindow);
   return true;
 }

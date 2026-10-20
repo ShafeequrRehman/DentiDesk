@@ -3,7 +3,7 @@
 import { cs } from '@/lib/currency';
 import { buildReceiptShellHtml } from '@/lib/order-receipt-print';
 import type { Expense } from '@/lib/pos-types';
-import { openPrintFrame } from '@/lib/print-frame';
+import { openPrintFrame, printWhenReady } from '@/lib/print-frame';
 
 function escapeHtml(value: string) {
   return value.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
@@ -41,7 +41,6 @@ export function printExpenseSlip(expense: Expense, target?: Window | null) {
   printWindow.document.open();
   printWindow.document.write(slipHtml(expense));
   printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
+  printWhenReady(printWindow);
   return true;
 }

@@ -21,7 +21,8 @@ import { SavedOrder, DuesHistoryEntry } from '@/lib/pos-types';
 import { getStoreSettings } from '@/lib/pos-settings';
 import { PRINT_LOGO_STORAGE_KEY } from '@/lib/print-logo';
 import { patientSlipExtrasHtml } from '@/lib/slip-extras';
-import { fetchCustomerOutstanding } from '@/lib/pos-api';
+import { fetchCustomerOutstanding } from '@/lib/pos-api';
+import { printWhenReady } from '@/lib/print-frame';
 
 const WALKIN_PHONE = '03000000000';
 
@@ -281,8 +282,7 @@ export function writeDuesEntryReceiptToWindow(printWindow: Window, customerName:
   printWindow.document.open();
   printWindow.document.write(buildReceiptShellHtml('Dues Receipt', bodyHtml, undefined, { patient: true }));
   printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
+  printWhenReady(printWindow);
 }
 
 // Same shell/print technique, for an ingredient purchase batch (Log
@@ -319,8 +319,7 @@ export function writePurchaseReceiptToWindow(printWindow: Window, purchase: Purc
   printWindow.document.open();
   printWindow.document.write(buildReceiptShellHtml('Purchase Receipt', bodyHtml));
   printWindow.document.close();
-  printWindow.focus();
-  printWindow.print();
+  printWhenReady(printWindow);
 }
 
 // Writes a full order receipt into an already-open window and prints it.
@@ -346,8 +345,7 @@ export function writeOrderReceiptToWindow(printWindow: Window, order: SavedOrder
     printWindow.document.open();
     printWindow.document.write(buildReceiptShellHtml('Appointment No.', bodyHtml, orderNumber, { patient: true }));
     printWindow.document.close();
-    printWindow.focus();
-    printWindow.print();
+    printWhenReady(printWindow);
   };
   const phone = order.customer?.phone;
   const online = typeof navigator === 'undefined' || navigator.onLine !== false;

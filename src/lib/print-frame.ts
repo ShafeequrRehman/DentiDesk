@@ -18,3 +18,34 @@ export function openPrintFrame(): Window | null {
   document.body.appendChild(frame);
   return frame.contentWindow;
 }
+
+// Prints once the slip's pictures (logo, QR) have loaded - printing right
+// after document.write() can come out without the logo.
+export function printWhenReady(win: Window) {
+  let done = false;
+  const go = () => {
+    if (done) return;
+    done = true;
+    try {
+      win.focus();
+      win.print();
+    } catch {
+      // frame gone - nothing to print
+    }
+  };
+  const pending = Array.from(win.document?.images || []).filter((img) => !img.complete);
+  if (pending.length === 0) {
+    setTimeout(go, 60);
+    return;
+  }
+  let left = pending.length;
+  const one = () => {
+    left -= 1;
+    if (left <= 0) setTimeout(go, 60);
+  };
+  pending.forEach((img) => {
+    img.addEventListener('load', one, { once: true });
+    img.addEventListener('error', one, { once: true });
+  });
+  setTimeout(go, 2500);
+}
