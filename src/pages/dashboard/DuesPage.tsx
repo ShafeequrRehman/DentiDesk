@@ -31,6 +31,8 @@ import OrderDetailModal from '@/components/OrderDetailModal';
 import PurchaseDetailModal from '@/components/PurchaseDetailModal';
 import DuesHistoryDetailModal from '@/components/DuesHistoryDetailModal';
 
+import { Paged } from '@/components/Paged';
+
 
 // This page used to source its list from fetchAllCustomers(), which only
 // ever carries the OLD, manually-set lump-sum Customer.previousDues field -
@@ -1613,7 +1615,7 @@ function CustomerCard({ customer, banks, providerNames = [], onAddManual, onSett
                 {filteredHistoryEntries.length === 0 ? (
                   <p className="px-1 py-3 text-center text-[11px] font-bold text-slate-400">No dues activity in {historyRangeLabel}.</p>
                 ) : null}
-                {filteredHistoryEntries.map((entry) => (
+                {<Paged items={filteredHistoryEntries}>{(pagedRows) => pagedRows.map((entry) => (
                   <div key={entry.key} className="rounded-lg bg-slate-50 px-2.5 py-2 text-[11px]">
                     <div className="flex items-center justify-between gap-2">
                       <span className={`font-black ${entry.tone}`}>{entry.label}</span>
@@ -1721,7 +1723,7 @@ function CustomerCard({ customer, banks, providerNames = [], onAddManual, onSett
                       ) : null}
                     </div>
                   </div>
-                ))}
+                ))}</Paged>}
               </div>
             ) : null}
           </div>

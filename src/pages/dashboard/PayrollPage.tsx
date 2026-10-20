@@ -13,6 +13,8 @@ import type { Bank, Expense } from '@/lib/pos-types';
 import { paidFromLabel, printSalarySlip, sendSalarySlipWhatsapp, type SalarySlipInfo } from '@/lib/salary-slip';
 import { useToast } from '@/lib/toast';
 
+import { Paged } from '@/components/Paged';
+
 // Real payroll, built on top of Manage Staff's monthlySalary field plus a
 // ledger of StaffPayment rows recorded here (salary/advance/bonus/
 // deduction) - see backend/controllers/shopOwnerController.js
@@ -732,7 +734,7 @@ function EmployeeHistoryModal({
           ) : (
             <table className="w-full text-left text-xs">
               <tbody className="divide-y divide-slate-50">
-                {payments.map((p) => (
+                {<Paged items={payments} colSpan={6}>{(pagedRows) => pagedRows.map((p) => (
                   <tr key={p._id}>
                     <td className="px-4 py-2.5 font-bold text-slate-500">{new Date(p.date).toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })}</td>
                     <td className="px-4 py-2.5"><span className="rounded-full bg-slate-100 px-2 py-1 font-black uppercase text-slate-600">{p.type}</span></td>
@@ -741,7 +743,7 @@ function EmployeeHistoryModal({
                     <td className="px-4 py-2.5 text-slate-500">{p.note || '—'}</td>
                     <td className="px-4 py-2.5"><PaymentActions payment={p} rows={rows} /></td>
                   </tr>
-                ))}
+                ))}</Paged>}
               </tbody>
             </table>
           )}

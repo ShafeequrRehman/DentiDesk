@@ -350,6 +350,28 @@ export default function RecordPage() {
   // midnight) - matches the `type="date"` input's own value format, so it
   // can be used directly as `max` to block picking any day after today.
   const todayKey = new Date().toLocaleDateString('en-CA');
+  const monthStartKey = `${todayKey.slice(0, 8)}01`;
+  // Which quick tab is on: Shift (live), Today, This Month, or Custom dates.
+  // The CSV / Excel / PDF downloads always follow exactly this choice.
+  const rangeMode: 'shift' | 'today' | 'month' | 'custom' = !isCustomRange
+    ? 'shift'
+    : rangeFrom === todayKey && rangeTo === todayKey
+      ? 'today'
+      : rangeFrom === monthStartKey && rangeTo === todayKey
+        ? 'month'
+        : 'custom';
+  function rangeTitle() {
+    if (rangeMode === 'today') return `Today (${todayKey})`;
+    if (rangeMode === 'month') return `This Month (${new Date().toLocaleDateString('en-GB', { month: 'long', year: 'numeric' })})`;
+    if (rangeMode === 'custom') return t('record.export.dateRangeValue', { from: rangeFrom, to: rangeTo });
+    return t('record.export.currentShift');
+  }
+  function rangeFileSuffix() {
+    if (rangeMode === 'today') return `today_${todayKey}`;
+    if (rangeMode === 'month') return `month_${todayKey.slice(0, 7)}`;
+    if (rangeMode === 'custom') return `${rangeFrom}_to_${rangeTo}`;
+    return 'current-shift';
+  }
 
   const customWindows = useMemo(() => {
     if (!isCustomRange) return [];
@@ -465,7 +487,7 @@ export default function RecordPage() {
     const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
     link.href = url;
-    link.download = `orders_${isCustomRange ? `${rangeFrom}_to_${rangeTo}` : 'current-shift'}.csv`;
+    link.download = `orders_${rangeFileSuffix()}.csv`;
     link.click();
     URL.revokeObjectURL(url);
   }
@@ -479,7 +501,7 @@ export default function RecordPage() {
   // exporter in @/lib/excel-export (see that file's header comment for why
   // this doesn't just use a library like exceljs).
   function exportExcel() {
-    const rangeLabel = isCustomRange ? t('record.export.dateRangeValue', { from: rangeFrom, to: rangeTo }) : t('record.export.currentShift');
+    const rangeLabel = rangeTitle();
     const MONEY_FORMAT = xlsxMoneyFormat().replace('.00', '');
 
     const titleStyle: ExcelCellStyle = { bold: true, fontSize: 14 };
@@ -679,7 +701,7 @@ export default function RecordPage() {
       rows: orderRows,
     });
 
-    downloadExcelWorkbook(sheets, `record_${isCustomRange ? `${rangeFrom}_to_${rangeTo}` : 'current-shift'}.xls`);
+    downloadExcelWorkbook(sheets, `record_${rangeFileSuffix()}.xls`);
   }
 
   // "Neat, downloadable PDF layout" of the exact same filtered view as
@@ -690,7 +712,7 @@ export default function RecordPage() {
   // needs.
   async function exportPdf() {
     const { ReportPdfDocument, downloadPdfDocument } = await import('@/lib/pdf-export');
-    const rangeLabel = isCustomRange ? t('record.export.dateRangeValue', { from: rangeFrom, to: rangeTo }) : t('record.export.currentShift');
+    const rangeLabel = rangeTitle();
     const formatMoney = (value: number) => `${cs()}${Math.round(value).toLocaleString()}`;
 
     const totalCategoryQty = categorySales.reduce((sum, c) => sum + c.qty, 0);
@@ -804,7 +826,7 @@ export default function RecordPage() {
       />
     );
 
-    await downloadPdfDocument(doc, `record_${isCustomRange ? `${rangeFrom}_to_${rangeTo}` : 'current-shift'}.pdf`);
+    await downloadPdfDocument(doc, `record_${rangeFileSuffix()}.pdf`);
   }
 
   const counts = useMemo(() => {
@@ -1088,6 +1110,28 @@ export default function RecordPage() {
                 <X size={11} /> {t('record.filters.backToShift')}
               </button>
             ) : null}
+          </div>
+          <div className="mb-1.5 flex flex-wrap gap-1">
+            {([
+              ['shift', 'Shift'],
+              ['today', 'Today'],
+              ['month', 'This Month'],
+              ['custom', 'Custom'],
+            ] as const).map(([key, label]) => (
+              <button
+                key={key}
+                type="button"
+                onClick={() => {
+                  if (key === 'shift') clearRange();
+                  else if (key === 'today') { setRangeFrom(todayKey); setRangeTo(todayKey); }
+                  else if (key === 'month') { setRangeFrom(monthStartKey); setRangeTo(todayKey); }
+                  else if (rangeMode !== 'custom') { const d = new Date(); d.setDate(d.getDate() - 6); setRangeFrom(d.toLocaleDateString('en-CA')); setRangeTo(todayKey); }
+                }}
+                className={`rounded-full px-3 py-1 text-[10px] font-black uppercase tracking-wide transition ${rangeMode === key ? 'bg-gray-900 text-white' : 'bg-white/60 text-gray-500 shadow-inner hover:bg-white'}`}
+              >
+                {label}
+              </button>
+            ))}
           </div>
           <div className="grid grid-cols-2 gap-1.5">
             <input

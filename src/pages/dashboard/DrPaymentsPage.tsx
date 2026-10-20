@@ -12,6 +12,7 @@ import { formatAppointmentDate, todayISO } from '@/lib/appointments';
 import { cs } from '@/lib/currency';
 import { useToast } from '@/lib/toast';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
+import { Paged } from '@/components/Paged';
 
 type Tab = 'dr' | 'service';
 type RangeMode = 'today' | 'month' | 'custom';
@@ -369,7 +370,7 @@ function DetailModal({
             ) : (
               <table className="w-full text-left text-xs">
                 <tbody className="divide-y divide-gray-50">
-                  {payments.map((p, index) => (
+                  {<Paged items={payments} colSpan={7}>{(pagedRows) => pagedRows.map((p, index) => (
                     <tr key={`${p.orderId}-${p.id || index}`}>
                       <td className="px-4 py-2.5 font-bold text-gray-500">{shortDate(p.date)}</td>
                       <td className="px-3 py-2.5 font-black text-gray-900">{p.label}</td>
@@ -383,7 +384,7 @@ function DetailModal({
                         ) : null}
                       </td>
                     </tr>
-                  ))}
+                  ))}</Paged>}
                 </tbody>
               </table>
             )
@@ -393,7 +394,7 @@ function DetailModal({
             ) : (
               <table className="w-full text-left text-xs">
                 <tbody className="divide-y divide-gray-50">
-                  {dues.map((d) => (
+                  {<Paged items={dues} colSpan={5}>{(pagedRows) => pagedRows.map((d) => (
                     <tr key={d.orderId}>
                       <td className="px-4 py-2.5 font-bold text-gray-500">{shortDate(d.date)}</td>
                       <td className="px-3 py-2.5 font-black text-gray-900">{d.label}</td>
@@ -405,7 +406,7 @@ function DetailModal({
                         </button>
                       </td>
                     </tr>
-                  ))}
+                  ))}</Paged>}
                 </tbody>
               </table>
             )
@@ -414,7 +415,7 @@ function DetailModal({
           ) : (
             <table className="w-full text-left text-xs">
               <tbody className="divide-y divide-gray-50">
-                {appointmentsList.map((a) => (
+                {<Paged items={appointmentsList} colSpan={6}>{(pagedRows) => pagedRows.map((a) => (
                   <tr key={a.orderId}>
                     <td className="px-4 py-2.5 font-bold text-gray-500">{shortDate(a.date)}</td>
                     <td className="px-3 py-2.5 font-black text-gray-900">{a.label}</td>
@@ -423,7 +424,7 @@ function DetailModal({
                     <td className="px-3 py-2.5 text-right font-bold text-emerald-600">{money(a.paid)}</td>
                     <td className={`px-3 py-2.5 text-right font-black ${a.due > 0 ? 'text-rose-600' : 'text-gray-300'}`}>{money(a.due)}</td>
                   </tr>
-                ))}
+                ))}</Paged>}
               </tbody>
             </table>
           )}

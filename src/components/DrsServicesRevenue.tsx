@@ -32,7 +32,7 @@ interface HistoryRow {
   status: SavedOrder['status'];
 }
 
-interface EarnerStat {
+export interface EarnerStat {
   name: string;
   appointments: number;
   billed: number;
@@ -68,7 +68,7 @@ function rangeFor(mode: RangeMode, from: string, to: string) {
   return { start: startOfDay(lo), end: endOfDay(hi), label: `${formatAppointmentDate(lo)} - ${formatAppointmentDate(hi)}` };
 }
 
-function buildStats(orders: SavedOrder[], products: Product[], tab: Tab): EarnerStat[] {
+export function buildStats(orders: SavedOrder[], products: Product[], tab: Tab): EarnerStat[] {
   const doctorNames = new Set(products.filter((p) => isDoctorProduct(p)).map((p) => p.name));
   const isDoctorName = (name: string) => doctorNames.has(name) || isDoctorProduct({ name });
   const byName = new Map<string, EarnerStat>();

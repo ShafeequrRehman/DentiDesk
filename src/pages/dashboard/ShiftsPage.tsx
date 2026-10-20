@@ -5,6 +5,8 @@ import { Store, AlertCircle, Clock, RefreshCcw } from 'lucide-react';
 import { fetchShopSessionHistory } from '@/lib/pos-api';
 import { ShopSession } from '@/lib/pos-types';
 
+import { Paged } from '@/components/Paged';
+
 function formatMoney(amount: number) {
   return `${cs()}${Math.round(amount).toLocaleString()}`;
 }
@@ -111,9 +113,9 @@ export default function ShiftsPage() {
             <span>Opened / Closed By</span>
           </div>
           <div className="divide-y divide-gray-100">
-            {sessions.map((session) => (
+            {<Paged items={sessions}>{(pagedRows) => pagedRows.map((session) => (
               <ShiftRow key={session.id} session={session} />
-            ))}
+            ))}</Paged>}
           </div>
         </div>
       )}

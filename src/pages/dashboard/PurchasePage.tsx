@@ -17,6 +17,8 @@ import { ReportPdfDocument, downloadPdfDocument, pdfDocumentToBase64 } from '@/l
 import { downloadExcelWorkbook, type ExcelCell, type ExcelSheet } from '@/lib/excel-export';
 import { useLanguage } from '@/i18n';
 
+import { Paged } from '@/components/Paged';
+
 function formatMoney(amount: number) {
   return `${cs()}${Math.round(amount).toLocaleString()}`;
 }
@@ -951,7 +953,7 @@ export default function PurchasePage() {
                 ) : filteredOrders.length === 0 ? (
                   <tr><td colSpan={6} className="px-8 py-10 text-center text-sm font-bold text-slate-400">{t('purchase.table.noMatches')}</td></tr>
                 ) : (
-                  filteredOrders.map((po) => {
+                  <Paged items={filteredOrders} colSpan={6}>{(pagedRows) => pagedRows.map((po) => {
                     const isCancelled = po.status === 'cancelled';
                     const isCancelling = cancellingOrderNumber === po.purchaseOrderNumber;
                     return (
@@ -1020,7 +1022,7 @@ export default function PurchasePage() {
                       </td>
                     </tr>
                     );
-                  })
+                  })}</Paged>
                 )}
               </tbody>
             </table>
@@ -1793,7 +1795,7 @@ function SupplierDashboard({
             ) : activeGroups.length === 0 ? (
               <tr><td colSpan={4} className="px-8 py-10 text-center text-sm font-bold text-slate-400">{t('purchase.supplierDashboard.noStreamOrders', { stream: stream === 'pending' ? t('purchase.supplierDashboard.streamPending') : t('purchase.supplierDashboard.streamCompleted') })}</td></tr>
             ) : (
-              activeGroups.map((po) => (
+              <Paged items={activeGroups} colSpan={4}>{(pagedRows) => pagedRows.map((po) => (
                 <tr key={po.purchaseOrderNumber} className="hover:bg-slate-50/50 transition-colors">
                   <td className="px-8 py-5">
                     <div className="text-sm font-black text-slate-900">{po.purchaseOrderNumber}</div>
@@ -1827,7 +1829,7 @@ function SupplierDashboard({
                     )}
                   </td>
                 </tr>
-              ))
+              ))}</Paged>
             )}
           </tbody>
         </table>

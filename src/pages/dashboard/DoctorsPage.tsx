@@ -21,6 +21,8 @@ import { formatAppointmentDate, formatSlot, isDoctorProduct, loadAppointments, p
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { sendPrescriptionSlip, slipPhoneProblem } from '@/lib/whatsapp-slips';
 
+import { Paged } from '@/components/Paged';
+
 // Prescription on WhatsApp (PDF) - one shared helper for the row button
 // and the checkup pad. A missing/wrong number says so.
 async function whatsappPrescription(order: SavedOrder, toast: { success: (m: string) => void; error: (m: string) => void }) {
@@ -361,7 +363,7 @@ export default function DoctorsPage() {
                   </div>
                 ) : (
                   <div className="space-y-2.5">
-                    {filteredAppointments.map((order) => (
+                    {<Paged items={filteredAppointments}>{(pagedRows) => pagedRows.map((order) => (
                       <AppointmentRow
                         key={order.id}
                         order={order}
@@ -370,7 +372,7 @@ export default function DoctorsPage() {
                         onCheckup={() => setCheckupTarget(order)}
                         onReopen={() => void handleReopen(order)}
                       />
-                    ))}
+                    ))}</Paged>}
                   </div>
                 )}
               </div>

@@ -32,6 +32,8 @@ import { useLanguage } from "@/i18n";
 import { useBackspaceToClose } from "@/lib/keyboard-shortcuts";
 import { writePurchaseReceiptToWindow } from "@/lib/order-receipt-print";
 
+import { Paged } from '@/components/Paged';
+
 // Expiry: days left until the expiry date (negative = expired), and
 // whether it's inside the alert window set for this medicine.
 function formatMoney(amount: number) {
@@ -179,7 +181,7 @@ export function IngredientStockSection({
   // Directory list paginates like Customer Dues/Record/POS - 30 shown,
   // "Load More" grows it by 30. Restarts whenever the filtered set changes
   // (search/company tab) so it never shows a stale slice.
-  const [visibleIngredientsCount, setVisibleIngredientsCount] = useState(30);
+  const [visibleIngredientsCount, setVisibleIngredientsCount] = useState(10);
   const [restockingId, setRestockingId] = useState<string | null>(null);
   const [restockQty, setRestockQty] = useState("");
 
@@ -787,7 +789,7 @@ export function IngredientStockSection({
   // would otherwise show an arbitrary/inconsistent slice - always restart
   // at 30 whenever the filtered set's own inputs change.
   useEffect(() => {
-    setVisibleIngredientsCount(30);
+    setVisibleIngredientsCount(10);
   }, [searchQuery, activeSupplier]);
 
   const visibleIngredients = filteredIngredients.slice(0, visibleIngredientsCount);
@@ -1841,7 +1843,7 @@ export function IngredientStockSection({
           <div className="flex justify-center pt-1">
             <button
               type="button"
-              onClick={() => setVisibleIngredientsCount((previous) => previous + 30)}
+              onClick={() => setVisibleIngredientsCount((previous) => previous + 10)}
               className="rounded-full bg-white px-6 py-2.5 text-xs font-black text-slate-700 shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50"
             >
               {t('ingredientStock.directory.loadMore', { count: filteredIngredients.length - visibleIngredients.length })}
@@ -2093,7 +2095,7 @@ function IngredientLedgerModal({ ingredient, onClose }: { ingredient: Ingredient
             </div>
           ) : (
             <div className="space-y-2">
-              {filteredEntries.map((entry, index) => (
+              {<Paged items={filteredEntries}>{(pagedRows) => pagedRows.map((entry, index) => (
                 <div key={index} className="flex items-center justify-between gap-3 rounded-2xl bg-white/60 px-4 py-3 shadow-sm ring-1 ring-slate-100">
                   <div className="flex min-w-0 items-center gap-3">
                     <div className={`flex h-9 w-9 shrink-0 items-center justify-center rounded-xl ${entry.type === 'adjustment' ? 'bg-amber-50 text-amber-600' : entry.direction === 'in' ? 'bg-emerald-50 text-emerald-600' : 'bg-rose-50 text-rose-600'}`}>
@@ -2120,7 +2122,7 @@ function IngredientLedgerModal({ ingredient, onClose }: { ingredient: Ingredient
                     </p>
                   </div>
                 </div>
-              ))}
+              ))}</Paged>}
             </div>
           )}
         </div>

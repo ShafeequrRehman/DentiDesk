@@ -1,7 +1,8 @@
 import { cs } from '@/lib/currency';
 import { useEffect, useState } from 'react';
 import { Moon, XCircle, Printer, MessageCircle, Lock } from 'lucide-react';
-import { fetchDayEndReport, fetchShopProfile, sendWhatsappDocument } from '@/lib/pos-api';
+import { fetchDayEndReport, fetchOrders, fetchProducts, fetchShopProfile, sendWhatsappDocument } from '@/lib/pos-api';
+import { buildStats, type EarnerStat } from '@/components/DrsServicesRevenue';
 import type { DayEndReport, ShopSession } from '@/lib/pos-types';
 import { useToast } from '@/lib/toast';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
@@ -45,6 +46,9 @@ export default function ShopClosingSummaryModal({
   const [phone, setPhone] = useState('');
   const [sendingWhatsapp, setSendingWhatsapp] = useState(false);
   const [confirming, setConfirming] = useState(false);
+  // Each Dr's and each Service's money for this shift (same split as the
+  // Dashboard's Drs / Services panel).
+  const [earners, setEarners] = useState<{ drs: EarnerStat[]; services: EarnerStat[] } | null>(null);
 
   useEffect(() => {
     let cancelled = false;
@@ -60,6 +64,15 @@ export default function ShopClosingSummaryModal({
         if (cancelled) return;
         if (reportData) setReport(reportData);
         setPhone(profile?.phone || '');
+        try {
+          const [orderList, productData] = await Promise.all([fetchOrders({ since: startIso }), fetchProducts()]);
+          const products = productData?.products || [];
+          const endTime = new Date(endIso).getTime();
+          const inShift = (orderList || []).filter((order) => new Date(order.createdAt).getTime() <= endTime);
+          if (!cancelled) setEarners({ drs: buildStats(inShift, products || [], 'drs'), services: buildStats(inShift, products || [], 'services') });
+        } catch {
+          if (!cancelled) setEarners({ drs: [], services: [] });
+        }
       } catch (error) {
         if (!cancelled) toast.error(error instanceof Error ? error.message : "Couldn't load the closing summary.");
       } finally {
@@ -107,6 +120,26 @@ export default function ShopClosingSummaryModal({
     };
   }
 
+  function buildEarnerTable(title: string, list: EarnerStat[]): PdfTable {
+    return {
+      title,
+      columns: [
+        { label: 'Name', width: 2 },
+        { label: 'Appts', width: 0.7, align: 'right' },
+        { label: 'Billed', width: 1, align: 'right' },
+        { label: 'Collected', width: 1, align: 'right' },
+      ],
+      rows: list.map((e) => [e.name, e.appointments, formatMoney(e.billed), formatMoney(e.collected)]),
+      footer: [
+        'Total',
+        list.reduce((n, e) => n + e.appointments, 0),
+        formatMoney(list.reduce((n, e) => n + e.billed, 0)),
+        formatMoney(list.reduce((n, e) => n + e.collected, 0)),
+      ],
+      emptyMessage: 'Nothing this shift.',
+    };
+  }
+
   function buildClosingPdfDoc() {
     const openedLabel = session?.openedAt ? new Date(session.openedAt).toLocaleString(undefined, { dateStyle: 'medium', timeStyle: 'short' }) : '--';
     return (
@@ -114,7 +147,7 @@ export default function ShopClosingSummaryModal({
         title="Day-End Clinic Closing Summary (Z-Report)"
         subtitle={`Shift opened ${openedLabel}${session?.openedByName ? ` by ${session.openedByName}` : ''}`}
         stats={buildPdfStats()}
-        tables={[buildExpenseTable(), buildOrderTypeTable()]}
+        tables={[buildExpenseTable(), buildOrderTypeTable(), buildEarnerTable('Drs - today', earners?.drs || []), buildEarnerTable('Services - today', earners?.services || [])]}
       />
     );
   }
@@ -198,6 +231,9 @@ export default function ShopClosingSummaryModal({
                 </div>
               </div>
 
+              <EarnerCard title="Drs - today" list={earners?.drs ?? null} />
+              <EarnerCard title="Services - today" list={earners?.services ?? null} />
+
               <div className="rounded-2xl bg-white/60 p-4">
                 <h3 className="mb-3 text-xs font-black uppercase tracking-wide text-gray-500">Appointments by Type</h3>
                 <div className="grid grid-cols-2 gap-3 text-center">
@@ -253,6 +289,44 @@ export default function ShopClosingSummaryModal({
           )}
         </div>
       </div>
+    </div>
+  );
+}
+
+function EarnerCard({ title, list }: { title: string; list: EarnerStat[] | null }) {
+  const billed = (list || []).reduce((n, e) => n + e.billed, 0);
+  const collected = (list || []).reduce((n, e) => n + e.collected, 0);
+  return (
+    <div className="rounded-2xl bg-white/60 p-4">
+      <h3 className="mb-3 text-xs font-black uppercase tracking-wide text-gray-500">{title}</h3>
+      {list === null ? (
+        <p className="text-xs font-bold text-gray-400">Loading...</p>
+      ) : list.length === 0 ? (
+        <p className="text-xs font-bold text-gray-400">Nothing this shift.</p>
+      ) : (
+        <div className="space-y-1.5 text-sm">
+          <div className="flex justify-between text-[10px] font-black uppercase text-gray-400">
+            <span>Name</span>
+            <span>Billed / Collected</span>
+          </div>
+          {list.map((e) => (
+            <div key={e.name} className="flex items-center justify-between gap-3">
+              <span className="min-w-0 truncate font-bold text-gray-600">
+                {e.name} <span className="text-[11px] font-semibold text-gray-400">({e.appointments})</span>
+              </span>
+              <span className="shrink-0 font-black text-gray-900">
+                {formatMoney(e.billed)} <span className="text-gray-300">/</span> <span className="text-emerald-600">{formatMoney(e.collected)}</span>
+              </span>
+            </div>
+          ))}
+          <div className="mt-2 flex justify-between border-t border-gray-200 pt-2 font-black">
+            <span className="text-gray-700">Total</span>
+            <span>
+              {formatMoney(billed)} <span className="text-gray-300">/</span> <span className="text-emerald-600">{formatMoney(collected)}</span>
+            </span>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

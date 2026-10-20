@@ -5,6 +5,8 @@ import { Bank } from '@/lib/pos-types';
 import { Landmark, Plus, RefreshCcw, Save, X, ArrowDownCircle, ArrowUpCircle, ChevronDown, ChevronUp, Download } from 'lucide-react';
 import { useToast } from '@/lib/toast';
 
+import { Paged } from '@/components/Paged';
+
 // Task 3's "bank ki bhi history ho ... date wise wala bhe option ho" - same
 // All/Today/This Month/Custom pattern already used for the Ingredient
 // Stock Ledger (IngredientStockSection.tsx) and Record page, just this
@@ -417,7 +419,7 @@ function BankCard({ bank, onChanged, confirm, toast }: {
               {filteredHistory.length === 0 ? (
                 <p className="text-[11px] font-bold text-slate-400 text-center py-3">No transactions in this range.</p>
               ) : null}
-              {filteredHistory.map((entry, index) => {
+              {<Paged items={filteredHistory}>{(pagedRows) => pagedRows.map((entry, index) => {
                 const isIn = entry.type === 'deposit';
                 const who = entry.relatedCustomerName
                   ? (isIn ? `Received from ${entry.relatedCustomerName}` : `Given to ${entry.relatedCustomerName}`)
@@ -437,7 +439,7 @@ function BankCard({ bank, onChanged, confirm, toast }: {
                     <p className="text-[10px] font-bold text-slate-300">Balance after: {cs()}{entry.balanceAfter.toLocaleString()}</p>
                   </div>
                 );
-              })}
+              })}</Paged>}
               </div>
             </div>
           ) : null}

@@ -25,6 +25,8 @@ import { useToast } from '@/lib/toast';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import DrsServicesRevenue from '@/components/DrsServicesRevenue';
 
+import { Paged } from '@/components/Paged';
+
 type InventoryItem = { id: string | number; name: string; stock: number; unit?: string; lowStockThreshold?: number; expiryDate?: string; expiryAlertDays?: number };
 // Extends the shared window (src/lib/shop-session.ts - the single source
 // of truth for the actual date-math, shared with Record/Sales) with the
@@ -1134,7 +1136,7 @@ function HistoryModalShell({
           ) : filteredRows.length === 0 ? (
             <p className="py-8 text-center text-xs font-bold text-gray-400">No history yet.</p>
           ) : (
-            filteredRows.map((row, index) => (
+            <Paged items={filteredRows}>{(pagedRows) => pagedRows.map((row, index) => (
               <div key={row.ref || index} className={`flex items-center justify-between gap-2 rounded-2xl p-3 ${row.undone ? 'bg-gray-50 opacity-70' : row.kind === 'clear' ? 'bg-amber-50' : 'bg-[#F8F9FB]'}`}>
                 <div className="min-w-0">
                   <p className={`flex flex-wrap items-center gap-1.5 text-sm font-black ${row.undone ? 'text-gray-400 line-through' : row.direction === 'in' ? 'text-emerald-600' : 'text-rose-600'}`}>
@@ -1172,7 +1174,7 @@ function HistoryModalShell({
                   </div>
                 ) : null}
               </div>
-            ))
+            ))}</Paged>
           )}
         </div>
       </div>
@@ -1483,7 +1485,7 @@ function CustomerAdvancesModal({
           {advances.length === 0 ? (
             <p className="py-8 text-center text-xs font-bold text-gray-400">No patient currently has an advance.</p>
           ) : (
-            advances.map((customer) => (
+            <Paged items={advances}>{(pagedRows) => pagedRows.map((customer) => (
               <div key={customer.phone || customer.name} className="flex items-center justify-between rounded-2xl bg-[#F8F9FB] p-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-gray-800">{customer.name}</p>
@@ -1492,7 +1494,7 @@ function CustomerAdvancesModal({
                 </div>
                 <p className="text-sm font-black text-emerald-600">{cs()}{customer.amount.toLocaleString()}</p>
               </div>
-            ))
+            ))}</Paged>
           )}
         </div>
       </div>
@@ -1557,7 +1559,7 @@ function StockValueDetailModal({ onClose }: { onClose: () => void }) {
           ) : rows.length === 0 ? (
             <p className="py-8 text-center text-xs font-bold text-gray-400">No stock items found.</p>
           ) : (
-            rows.map((item, index) => (
+            <Paged items={rows}>{(pagedRows) => pagedRows.map((item, index) => (
               <div key={`${item.name}-${index}`} className="flex items-center justify-between rounded-2xl bg-[#F8F9FB] p-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-gray-800">{item.name}</p>
@@ -1567,7 +1569,7 @@ function StockValueDetailModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <p className="text-sm font-black text-violet-600">{cs()}{item.value.toLocaleString()}</p>
               </div>
-            ))
+            ))}</Paged>
           )}
         </div>
       </div>
@@ -1631,12 +1633,12 @@ function VendorBalanceDetailModal({ onClose }: { onClose: () => void }) {
           ) : rows.length === 0 ? (
             <p className="py-8 text-center text-xs font-bold text-gray-400">No vendor currently has a balance.</p>
           ) : (
-            rows.map((vendor, index) => (
+            <Paged items={rows}>{(pagedRows) => pagedRows.map((vendor, index) => (
               <div key={`${vendor.name}-${index}`} className="flex items-center justify-between rounded-2xl bg-[#F8F9FB] p-3">
                 <p className="truncate text-sm font-bold text-gray-800">{vendor.name}</p>
                 <p className="text-sm font-black text-amber-700">{cs()}{vendor.balance.toLocaleString()}</p>
               </div>
-            ))
+            ))}</Paged>
           )}
         </div>
       </div>
@@ -1710,7 +1712,7 @@ function SaleOnCashDetailModal({
           ) : rows.length === 0 ? (
             <p className="py-8 text-center text-xs font-bold text-gray-400">No sale in this range yet.</p>
           ) : (
-            rows.map((order, index) => (
+            <Paged items={rows}>{(pagedRows) => pagedRows.map((order, index) => (
               <div key={`${order.orderNumber ?? 'na'}-${index}`} className="flex items-center justify-between rounded-2xl bg-[#F8F9FB] p-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-gray-800">
@@ -1722,7 +1724,7 @@ function SaleOnCashDetailModal({
                 </div>
                 <p className="text-sm font-black text-blue-600">{cs()}{order.amount.toLocaleString()}</p>
               </div>
-            ))
+            ))}</Paged>
           )}
         </div>
       </div>
@@ -1878,7 +1880,7 @@ function RecoveryHistoryModal({ onClose }: { onClose: () => void }) {
           ) : rows.length === 0 ? (
             <p className="py-8 text-center text-xs font-bold text-gray-400">No recovery in this range.</p>
           ) : (
-            rows.map((row, index) => (
+            <Paged items={rows}>{(pagedRows) => pagedRows.map((row, index) => (
               <div key={index} className="flex items-center justify-between rounded-2xl bg-[#F8F9FB] p-3">
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-gray-800">{row.customerName}</p>
@@ -1888,7 +1890,7 @@ function RecoveryHistoryModal({ onClose }: { onClose: () => void }) {
                 </div>
                 <p className="text-sm font-black text-emerald-600">{cs()}{row.amount.toLocaleString()}</p>
               </div>
-            ))
+            ))}</Paged>
           )}
         </div>
       </div>
@@ -1977,7 +1979,7 @@ function StockAlertsSection({ items }: { items: InventoryItem[] | null }) {
               <p className="rounded-2xl bg-gray-50 px-4 py-3 text-xs font-bold text-gray-400">No medicine is expired or near expiry.</p>
             ) : (
               <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                {expiring.map(({ item, expiry }) => {
+                {<Paged items={expiring}>{(pagedRows) => pagedRows.map(({ item, expiry }) => {
                   const expired = expiry.daysLeft < 0;
                   return (
                     <li key={String(item.id)} className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 ${expired ? 'border-red-200 bg-red-50' : 'border-orange-200 bg-orange-50'}`}>
@@ -1990,7 +1992,7 @@ function StockAlertsSection({ items }: { items: InventoryItem[] | null }) {
                       </span>
                     </li>
                   );
-                })}
+                })}</Paged>}
               </ul>
             )}
           </div>
@@ -2004,7 +2006,7 @@ function StockAlertsSection({ items }: { items: InventoryItem[] | null }) {
               <p className="rounded-2xl bg-gray-50 px-4 py-3 text-xs font-bold text-gray-400">No medicine is low on stock.</p>
             ) : (
               <ul className="max-h-72 space-y-2 overflow-y-auto pr-1">
-                {low.map((item) => {
+                {<Paged items={low}>{(pagedRows) => pagedRows.map((item) => {
                   const out = item.stock <= 0;
                   return (
                     <li key={String(item.id)} className={`flex items-center justify-between gap-3 rounded-2xl border px-4 py-2.5 ${out ? 'border-red-200 bg-red-50' : 'border-amber-200 bg-amber-50'}`}>
@@ -2017,7 +2019,7 @@ function StockAlertsSection({ items }: { items: InventoryItem[] | null }) {
                       </span>
                     </li>
                   );
-                })}
+                })}</Paged>}
               </ul>
             )}
           </div>

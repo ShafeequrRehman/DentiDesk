@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { BookText, ChevronDown, ChevronUp, Phone, Search, AlertCircle, RefreshCcw, Download, X, Users, Truck } from 'lucide-react';
 import { fetchCustomerLedger, fetchCompanyLedger } from '@/lib/pos-api';
 import { CompanyLedgerEntry, LedgerCustomer } from '@/lib/pos-types';
+
+import { Paged } from '@/components/Paged';
 // NOTE: intentionally NOT a static top-level import. @react-pdf/renderer
 // (imported by @/lib/pdf-export) pulls in a transitive dependency
 // (js-md5) whose Node/CJS-environment detection misfires under Vite's
@@ -565,7 +567,7 @@ function LedgerRow({
                   </tr>
                 </thead>
                 <tbody className="divide-y divide-gray-100">
-                  {customer.orders.map((order) => (
+                  {<Paged items={customer.orders} colSpan={7}>{(pagedRows) => pagedRows.map((order) => (
                     <tr key={order.id}>
                       <td className="py-2.5 pr-4 font-black text-gray-800">#{order.dailyOrderNumber ?? '—'}</td>
                       <td className="py-2.5 pr-4 font-bold text-gray-500">{formatDate(order.createdAt)}</td>
@@ -581,7 +583,7 @@ function LedgerRow({
                         {order.status === 'cancelled' ? '—' : formatMoney(order.remainingAmount)}
                       </td>
                     </tr>
-                  ))}
+                  ))}</Paged>}
                 </tbody>
                 <tfoot>
                   <tr className="border-t-2 border-gray-200">
