@@ -14,6 +14,7 @@ import { buildReceiptShellHtml } from '@/lib/order-receipt-print';
 import type { SavedOrder } from '@/lib/pos-types';
 
 import { openPrintFrame } from '@/lib/print-frame';
+import { buildPrescriptionA4Html } from '@/lib/prescription-a4';
 
 // Default clinic hours and slot length. The real hours come from Settings
 // (Business Start / End Time, saved on the server) - see setClinicHours.
@@ -360,36 +361,13 @@ function escapeHtml(value: string) {
     .replace(/"/g, '&quot;');
 }
 
-// Prints the Dr's medicine details for one appointment on the receipt
-// printer (same 80mm layout and clinic header as the patient receipt).
+// Prints the Dr's medicine details for one appointment on a full A4 page
+// (letterhead layout - see prescription-a4.ts).
 export function printPrescription(order: SavedOrder) {
   const printWindow = openPrintFrame();
   if (!printWindow) return false;
-  const appointmentNo = String(order.dailyOrderNumber ?? order.id.slice(-3)).padStart(3, '0');
-  const patientName = order.customer?.name || 'Patient';
-  const phone = order.customer?.phone && order.customer.phone !== '03000000000' ? order.customer.phone : '';
-  const services = order.items
-    .filter((item) => item.name !== order.doctorName)
-    .map((item) => `<p>- ${escapeHtml(item.name)}${item.variation && item.variation !== 'Standard' ? ` (${escapeHtml(item.variation)})` : ''}</p>`)
-    .join('');
-  const prescription = escapeHtml(order.prescription || '').replace(/\n/g, '<br/>');
-  const checkedDate = order.checkedAt ? new Date(order.checkedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' }) : '';
-  const bodyHtml = `
-    <p><b>${/^dr\.?\s/i.test(order.doctorName || '') ? 'DR' : 'SERVICE'}:</b> ${escapeHtml(order.doctorName || '')}</p>
-    <p><b>PATIENT:</b> ${escapeHtml(patientName.toUpperCase())}</p>
-    ${phone ? `<p><b>PHONE:</b> ${escapeHtml(phone)}</p>` : ''}
-    <p><b>DATE:</b> ${formatAppointmentDate(order.appointmentDate)} ${formatSlot(order.appointmentTime)}</p>
-    ${checkedDate ? `<p><b>CHECKED:</b> ${checkedDate}</p>` : ''}
-    ${services ? `<div class="dashed"></div><p><b>SERVICES:</b></p>${services}` : ''}
-    ${order.diagnosis ? `<div class="dashed"></div><p><b>DISEASE:</b> ${escapeHtml(order.diagnosis)}</p>` : ''}
-    <div class="dashed"></div>
-    <p style="font-size:16px;font-weight:900">Rx</p>
-    <div style="font-size:13px;line-height:18px;white-space:normal">${prescription || '-'}</div>
-    <div class="dashed"></div>
-    <p style="margin-top:28px">Signature: ____________________</p>
-  `;
   printWindow.document.open();
-  printWindow.document.write(buildReceiptShellHtml('Prescription', bodyHtml, appointmentNo, { patient: true }));
+  printWindow.document.write(buildPrescriptionA4Html(order));
   printWindow.document.close();
   printWindow.focus();
   printWindow.print();

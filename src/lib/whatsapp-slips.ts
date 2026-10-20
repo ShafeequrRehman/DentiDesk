@@ -106,33 +106,11 @@ export async function sendPrescriptionSlip(order: SavedOrder) {
   if (!order.prescription?.trim() && !order.diagnosis?.trim()) {
     throw new Error('Write the medicine details first, then send the prescription.');
   }
-  const { ReportPdfDocument, pdfDocumentToBase64 } = await import('@/lib/pdf-export');
-  const withWhom = bookedWith(order);
-  const { BOOKING_QR_CAPTION, bookingQrPng, socialLinks } = await import('@/lib/slip-extras');
-  const extras = { links: socialLinks(), qr: await bookingQrPng(), caption: BOOKING_QR_CAPTION };
-  const doc = createElement(ReportPdfDocument, {
-    extras,
-    title: 'Prescription',
-    subtitle: order.checkedAt ? `Checked ${new Date(order.checkedAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' })}` : undefined,
-    stats: [
-      { label: 'Patient', value: order.customer?.name || 'Patient' },
-      ...(withWhom ? [{ label: withWhom.label, value: withWhom.value }] : []),
-      ...(order.appointmentDate ? [{ label: 'Date', value: `${formatAppointmentDate(order.appointmentDate)} ${formatSlot(order.appointmentTime)}` }] : []),
-      ...(order.diagnosis ? [{ label: 'Disease', value: order.diagnosis }] : []),
-    ],
-    tables: [
-      {
-        title: 'Rx - Medicine details',
-        columns: [{ label: 'Medicine / instructions', width: 1 }],
-        rows: (order.prescription || '')
-          .split('\n')
-          .map((line) => line.trim())
-          .filter(Boolean)
-          .map((line) => [line]),
-        emptyMessage: '-',
-      },
-    ],
-  });
+  // A4 prescription (same layout as the printed one).
+  const { pdfDocumentToBase64 } = await import('@/lib/pdf-export');
+  const { PrescriptionPdf } = await import('@/lib/prescription-pdf');
+  const { bookingQrPng } = await import('@/lib/slip-extras');
+  const doc = createElement(PrescriptionPdf, { order, qr: await bookingQrPng() });
   const base64 = await pdfDocumentToBase64(doc);
   await sendWhatsappDocument(order.customer.phone, base64, `Prescription_${appointmentNo(order)}_${fileSafe(order.customer?.name || '')}.pdf`);
 }
