@@ -32,7 +32,9 @@ export function prescriptionData(order: SavedOrder) {
 }
 
 // images: pictures the Dr attached (data URLs) - printed under the medicines.
-export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []) {
+// workAs: the Dr's "Work As" lines (Manage Appointments) - degrees,
+// speciality, PMDC no. - printed under the Dr's name.
+export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = [], workAs = '') {
   const settings = getStoreSettings();
   const data = prescriptionData(order);
   const logo = typeof window === 'undefined' ? null : window.localStorage.getItem(PRINT_LOGO_STORAGE_KEY);
@@ -49,15 +51,17 @@ export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: #fff; color: #111827; font-family: 'Segoe UI', Arial, sans-serif; }
     .page { width: 210mm; min-height: 285mm; padding: 14mm 14mm 10mm; display: flex; flex-direction: column; }
-    .head { display: flex; align-items: center; justify-content: space-between; gap: 16px; padding-bottom: 12px; border-bottom: 3px solid #0e7490; }
-    .brand { display: flex; align-items: center; gap: 14px; }
+    .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 12px; border-bottom: 3px solid #0e7490; }
+    .brand { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
     .brand img { max-height: 80px; max-width: 140px; object-fit: contain; }
     .clinic { font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #0e7490; margin: 0; }
     .sub { font-size: 12px; color: #4b5563; margin: 2px 0 0; }
-    .doc { text-align: right; }
+    .doc { text-align: right; flex-shrink: 0; max-width: 42%; }
     .doc .label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #6b7280; }
-    .doc .name { font-size: 18px; font-weight: 800; }
-    .doc .no { font-size: 12px; color: #374151; margin-top: 2px; }
+    .doc .name { font-size: 22px; line-height: 1.1; font-weight: 800; color: #0f172a; }
+    .doc .work { margin-top: 4px; font-size: 11.5px; line-height: 1.45; color: #374151; white-space: pre-line; }
+    .doc .work b { color: #0e7490; }
+    .doc .no { font-size: 11px; color: #6b7280; margin-top: 6px; }
     .patient { display: grid; grid-template-columns: repeat(4, 1fr); gap: 10px; margin: 14px 0; padding: 10px 12px; background: #f0fdff; border: 1px solid #cffafe; border-radius: 10px; }
     .info span { display: block; font-size: 9px; letter-spacing: 1.5px; text-transform: uppercase; color: #6b7280; }
     .info b { font-size: 13px; }
@@ -94,6 +98,7 @@ export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []
       <div class="doc">
         <div class="label">${data.withLabel}</div>
         <div class="name">${escapeHtml(data.withName || '-')}</div>
+        ${workAs.trim() ? `<div class="work">${workAsHtml(workAs)}</div>` : ''}
         <div class="no">Appointment #${data.appointmentNo}</div>
       </div>
     </div>
@@ -127,4 +132,25 @@ export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []
     </div>
   </div>
   </body></html>`;
+}
+
+// "Work As" text -> safe HTML: line breaks kept, **bold** supported.
+export function workAsHtml(text: string) {
+  return escapeHtml(text.trim()).replace(/\*\*(.+?)\*\*/g, '<b>$1</b>');
+}
+
+// The Dr's "Work As" from the catalog (cached for a few minutes).
+let workAsCache: { at: number; map: Map<string, string> } | null = null;
+export async function lookupWorkAs(name?: string) {
+  if (!name) return '';
+  try {
+    if (!workAsCache || Date.now() - workAsCache.at > 5 * 60 * 1000) {
+      const { fetchProducts } = await import('@/lib/pos-api');
+      const data = await fetchProducts();
+      workAsCache = { at: Date.now(), map: new Map((data?.products || []).map((p) => [p.name, p.workAs || ''])) };
+    }
+    return workAsCache.map.get(name) || '';
+  } catch {
+    return '';
+  }
 }

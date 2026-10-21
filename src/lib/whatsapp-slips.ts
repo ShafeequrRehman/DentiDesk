@@ -155,7 +155,8 @@ export async function sendPrescriptionSlip(order: SavedOrder) {
     const { fetchPrescriptionImages } = await import('@/lib/pos-api');
     images = ((await fetchPrescriptionImages(order.id).catch(() => [])) || []).map((img) => img.data);
   }
-  const doc = createElement(PrescriptionPdf, { order, qr: await bookingQrPng(), images });
+  const { lookupWorkAs } = await import('@/lib/prescription-a4');
+  const doc = createElement(PrescriptionPdf, { order, qr: await bookingQrPng(), images, workAs: await lookupWorkAs(order.doctorName) });
   const base64 = await pdfDocumentToBase64(doc);
   await sendWhatsappDocument(order.customer.phone, base64, `Prescription_${appointmentNo(order)}_${fileSafe(order.customer?.name || '')}.pdf`);
 }

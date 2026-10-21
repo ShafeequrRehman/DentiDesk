@@ -14,7 +14,7 @@ import { buildReceiptShellHtml } from '@/lib/order-receipt-print';
 import type { SavedOrder } from '@/lib/pos-types';
 
 import { openPrintFrame, printWhenReady } from '@/lib/print-frame';
-import { buildPrescriptionA4Html } from '@/lib/prescription-a4';
+import { buildPrescriptionA4Html, lookupWorkAs } from '@/lib/prescription-a4';
 import { fetchPrescriptionImages } from '@/lib/pos-api';
 
 // Default clinic hours and slot length. The real hours come from Settings
@@ -364,11 +364,11 @@ function escapeHtml(value: string) {
 
 // Prints the Dr's medicine details for one appointment on a full A4 page
 // (letterhead layout - see prescription-a4.ts).
-export function printPrescription(order: SavedOrder, images: string[] = []) {
+export function printPrescription(order: SavedOrder, images: string[] = [], workAs = '') {
   const printWindow = openPrintFrame();
   if (!printWindow) return false;
   printWindow.document.open();
-  printWindow.document.write(buildPrescriptionA4Html(order, images));
+  printWindow.document.write(buildPrescriptionA4Html(order, images, workAs));
   printWindow.document.close();
   printWhenReady(printWindow);
   return true;
@@ -385,5 +385,5 @@ export async function printPrescriptionWithImages(order: SavedOrder, images?: st
       pictures = [];
     }
   }
-  return printPrescription(order, pictures || []);
+  return printPrescription(order, pictures || [], await lookupWorkAs(order.doctorName));
 }

@@ -13,13 +13,13 @@ const PHONE_PATH = 'M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11
 const TEAL = '#0e7490';
 const styles = StyleSheet.create({
   page: { padding: 34, fontFamily: 'Helvetica', fontSize: 11, color: '#111827' },
-  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingBottom: 10, borderBottomWidth: 3, borderColor: TEAL },
-  brand: { flexDirection: 'row', alignItems: 'center' },
+  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 10, borderBottomWidth: 3, borderColor: TEAL },
+  brand: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 14 },
   logo: { maxHeight: 60, maxWidth: 100, objectFit: 'contain', marginRight: 12 },
   clinic: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: TEAL },
   sub: { fontSize: 9, color: '#4b5563', marginTop: 2 },
   docLabel: { fontSize: 8, color: '#6b7280', textAlign: 'right', letterSpacing: 1.5 },
-  docName: { fontSize: 15, fontFamily: 'Helvetica-Bold', textAlign: 'right' },
+  docName: { fontSize: 18, fontFamily: 'Helvetica-Bold', textAlign: 'right' },
   docNo: { fontSize: 9, color: '#374151', textAlign: 'right', marginTop: 2 },
   patient: { flexDirection: 'row', marginTop: 12, padding: 9, backgroundColor: '#f0fdff', borderWidth: 1, borderColor: '#cffafe', borderRadius: 8 },
   infoBox: { flex: 1, paddingRight: 6 },
@@ -42,7 +42,7 @@ function Info({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function PrescriptionPdf({ order, qr, images = [] }: { order: SavedOrder; qr?: string | null; images?: string[] }) {
+export function PrescriptionPdf({ order, qr, images = [], workAs = '' }: { order: SavedOrder; qr?: string | null; images?: string[]; workAs?: string }) {
   const settings = getStoreSettings();
   const data = prescriptionData(order);
   const links = socialLinks(settings);
@@ -67,9 +67,14 @@ export function PrescriptionPdf({ order, qr, images = [] }: { order: SavedOrder;
               {contact ? <Text style={styles.sub}>{contact}</Text> : null}
             </View>
           </View>
-          <View>
+          <View style={{ maxWidth: '42%' }}>
             <Text style={styles.docLabel}>{data.withLabel.toUpperCase()}</Text>
             <Text style={styles.docName}>{data.withName || '-'}</Text>
+            {workAs.trim()
+              ? workAs.trim().split('\n').map((line, i) => (
+                  <Text key={i} style={{ fontSize: 8.5, color: '#374151', textAlign: 'right', marginTop: i === 0 ? 3 : 0 }}>{line.replace(/\*\*/g, '')}</Text>
+                ))
+              : null}
             <Text style={styles.docNo}>Appointment #{data.appointmentNo}</Text>
           </View>
         </View>

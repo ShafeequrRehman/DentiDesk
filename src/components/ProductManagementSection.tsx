@@ -115,6 +115,30 @@ export function ProductManagementSection({
   // POSPage.tsx's product-code entry box.
   const [productCode, setProductCode] = useState("");
   const [workAs, setWorkAs] = useState("");
+  const workAsRef = useRef<HTMLTextAreaElement | null>(null);
+  // Work As editor buttons: **bold** around the selection, or insert text.
+  function wrapWorkAs(mark: string) {
+    const el = workAsRef.current;
+    if (!el) return;
+    const { selectionStart: a, selectionEnd: b } = el;
+    const picked = workAs.slice(a, b) || "text";
+    const next = `${workAs.slice(0, a)}${mark}${picked}${mark}${workAs.slice(b)}`;
+    setWorkAs(next.slice(0, 600));
+    requestAnimationFrame(() => {
+      el.focus();
+      el.setSelectionRange(a + mark.length, a + mark.length + picked.length);
+    });
+  }
+  function insertWorkAs(text: string) {
+    const el = workAsRef.current;
+    const at = el ? el.selectionStart : workAs.length;
+    const next = `${workAs.slice(0, at)}${text}${workAs.slice(el ? el.selectionEnd : at)}`;
+    setWorkAs(next.slice(0, 600));
+    requestAnimationFrame(() => {
+      el?.focus();
+      el?.setSelectionRange(at + text.length, at + text.length);
+    });
+  }
   // Note / extra details - shown to patients on the online appointment
   // page only (the card's "Details"). Saved as Product.description.
   const [notes, setNotes] = useState("");
@@ -547,15 +571,30 @@ export function ProductManagementSection({
             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">
               {t("productManagement.fields.workAs")}
             </label>
-            <input
-              type="text"
+            {/* Several lines (degrees, speciality, registration no.) -
+                **text** prints bold. Line 1 shows on the online card; all
+                lines print under the Dr's name on the prescription. */}
+            <div className="flex flex-wrap gap-1.5">
+              {[
+                ['B', 'Bold', () => wrapWorkAs('**')],
+                ['↵', 'New line', () => insertWorkAs('\n')],
+                ['•', 'Bullet', () => insertWorkAs('\n• ')],
+              ].map(([label, title, run]) => (
+                <button key={title as string} type="button" title={title as string} onMouseDown={(e) => e.preventDefault()} onClick={run as () => void} className="rounded-lg bg-white px-2.5 py-1 text-xs font-black text-slate-600 ring-1 ring-slate-200 hover:bg-slate-50">
+                  {label as string}
+                </button>
+              ))}
+            </div>
+            <textarea
+              ref={workAsRef}
               value={workAs}
-              maxLength={120}
+              maxLength={600}
+              rows={4}
               onChange={(e) => setWorkAs(e.target.value)}
-              placeholder={t("productManagement.fields.workAsPlaceholder")}
-              className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+              placeholder={"e.g.\nBDS, MDS (Orthodontics)\nConsultant Orthodontist\nPMDC Reg. No. 12345-D"}
+              className="w-full resize-y rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold leading-6 shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
             />
-            <p className="text-[10px] font-bold text-slate-400 ml-1">{t("productManagement.fields.workAsHint")}</p>
+            <p className="text-[10px] font-bold text-slate-400 ml-1">One line each for degree, speciality, registration no. Select text and press B for bold. All lines print under the Dr&apos;s name on the prescription; the first line shows on the online appointment card.</p>
           </div>
           <div className="space-y-2">
             <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">

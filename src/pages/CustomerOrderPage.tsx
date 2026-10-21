@@ -1451,7 +1451,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
               <p className="text-sm font-black text-gray-900">{group.name}</p>
               {group.variations.find((v) => v.workAs)?.workAs ? (
                 <p className="mt-0.5 inline-flex max-w-full items-center rounded-full bg-[#EBFAFC] px-2.5 py-0.5 text-[11px] font-bold text-[#007F90]">
-                  <span className="truncate">{group.variations.find((v) => v.workAs)?.workAs}</span>
+                  <span className="truncate">{firstWorkAsLine(group.variations.find((v) => v.workAs)?.workAs)}</span>
                 </p>
               ) : null}
               {(() => {
@@ -1574,7 +1574,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                       >
                         <span className="min-w-0">
                           <span className="block truncate text-sm font-black text-gray-900">{dr.name}</span>
-                          {dr.workAs ? <span className="block truncate text-[11px] font-bold text-[#007F90]">{dr.workAs}</span> : null}
+                          {dr.workAs ? <span className="block truncate text-[11px] font-bold text-[#007F90]">{firstWorkAsLine(dr.workAs)}</span> : null}
                           <span className="block truncate text-[11px] font-semibold text-gray-500">{describeSchedule(scheduleOf(dr)) || 'Every day'}</span>
                         </span>
                         <span className={`shrink-0 rounded-full px-2 py-0.5 text-[10px] font-black ${today ? 'bg-emerald-100 text-emerald-700' : 'bg-gray-200 text-gray-500'}`}>
@@ -1866,4 +1866,9 @@ function ConfirmationNotice({ phones }: { phones: string }) {
       )}
     </div>
   );
+}
+
+// "Work As" can be several lines with **bold** - cards show line 1, plain.
+function firstWorkAsLine(text?: string) {
+  return String(text || '').split('\n').map((l) => l.replace(/\*\*/g, '').replace(/^[•\-]\s*/, '').trim()).find(Boolean) || '';
 }
