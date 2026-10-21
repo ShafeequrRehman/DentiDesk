@@ -18,9 +18,9 @@ const styles = StyleSheet.create({
   logo: { maxHeight: 60, maxWidth: 100, objectFit: 'contain', marginRight: 12 },
   clinic: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: TEAL },
   sub: { fontSize: 9, color: '#4b5563', marginTop: 2 },
-  docLabel: { fontSize: 8, color: '#6b7280', textAlign: 'right', letterSpacing: 1.5 },
-  docName: { fontSize: 18, fontFamily: 'Helvetica-Bold', textAlign: 'right' },
-  docNo: { fontSize: 9, color: '#374151', textAlign: 'right', marginTop: 2 },
+  docLabel: { fontSize: 8, color: '#6b7280', textAlign: 'left', letterSpacing: 1.5 },
+  docName: { fontSize: 18, fontFamily: 'Helvetica-Bold', textAlign: 'left' },
+  docNo: { fontSize: 9, color: '#374151', textAlign: 'left', marginTop: 2 },
   patient: { flexDirection: 'row', marginTop: 12, padding: 9, backgroundColor: '#f0fdff', borderWidth: 1, borderColor: '#cffafe', borderRadius: 8 },
   infoBox: { flex: 1, paddingRight: 6 },
   infoLabel: { fontSize: 7, color: '#6b7280', letterSpacing: 1.2 },
@@ -72,7 +72,7 @@ export function PrescriptionPdf({ order, qr, images = [], workAs = '' }: { order
             <Text style={styles.docName}>{data.withName || '-'}</Text>
             {workAs.trim()
               ? workAs.trim().split('\n').map((line, i) => (
-                  <Text key={i} style={{ fontSize: 8.5, color: '#374151', textAlign: 'right', marginTop: i === 0 ? 3 : 0 }}>{line.replace(/\*\*/g, '')}</Text>
+                  <Text key={i} style={{ fontSize: 8.5, color: '#374151', textAlign: 'left', marginTop: i === 0 ? 3 : 0 }}>{line.replace(/\*\*/g, '')}</Text>
                 ))
               : null}
             <Text style={styles.docNo}>Appointment #{data.appointmentNo}</Text>
