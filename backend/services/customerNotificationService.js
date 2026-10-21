@@ -81,6 +81,21 @@ function formatSlotDate(iso) {
 }
 
 // Sent when the clinic presses "Mark Confirmed" on an online appointment.
+// "Unpaid / Partly paid / Paid" for the WhatsApp text - from what was
+// really paid on this appointment (an advance that covered it says so).
+function paymentLine(order, C, hideMoney) {
+  const total = Number(order.total || 0);
+  const paid = Number(order.paidAmount || 0);
+  const remaining = typeof order.remainingAmount === "number" ? Math.max(order.remainingAmount, 0) : Math.max(total - paid, 0);
+  const advance = Number(order.advanceApplied || 0);
+  if (remaining > 0) {
+    const amount = hideMoney ? "" : ` - ${C}${formatMoney(remaining)} to pay at the clinic`;
+    return paid > 0 ? `Payment: *Partly paid*${amount}` : `Payment: *Unpaid*${amount || " - pay at the clinic"}`;
+  }
+  if (total > 0 && paid <= 0 && advance > 0) return "Payment: *Paid from your advance*";
+  return "Payment: *Paid*";
+}
+
 function buildAppointmentConfirmedMessage(order, shop, isHidden = () => false) {
   const shopName = shop?.name || "";
   const C = currencySign(shop);
@@ -104,9 +119,7 @@ function buildAppointmentConfirmedMessage(order, shop, isHidden = () => false) {
       return services.length ? [`Services:`, formatItems(services, C, isHidden)] : [];
     })(),
     hideMoney ? null : `Total: ${C}${formatMoney(order.total)}`,
-    hideMoney
-      ? `Payment: ${Number(order.remainingAmount || 0) > 0 ? "at the clinic" : "Paid"}`
-      : `Payment: ${Number(order.remainingAmount || 0) > 0 ? `${C}${formatMoney(order.remainingAmount)} to pay at the clinic` : "Paid"}`,
+    paymentLine(order, C, hideMoney),
     `------------------------`,
     `Please arrive 10 minutes before your time.`,
     `${clinicPhones(shop)}`,

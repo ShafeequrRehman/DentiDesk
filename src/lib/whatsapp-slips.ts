@@ -53,10 +53,9 @@ function slipMessage(order: SavedOrder, kind: SlipKind, previousDues: number, wi
   const clinic = getStoreSettings().receiptHeader || 'Clinic';
   const withWhom = bookedWith(order);
   const remaining = typeof order.remainingAmount === 'number' ? order.remainingAmount : Math.max(Number(order.total || 0) - Number(order.paidAmount || 0), 0);
+  if (kind === 'booked') return bookedMessage(order, clinic, withPdf);
   const lines = [`*${clinic}*`, ''];
-  if (kind === 'booked') {
-    lines.push(`Dear ${order.customer?.name || 'Patient'}, your appointment is confirmed.`);
-  } else {
+  {
     lines.push(`Dear ${order.customer?.name || 'Patient'}, thank you for your visit. Your payment is received.`);
   }
   lines.push(`Appointment No: *${appointmentNo(order)}*`);
@@ -75,6 +74,47 @@ function slipMessage(order: SavedOrder, kind: SlipKind, previousDues: number, wi
     lines.push('', `Please arrive 10 minutes before your time.${withPdf ? ' Your slip is attached.' : ''}`);
   }
   return lines.join('\n');
+}
+
+// Same message the patient gets when the clinic confirms an ONLINE booking
+// (backend customerNotificationService) - so clinic and online bookings
+// read the same.
+function bookedMessage(order: SavedOrder, clinic: string, withPdf: boolean) {
+  const settings = getStoreSettings();
+  const withWhom = bookedWith(order);
+  const total = Number(order.total || 0);
+  const paid = Number(order.paidAmount || 0);
+  const remaining = typeof order.remainingAmount === 'number' ? Math.max(order.remainingAmount, 0) : Math.max(total - paid, 0);
+  const advance = Number((order as { advanceApplied?: number }).advanceApplied || 0);
+  const payment = remaining > 0
+    ? `Payment: *${paid > 0 ? 'Partly paid' : 'Unpaid'}* - ${money(remaining)} to pay at the clinic`
+    : total > 0 && paid <= 0 && advance > 0
+      ? 'Payment: *Paid from your advance*'
+      : 'Payment: *Paid*';
+  const services = (order.items || []).filter((item) => item.name !== order.doctorName);
+  const lines: Array<string | null> = [
+    '*Your appointment is confirmed* \u2705',
+    `Hello ${order.customer?.name || 'there'},`,
+    `${clinic} has confirmed your appointment.`,
+    '',
+    '*Appointment Details*',
+    '------------------------',
+    `Appointment No: ${order.dailyOrderNumber ?? appointmentNo(order)}`,
+    withWhom ? `${withWhom.label}: ${withWhom.value}` : null,
+    order.appointmentDate ? `Date: ${formatAppointmentDate(order.appointmentDate)}` : null,
+    order.appointmentTime ? `Time: ${formatSlot(order.appointmentTime)}` : null,
+    ...(services.length
+      ? ['Services:', ...services.map((item) => `- ${item.quantity || 1}x ${item.name}${item.variation && item.variation !== 'Standard' ? ` (${item.variation})` : ''} \u2014 ${money(Number(item.price || 0) * Number(item.quantity || 1))}`)]
+      : []),
+    `Total: ${money(total)}`,
+    payment,
+    '------------------------',
+    `Please arrive 10 minutes before your time.${withPdf ? ' Your slip is attached.' : ''}`,
+    settings.receiptContact ? String(settings.receiptContact) : null,
+    settings.receiptAddress ? String(settings.receiptAddress) : null,
+    clinic,
+  ];
+  return lines.filter((line): line is string => line !== null).join('\n');
 }
 
 // Appointment on WhatsApp: a confirmation text, then (on payment, or when
