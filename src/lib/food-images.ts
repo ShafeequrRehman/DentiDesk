@@ -199,6 +199,16 @@ const KEYWORD_GROUPS: Array<{ keywords: string[]; photo: string }> = [
  * keyword groups above; (4) a generic appetizing food photo as the last
  * resort so nothing ever renders as a blank box.
  */
+// No photo added yet: a WhatsApp-style "no DP" placeholder - a grey
+// person for a Dr, a grey tooth for a Service - instead of a random photo.
+const DR_PLACEHOLDER = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#DFE5E7"/><circle cx="100" cy="78" r="38" fill="#FFFFFF"/><path d="M28 200c0-46 32-74 72-74s72 28 72 74z" fill="#FFFFFF"/></svg>')}`;
+const SERVICE_PLACEHOLDER = `data:image/svg+xml;utf8,${encodeURIComponent('<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 200 200"><rect width="200" height="200" fill="#DFE5E7"/><path d="M100 52c-12-10-30-14-44-6-16 9-19 30-14 50 4 16 6 33 9 50 2 12 6 22 14 22 9 0 11-12 14-24 3-12 8-22 21-22s18 10 21 22c3 12 5 24 14 24 8 0 12-10 14-22 3-17 5-34 9-50 5-20 2-41-14-50-14-8-32-4-44 6z" fill="#FFFFFF"/></svg>')}`;
+
+export function placeholderImage(input: { name?: string; category?: string }): string {
+  const isDr = /\b(drs?|doctors?)\b/i.test(input.category || '') || /^dr\.?\s/i.test(input.name || '');
+  return isDr ? DR_PLACEHOLDER : SERVICE_PLACEHOLDER;
+}
+
 export function resolveProductImage(input: { image?: string | null; name?: string; category?: string }): string {
   const raw = (input.image || "").trim();
 
@@ -210,15 +220,8 @@ export function resolveProductImage(input: { image?: string | null; name?: strin
     if (ICON_FILE_TO_PHOTO[filename]) return ICON_FILE_TO_PHOTO[filename];
   }
 
-  const haystack = `${input.name ?? ""} ${input.category ?? ""}`.toLowerCase();
-  for (const group of KEYWORD_GROUPS) {
-    if (group.keywords.some((keyword) => haystack.includes(keyword))) return group.photo;
-  }
-
-  // Terminal fallback: this app is a fertilizer/agriculture shop, not a
-  // restaurant, so an unmatched product shows a generic fertilizer-bag icon
-  // instead of a random plated-food photo.
-  return PHOTOS.fertilizerBag;
+  // Clinic: no photo yet -> the "no DP" placeholder (never a guessed photo).
+  return placeholderImage(input);
 }
 
 /**

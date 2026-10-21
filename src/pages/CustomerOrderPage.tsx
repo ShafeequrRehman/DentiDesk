@@ -3,6 +3,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { ShoppingCart, Plus, X, CheckCircle2, AlertCircle, MapPin, Download, UtensilsCrossed, Share, RotateCcw, Edit3, Clock, Check, Bike, Phone, Heart, Quote, Star } from 'lucide-react';
 import { getProductImageUrl } from '@/lib/asset-path';
+import { placeholderImage } from '@/lib/food-images';
 import {
   createPublicOrder,
   fetchPublicBookedSlots,
@@ -265,11 +266,7 @@ function VariationPickerSheet({ group, onSelect, onClose }: { group: ProductGrou
       <div className="glass-strong w-full max-w-sm rounded-t-[28px] p-6 sm:rounded-[28px]" onClick={(event) => event.stopPropagation()}>
         <div className="mb-4 flex items-center gap-3">
           <div className={`h-14 w-14 shrink-0 overflow-hidden rounded-[16px] shadow-inner ${group.color || 'bg-indigo-50'} p-2`}>
-            {getProductImageUrl(group.image) ? (
-              <img src={getProductImageUrl(group.image)} alt={group.name} className="h-full w-full object-contain" />
-            ) : (
-              <UtensilsCrossed className="h-full w-full text-black/30" strokeWidth={1.5} />
-            )}
+            <img src={getProductImageUrl(group.image) || placeholderImage(group)} alt={group.name} className="h-full w-full object-contain" />
           </div>
           <div className="min-w-0">
             <h3 className="truncate text-lg font-black text-gray-900">{group.name}</h3>
@@ -1388,7 +1385,8 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
             : 0;
           const pricedOptions = group.variations.filter((v) => !v.priceHidden);
           const cheapest = pricedOptions.length ? Math.min(...pricedOptions.map((v) => v.price)) : 0;
-          const imageUrl = getProductImageUrl(group.image);
+          // No photo added -> the "no DP" placeholder (person / tooth).
+          const imageUrl = getProductImageUrl(group.image) || placeholderImage(group);
           return (
             <div key={group.key} className="rounded-[20px] border-[0.5px] border-white/50 bg-gradient-to-br from-white/70 to-white/30 p-3 backdrop-blur-xl backdrop-saturate-150 shadow-[inset_0_1px_0_rgba(255,255,255,0.9),inset_0_-3px_8px_rgba(15,23,42,0.12)] transition hover:-translate-y-0.5">
               {/* Same colored icon tile POSPage.tsx's own product grid uses
