@@ -972,6 +972,8 @@ export interface OrderPayload {
   diagnosis?: string;
   checkedAt?: string | null;
   checkedBy?: string;
+  // How many pictures the Dr attached to the prescription.
+  prescriptionImageCount?: number;
   // No longer settable when creating an order (Dining Tables removed from
   // the POS order flow) - stays optional for backward compatibility with
   // historical Dine-In orders that already have one saved.

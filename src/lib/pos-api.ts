@@ -1156,12 +1156,45 @@ export async function fetchAppointments(query: AppointmentQuery) {
 
 // done:true marks the checkup complete (frees the slot) and saves the
 // medicine details; done:false re-opens it.
-export async function saveCheckup(id: string, prescription: string, done = true, diagnosis?: string) {
+export async function saveCheckup(id: string, prescription: string, done = true, diagnosis?: string, saveOnly = false) {
   try {
-    const response = await api.patch<SavedOrder & { _id?: string; stockWarning?: string | null }>(`/orders/${id}/checkup`, { prescription, done, ...(diagnosis !== undefined ? { diagnosis } : {}) });
+    const response = await api.patch<SavedOrder & { _id?: string; stockWarning?: string | null }>(`/orders/${id}/checkup`, { prescription, done, ...(saveOnly ? { saveOnly: true } : {}), ...(diagnosis !== undefined ? { diagnosis } : {}) });
     // stockWarning: set when a medicine ran short while taking this
     // appointment's medicines off Medicine Stock.
     return Object.assign(normalizeOrder(response.data), { stockWarning: response.data.stockWarning ?? null });
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+// Pictures attached to a prescription (X-ray, report...).
+export interface PrescriptionImage {
+  id: string;
+  data: string;
+}
+
+export async function fetchPrescriptionImages(orderId: string) {
+  try {
+    const response = await api.get<{ images: PrescriptionImage[] }>(`/orders/${orderId}/prescription-images`);
+    return response.data.images || [];
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function addPrescriptionImage(orderId: string, data: string) {
+  try {
+    const response = await api.post<PrescriptionImage>(`/orders/${orderId}/prescription-images`, { data });
+    return response.data;
+  } catch (error) {
+    handleApiError(error);
+  }
+}
+
+export async function removePrescriptionImage(orderId: string, imageId: string) {
+  try {
+    await api.delete(`/orders/${orderId}/prescription-images/${imageId}`);
+    return true;
   } catch (error) {
     handleApiError(error);
   }

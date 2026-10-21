@@ -42,7 +42,7 @@ function Info({ label, value }: { label: string; value: string }) {
   );
 }
 
-export function PrescriptionPdf({ order, qr }: { order: SavedOrder; qr?: string | null }) {
+export function PrescriptionPdf({ order, qr, images = [] }: { order: SavedOrder; qr?: string | null; images?: string[] }) {
   const settings = getStoreSettings();
   const data = prescriptionData(order);
   const links = socialLinks(settings);
@@ -105,6 +105,17 @@ export function PrescriptionPdf({ order, qr }: { order: SavedOrder; qr?: string 
         ) : (
           <Text style={{ color: '#6b7280', marginTop: 6 }}>-</Text>
         )}
+
+        {images.length ? (
+          <View style={{ marginTop: 14 }}>
+            <Text style={styles.sectionTitle}>ATTACHMENTS</Text>
+            <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
+              {images.map((src, i) => (
+                <Image key={i} src={src} style={{ width: 250, maxHeight: 260, objectFit: 'contain', marginRight: 8, marginBottom: 8 }} />
+              ))}
+            </View>
+          </View>
+        ) : null}
 
         <View style={styles.sign}>
           <Text style={{ fontSize: 9, textAlign: 'center', color: '#374151' }}>Doctor&apos;s Signature</Text>

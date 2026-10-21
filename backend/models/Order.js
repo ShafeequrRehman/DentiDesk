@@ -181,6 +181,17 @@ const orderSchema = new mongoose.Schema(
     prescription: { type: String, default: "" },
     // What the Dr found - the disease/problem (e.g. "Tooth decay, lower left molar").
     diagnosis: { type: String, default: "" },
+    // Pictures the Dr attached to the prescription (X-ray, report...) -
+    // small JPEG data URLs, shown under the medicine details on the
+    // prescription. Loaded only when opened (not in appointment lists).
+    prescriptionImages: {
+      type: [{ data: { type: String, required: true }, addedAt: { type: Date, default: Date.now } }],
+      default: [],
+      // Never loaded by ordinary order queries (lists stay light) - only by
+      // the prescription-images endpoints (`+prescriptionImages`).
+      select: false,
+    },
+    prescriptionImageCount: { type: Number, default: 0 },
     checkedAt: { type: Date, default: null },
     checkedBy: { type: String, default: "" },
     status: { type: String, enum: ["pending", "completed", "cancelled", "paid"], default: "pending" },

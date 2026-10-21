@@ -21,6 +21,9 @@ const {
   respondToChangeRequest,
   getAppointments,
   completeCheckup,
+  getPrescriptionImages,
+  addPrescriptionImage,
+  removePrescriptionImage,
 } = require("../controllers/orderController");
 
 const router = express.Router();
@@ -80,6 +83,10 @@ router.patch("/:id", requireAnyPermission("sales.create", "sales.edit"), updateO
 // Print-claim endpoints - till-level, left ungated, see canReadOrders' comment.
 router.patch("/:id/claim-receipt-print", claimReceiptPrint);
 router.patch("/:id/checkup", requireAnyPermission("sales.create", "sales.edit", "orders.record.view"), completeCheckup);
+// Pictures attached to the prescription.
+router.get("/:id/prescription-images", requireAnyPermission("sales.create", "sales.edit", "orders.record.view"), getPrescriptionImages);
+router.post("/:id/prescription-images", requireAnyPermission("sales.create", "sales.edit", "orders.record.view"), addPrescriptionImage);
+router.delete("/:id/prescription-images/:imageId", requireAnyPermission("sales.create", "sales.edit", "orders.record.view"), removePrescriptionImage);
 router.patch("/:id/tracking-status", requireAnyPermission("sales.create", "sales.edit"), updateTrackingStatus);
 router.patch("/:id/assign-rider", requireAnyPermission("sales.create", "sales.edit"), assignRider);
 router.patch("/:id/change-request", requireAnyPermission("sales.create", "sales.edit"), respondToChangeRequest);

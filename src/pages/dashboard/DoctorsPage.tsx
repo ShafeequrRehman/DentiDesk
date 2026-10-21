@@ -10,14 +10,14 @@
 // Services tab: every other Drs/Services item, with its price.
 import { cs } from '@/lib/currency';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
-import { Building2, CalendarDays, CheckCircle2, Globe, Wallet, ClipboardList, Clock, Phone, Printer, RefreshCcw, RotateCcw, Search, Stethoscope, Undo2, UserRound, X, MessageCircle } from 'lucide-react';
-import { fetchProducts, saveCheckup } from '@/lib/pos-api';
+import { Building2, CalendarDays, CheckCircle2, Globe, Wallet, ClipboardList, Clock, Phone, Printer, RefreshCcw, RotateCcw, Search, Stethoscope, Undo2, UserRound, X, MessageCircle, ImagePlus, Loader2, Save, Paperclip } from 'lucide-react';
+import { addPrescriptionImage, fetchPrescriptionImages, fetchProducts, removePrescriptionImage, saveCheckup, type PrescriptionImage } from '@/lib/pos-api';
 import type { Product, SavedOrder } from '@/lib/pos-types';
 import { getReferenceData } from '@/lib/local-hub-api';
 import { isDesktopApp } from '@/lib/api';
 import { resolveProductImage } from '@/lib/food-images';
 import { useToast } from '@/lib/toast';
-import { formatAppointmentDate, formatSlot, isDoctorProduct, loadAppointments, printPrescription, todayISO } from '@/lib/appointments';
+import { formatAppointmentDate, formatSlot, isDoctorProduct, loadAppointments, printPrescriptionWithImages, todayISO } from '@/lib/appointments';
 import { useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { sendPrescriptionSlip, slipPhoneProblem } from '@/lib/whatsapp-slips';
 
@@ -84,6 +84,8 @@ export default function DoctorsPage() {
   const [date, setDate] = useState(() => todayISO());
   const [showUpcoming, setShowUpcoming] = useState(false);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>('all');
+  // Find a patient in this Dr's list - name, phone or appointment number.
+  const [patientSearch, setPatientSearch] = useState('');
   const [appointments, setAppointments] = useState<SavedOrder[]>([]);
   const [appointmentsLoading, setAppointmentsLoading] = useState(false);
   const [fromCache, setFromCache] = useState(false);
@@ -193,10 +195,21 @@ export default function DoctorsPage() {
   }, [selectedDoctor, loadDoctorAppointments]);
 
   const filteredAppointments = useMemo(() => {
-    if (statusFilter === 'all') return appointments;
-    if (statusFilter === 'done') return appointments.filter((a) => a.checkupStatus === 'done');
-    return appointments.filter((a) => a.checkupStatus !== 'done');
-  }, [appointments, statusFilter]);
+    const byStatus = statusFilter === 'all'
+      ? appointments
+      : statusFilter === 'done'
+        ? appointments.filter((a) => a.checkupStatus === 'done')
+        : appointments.filter((a) => a.checkupStatus !== 'done');
+    const q = patientSearch.trim().toLowerCase();
+    if (!q) return byStatus;
+    const digits = q.replace(/\D/g, '');
+    return byStatus.filter((a) => {
+      const no = String(a.dailyOrderNumber ?? '');
+      return (a.customer?.name || '').toLowerCase().includes(q)
+        || (digits.length >= 3 && (a.customer?.phone || '').includes(digits))
+        || (digits && (no === digits || no.padStart(3, '0') === digits.padStart(3, '0')));
+    });
+  }, [appointments, statusFilter, patientSearch]);
 
   const waitingCount = appointments.filter((a) => a.checkupStatus !== 'done').length;
   const doneCount = appointments.length - waitingCount;
@@ -357,6 +370,19 @@ export default function DoctorsPage() {
                   ))}
                 </div>
 
+                <div className="relative">
+                  <Search size={15} className="absolute left-3.5 top-1/2 -translate-y-1/2 text-gray-400" />
+                  <input
+                    value={patientSearch}
+                    onChange={(event) => setPatientSearch(event.target.value)}
+                    placeholder="Search patient - name, phone or appointment #"
+                    className="w-full rounded-2xl border border-gray-200 bg-gray-50 py-2.5 pl-10 pr-9 text-sm font-semibold outline-none focus:border-indigo-400"
+                  />
+                  {patientSearch ? (
+                    <button type="button" onClick={() => setPatientSearch('')} className="absolute right-2.5 top-1/2 -translate-y-1/2 rounded-full p-1 text-gray-400 hover:bg-gray-200"><X size={14} /></button>
+                  ) : null}
+                </div>
+
                 {fromCache ? (
                   <p className="rounded-xl bg-amber-50 px-3 py-2 text-xs font-bold text-amber-700">
                     {typeof navigator !== 'undefined' && navigator.onLine
@@ -459,7 +485,7 @@ function AppointmentRow({ order, showDate, offline, onCheckup, onReopen }: { ord
           <>
             <span className="flex items-center gap-1 rounded-full bg-emerald-100 px-3 py-1 text-[11px] font-black text-emerald-700"><CheckCircle2 size={13} />Checked</span>
             <button type="button" onClick={onCheckup} disabled={offline} className="rounded-xl bg-gray-100 px-3 py-2 text-xs font-black text-gray-700 hover:bg-gray-200 disabled:opacity-50">View / Edit</button>
-            <button type="button" onClick={() => printPrescription(order)} className="flex items-center gap-1 rounded-xl bg-gray-100 px-3 py-2 text-xs font-black text-gray-700 hover:bg-gray-200"><Printer size={13} />Print</button>
+            <button type="button" onClick={() => void printPrescriptionWithImages(order)} className="flex items-center gap-1 rounded-xl bg-gray-100 px-3 py-2 text-xs font-black text-gray-700 hover:bg-gray-200"><Printer size={13} />Print</button>
             <button type="button" onClick={() => void whatsappPrescription(order, toast)} title="Send the prescription on WhatsApp" className="flex items-center gap-1 rounded-xl bg-[#25D366] px-3 py-2 text-xs font-black text-white hover:brightness-95"><MessageCircle size={13} />WhatsApp</button>
             <button type="button" onClick={onReopen} disabled={offline} title="Mark as not checked - books this time slot again" className="flex items-center gap-1 rounded-xl bg-gray-100 px-3 py-2 text-xs font-black text-gray-500 hover:bg-gray-200 disabled:opacity-50"><Undo2 size={13} />Uncheck</button>
           </>
@@ -488,7 +514,77 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
   const [diagnosis, setDiagnosis] = useState(order.diagnosis || '');
   const [saving, setSaving] = useState(false);
   const alreadyDone = order.checkupStatus === 'done';
-  useBackspaceToClose(onClose);
+
+  // Pictures on the prescription (X-ray, report...). Each one is saved to
+  // the appointment as soon as it is attached.
+  const [images, setImages] = useState<PrescriptionImage[]>([]);
+  const [imagesLoading, setImagesLoading] = useState((order.prescriptionImageCount || 0) > 0);
+  const [uploading, setUploading] = useState(false);
+  const fileRef = useRef<HTMLInputElement>(null);
+  useEffect(() => {
+    if (!(order.prescriptionImageCount || 0)) return;
+    let cancelled = false;
+    fetchPrescriptionImages(order.id)
+      .then((list) => { if (!cancelled) setImages(list || []); })
+      .catch(() => undefined)
+      .finally(() => { if (!cancelled) setImagesLoading(false); });
+    return () => { cancelled = true; };
+  }, [order.id, order.prescriptionImageCount]);
+
+  // Closing keeps the row's picture count right (pictures save instantly).
+  function close() {
+    if (!imagesLoading && images.length !== (order.prescriptionImageCount || 0)) onSaved({ ...order, prescriptionImageCount: images.length });
+    else onClose();
+  }
+  useBackspaceToClose(close);
+
+  async function attach(files: FileList | null) {
+    const list = Array.from(files || []).filter((file) => file.type.startsWith('image/'));
+    if (!list.length) return;
+    setUploading(true);
+    try {
+      for (const file of list) {
+        if (images.length >= 6) {
+          toast.error('Up to 6 pictures per prescription.');
+          break;
+        }
+        const data = await shrinkToJpeg(file);
+        const saved = await addPrescriptionImage(order.id, data);
+        if (saved) setImages((prev) => [...prev, saved]);
+      }
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not attach the picture.');
+    } finally {
+      setUploading(false);
+      if (fileRef.current) fileRef.current.value = '';
+    }
+  }
+
+  async function detach(image: PrescriptionImage) {
+    try {
+      await removePrescriptionImage(order.id, image.id);
+      setImages((prev) => prev.filter((img) => img.id !== image.id));
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not remove the picture.');
+    }
+  }
+
+  // Save only: keep the diagnosis / medicines (a draft) - the checkup is
+  // NOT completed, the slot stays booked, no stock is taken.
+  async function saveDraft() {
+    if (saving) return;
+    setSaving(true);
+    try {
+      const updated = await saveCheckup(order.id, prescription.trim(), true, diagnosis.trim(), true);
+      if (!updated) throw new Error('Could not save.');
+      toast.success('Prescription saved.');
+      onSaved({ ...order, ...updated, diagnosis: diagnosis.trim(), prescription: prescription.trim(), prescriptionImageCount: images.length });
+    } catch (error) {
+      toast.error(error instanceof Error ? error.message : 'Could not save.');
+    } finally {
+      setSaving(false);
+    }
+  }
 
   async function submit(print: boolean, whatsapp = false) {
     if (saving) return;
@@ -497,8 +593,8 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
       const updated = await saveCheckup(order.id, prescription.trim(), true, diagnosis.trim());
       if (!updated) throw new Error('Could not save this checkup.');
       // Keep what the Dr just typed on the slip even if the server copy lags behind.
-      const merged = { ...order, ...updated, diagnosis: updated.diagnosis ?? diagnosis.trim(), prescription: updated.prescription ?? prescription.trim() };
-      if (print && !printPrescription(merged)) {
+      const merged = { ...order, ...updated, diagnosis: updated.diagnosis ?? diagnosis.trim(), prescription: updated.prescription ?? prescription.trim(), prescriptionImageCount: images.length };
+      if (print && !(await printPrescriptionWithImages(merged, images.map((img) => img.data)))) {
         toast.error('The print window was blocked - allow pop-ups for this app, then use Print.');
       }
       toast.success(alreadyDone
@@ -517,7 +613,7 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
   const phone = order.customer?.phone && order.customer.phone !== '03000000000' ? order.customer.phone : '';
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={onClose}>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={close}>
       <div className="w-full max-w-2xl rounded-[32px] bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
@@ -528,7 +624,7 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
               {phone ? ` · ${phone}` : ''} · #{String(order.dailyOrderNumber ?? order.id.slice(-3)).padStart(3, '0')}
             </p>
           </div>
-          <button type="button" onClick={onClose} className="rounded-full bg-gray-100 p-2 text-gray-500 hover:bg-gray-200"><X size={16} /></button>
+          <button type="button" onClick={close} className="rounded-full bg-gray-100 p-2 text-gray-500 hover:bg-gray-200"><X size={16} /></button>
         </div>
 
         <div className="mb-3 flex flex-wrap gap-1.5">
@@ -557,8 +653,38 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
           className="w-full resize-y rounded-2xl border border-gray-200 bg-[#FFFDF5] p-4 font-mono text-sm leading-6 text-gray-800 outline-none focus:border-indigo-400"
         />
 
+        {/* Attached pictures - printed under the medicine details */}
+        <div className="mt-3 rounded-2xl border border-dashed border-gray-200 p-3">
+          <div className="flex flex-wrap items-center justify-between gap-2">
+            <p className="flex items-center gap-1.5 text-xs font-black uppercase tracking-widest text-gray-400"><Paperclip size={13} /> Attach pictures (X-ray, report...)</p>
+            <input ref={fileRef} type="file" accept="image/*" multiple className="hidden" onChange={(event) => void attach(event.target.files)} />
+            <button type="button" disabled={uploading || images.length >= 6} onClick={() => fileRef.current?.click()} className="flex items-center gap-1.5 rounded-xl bg-indigo-50 px-3 py-2 text-xs font-black text-indigo-700 hover:bg-indigo-100 disabled:opacity-50">
+              {uploading ? <Loader2 size={14} className="animate-spin" /> : <ImagePlus size={14} />} {uploading ? 'Attaching...' : 'Add picture'}
+            </button>
+          </div>
+          {imagesLoading ? (
+            <p className="mt-2 text-xs font-bold text-gray-400">Loading pictures...</p>
+          ) : images.length ? (
+            <div className="mt-3 grid grid-cols-3 gap-2 sm:grid-cols-6">
+              {images.map((img) => (
+                <div key={img.id} className="group relative aspect-square overflow-hidden rounded-xl bg-gray-100 ring-1 ring-gray-200">
+                  <img src={img.data} alt="" className="h-full w-full object-cover" />
+                  <button type="button" title="Remove" onClick={() => void detach(img)} className="absolute right-1 top-1 rounded-full bg-white/90 p-1 text-rose-600 shadow hover:bg-white"><X size={12} /></button>
+                </div>
+              ))}
+            </div>
+          ) : (
+            <p className="mt-2 text-[11px] font-semibold text-gray-400">Pictures show on the prescription, under the medicine details (print and WhatsApp).</p>
+          )}
+        </div>
+
         <div className="mt-4 flex flex-wrap justify-end gap-2">
-          <button type="button" onClick={onClose} className="rounded-2xl bg-gray-100 px-4 py-3 text-sm font-black text-gray-600 hover:bg-gray-200">Cancel</button>
+          <button type="button" onClick={close} className="rounded-2xl bg-gray-100 px-4 py-3 text-sm font-black text-gray-600 hover:bg-gray-200">Cancel</button>
+          {alreadyDone ? null : (
+            <button type="button" disabled={saving} onClick={() => void saveDraft()} className="flex items-center gap-2 rounded-2xl bg-indigo-600 px-4 py-3 text-sm font-black text-white hover:bg-indigo-700 disabled:opacity-60">
+              <Save size={16} /> Save
+            </button>
+          )}
           <button type="button" disabled={saving} onClick={() => void submit(false)} className="flex items-center gap-2 rounded-2xl bg-emerald-600 px-4 py-3 text-sm font-black text-white hover:bg-emerald-700 disabled:opacity-60">
             {alreadyDone ? <RotateCcw size={16} /> : <CheckCircle2 size={16} />} {alreadyDone ? 'Save' : 'Complete Checkup'}
           </button>
@@ -607,4 +733,30 @@ function ServicesList({ services, loading }: { services: Product[]; loading: boo
       )}
     </section>
   );
+}
+
+// Phone photos are big - shrink to at most 1400px JPEG before attaching.
+function shrinkToJpeg(file: File): Promise<string> {
+  return new Promise((resolve, reject) => {
+    const url = URL.createObjectURL(file);
+    const img = new Image();
+    img.onerror = () => {
+      URL.revokeObjectURL(url);
+      reject(new Error('This file is not a picture.'));
+    };
+    img.onload = () => {
+      URL.revokeObjectURL(url);
+      const scale = Math.min(1, 1400 / Math.max(img.width, img.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(img.width * scale);
+      canvas.height = Math.round(img.height * scale);
+      const ctx = canvas.getContext('2d');
+      if (!ctx) return reject(new Error('Could not prepare the picture.'));
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(img, 0, 0, canvas.width, canvas.height);
+      resolve(canvas.toDataURL('image/jpeg', 0.82));
+    };
+    img.src = url;
+  });
 }

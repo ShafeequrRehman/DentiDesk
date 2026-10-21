@@ -31,7 +31,8 @@ export function prescriptionData(order: SavedOrder) {
   };
 }
 
-export function buildPrescriptionA4Html(order: SavedOrder) {
+// images: pictures the Dr attached (data URLs) - printed under the medicines.
+export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []) {
   const settings = getStoreSettings();
   const data = prescriptionData(order);
   const logo = typeof window === 'undefined' ? null : window.localStorage.getItem(PRINT_LOGO_STORAGE_KEY);
@@ -66,6 +67,10 @@ export function buildPrescriptionA4Html(order: SavedOrder) {
     .rx { flex: 1; margin-top: 16px; }
     .rx .sym { font-family: Georgia, 'Times New Roman', serif; font-size: 44px; font-weight: 700; color: #0e7490; line-height: 1; }
     .rx ol { margin: 10px 0 0 6px; padding-left: 20px; font-size: 15px; line-height: 1.9; }
+    .attach { margin-top: 14px; }
+    .attach h3 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #0e7490; margin: 0 0 6px; }
+    .attach .grid { display: flex; flex-wrap: wrap; gap: 8px; }
+    .attach img { max-width: calc(50% - 4px); max-height: 95mm; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 6px; page-break-inside: avoid; }
     .sign { display: flex; justify-content: flex-end; margin-top: 30px; }
     .sign div { width: 220px; border-top: 1px solid #111827; text-align: center; padding-top: 4px; font-size: 12px; color: #374151; }
     .foot { margin-top: 18px; padding-top: 10px; border-top: 1px dashed #9ca3af; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
@@ -107,6 +112,8 @@ export function buildPrescriptionA4Html(order: SavedOrder) {
       <div class="sym">&#8478;</div>
       ${data.rxLines.length ? `<ol>${data.rxLines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ol>` : '<p style="font-size:14px;color:#6b7280">-</p>'}
     </div>
+
+    ${images.length ? `<div class="attach"><h3>Attachments</h3><div class="grid">${images.map((src) => `<img src="${src}" alt="" />`).join('')}</div></div>` : ''}
 
     <div class="sign"><div>Doctor's Signature</div></div>
 

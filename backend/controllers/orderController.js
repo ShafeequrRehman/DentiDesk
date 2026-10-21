@@ -2084,7 +2084,7 @@ exports.getAppointments = async (req, res) => {
     else if (status === "waiting") query.checkupStatus = { $ne: "done" };
 
     const orders = await Order.find(query)
-      .select("dailyOrderNumber shopSequenceNumber customer note items total paidAmount remainingAmount status orderType source paymentStatus paymentMethod appointmentDate appointmentTime doctorName checkupStatus prescription diagnosis checkedAt checkedBy createdAt")
+      .select("dailyOrderNumber shopSequenceNumber customer note items total paidAmount remainingAmount status orderType source paymentStatus paymentMethod appointmentDate appointmentTime doctorName checkupStatus prescription diagnosis checkedAt checkedBy createdAt prescriptionImageCount")
       .sort({ appointmentDate: 1, appointmentTime: 1 })
       .limit(500)
       .lean();
@@ -2107,6 +2107,8 @@ exports.completeCheckup = async (req, res) => {
     if (order.status === "cancelled") {
       return res.status(400).json({ error: "This appointment was cancelled." });
     }
+    // saveOnly: just keep what the Dr typed (draft) - no checkup status change.
+    const saveOnly = req.body?.saveOnly === true;
     const done = req.body?.done !== false;
     if (typeof req.body?.prescription === "string") {
       order.prescription = req.body.prescription.slice(0, 5000);
@@ -2115,7 +2117,9 @@ exports.completeCheckup = async (req, res) => {
       order.diagnosis = req.body.diagnosis.trim().slice(0, 1000);
     }
     let stockWarning = null;
-    if (done) {
+    if (saveOnly) {
+      // nothing else changes
+    } else if (done) {
       order.checkupStatus = "done";
       order.checkedAt = new Date();
       order.checkedBy = await currentUserDisplayName(req);
@@ -2140,3 +2144,64 @@ exports.completeCheckup = async (req, res) => {
   }
 };
 
+// --- Prescription pictures (Drs & Services checkup pad) -------------------
+const MAX_PRESCRIPTION_IMAGES = 6;
+
+async function findCheckupOrder(req, res) {
+  const order = await Order.findOne({ _id: req.params.id, ...buildShopScope(req) }).select("+prescriptionImages");
+  if (!order) {
+    res.status(404).json({ error: "Appointment not found" });
+    return null;
+  }
+  if (req.user?.linkedDoctor && order.doctorName !== req.user.linkedDoctor) {
+    res.status(403).json({ error: "This appointment belongs to another Dr." });
+    return null;
+  }
+  return order;
+}
+
+// GET /orders/:id/prescription-images
+exports.getPrescriptionImages = async (req, res) => {
+  try {
+    const order = await findCheckupOrder(req, res);
+    if (!order) return;
+    res.json({ images: (order.prescriptionImages || []).map((img) => ({ id: String(img._id), data: img.data })) });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// POST /orders/:id/prescription-images  body: { data: "data:image/jpeg;base64,..." }
+exports.addPrescriptionImage = async (req, res) => {
+  try {
+    const order = await findCheckupOrder(req, res);
+    if (!order) return;
+    const data = String(req.body?.data || "");
+    if (!/^data:image\/(jpeg|png|webp);base64,/i.test(data)) return res.status(400).json({ error: "Attach a picture (JPG, PNG or WEBP)." });
+    if (data.length > 3000000) return res.status(400).json({ error: "This picture is too large - pick a smaller one." });
+    if ((order.prescriptionImages || []).length >= MAX_PRESCRIPTION_IMAGES) {
+      return res.status(400).json({ error: `Up to ${MAX_PRESCRIPTION_IMAGES} pictures per prescription.` });
+    }
+    order.prescriptionImages.push({ data });
+    order.prescriptionImageCount = order.prescriptionImages.length;
+    await order.save();
+    const added = order.prescriptionImages[order.prescriptionImages.length - 1];
+    res.status(201).json({ id: String(added._id), data: added.data });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
+
+// DELETE /orders/:id/prescription-images/:imageId
+exports.removePrescriptionImage = async (req, res) => {
+  try {
+    const order = await findCheckupOrder(req, res);
+    if (!order) return;
+    order.prescriptionImages = (order.prescriptionImages || []).filter((img) => String(img._id) !== String(req.params.imageId));
+    order.prescriptionImageCount = order.prescriptionImages.length;
+    await order.save();
+    res.json({ ok: true });
+  } catch (error) {
+    res.status(500).json({ error: error.message });
+  }
+};
