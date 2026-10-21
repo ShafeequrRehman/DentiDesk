@@ -67,8 +67,8 @@ export function PrescriptionPdf({ order, qr, images = [], workAs = '' }: { order
               {contact ? <Text style={styles.sub}>{contact}</Text> : null}
             </View>
           </View>
-          <View style={{ maxWidth: '42%' }}>
-            <Text style={styles.docLabel}>{data.withLabel.toUpperCase()}</Text>
+          <View style={{ maxWidth: '42%', alignSelf: 'stretch', borderLeftWidth: 2, borderColor: TEAL, paddingLeft: 12 }}>
+            {data.withLabel === 'Dr' ? null : <Text style={styles.docLabel}>{data.withLabel.toUpperCase()}</Text>}
             <Text style={styles.docName}>{data.withName || '-'}</Text>
             {workAs.trim()
               ? workAs.trim().split('\n').map((line, i) => (

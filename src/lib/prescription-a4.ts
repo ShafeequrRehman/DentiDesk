@@ -56,7 +56,8 @@ export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []
     .brand img { max-height: 80px; max-width: 140px; object-fit: contain; }
     .clinic { font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #0e7490; margin: 0; }
     .sub { font-size: 12px; color: #4b5563; margin: 2px 0 0; }
-    .doc { text-align: right; flex-shrink: 0; max-width: 42%; }
+    /* Vertical separator between the clinic and the Dr */
+    .doc { text-align: right; flex-shrink: 0; max-width: 42%; align-self: stretch; border-left: 2px solid #0e7490; padding-left: 16px; }
     .doc .label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #6b7280; }
     .doc .name { font-size: 22px; line-height: 1.1; font-weight: 800; color: #0f172a; }
     .doc .work { margin-top: 4px; font-size: 11.5px; line-height: 1.45; color: #374151; white-space: pre-line; }
@@ -96,7 +97,7 @@ export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []
         </div>
       </div>
       <div class="doc">
-        <div class="label">${data.withLabel}</div>
+        ${data.withLabel === 'Dr' ? '' : `<div class="label">${data.withLabel}</div>`}
         <div class="name">${escapeHtml(data.withName || '-')}</div>
         ${workAs.trim() ? `<div class="work">${workAsHtml(workAs)}</div>` : ''}
         <div class="no">Appointment #${data.appointmentNo}</div>
