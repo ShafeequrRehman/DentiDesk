@@ -15,6 +15,16 @@ const { categoryLookup, itemPriceHidden, anyPriceHiddenSetting } = require("./on
 
 const WALKIN_PLACEHOLDER_PHONE = "03000000000";
 
+// Settings > Manage Receipt (saved per clinic) - the same contact numbers
+// and address the slips print; the profile phone/address only as a fallback.
+function clinicPhones(shop) {
+  return String(shop?.receiptSettings?.receiptContact || shop?.phone || "").trim();
+}
+
+function clinicAddress(shop) {
+  return String(shop?.receiptSettings?.receiptAddress || shop?.address || "").trim();
+}
+
 function hasRealPhone(order) {
   const phone = order?.customer?.phone;
   return Boolean(phone && phone !== WALKIN_PLACEHOLDER_PHONE);
@@ -40,7 +50,7 @@ function formatItems(items, C = "$", isHidden = () => false) {
   const lines = (items || []).map((item) => {
     const qty = Number(item.quantity) || 0;
     const lineTotal = formatMoney((Number(item.price) || 0) * qty);
-    const variation = item.variation ? ` (${item.variation})` : "";
+    const variation = item.variation && item.variation !== "Standard" ? ` (${item.variation})` : "";
     return isHidden(item) ? `- ${qty}x ${item.name}${variation}` : `- ${qty}x ${item.name}${variation} — ${C}${lineTotal}`;
   });
   return lines.join("\n") || "-";
@@ -88,16 +98,19 @@ function buildAppointmentConfirmedMessage(order, shop, isHidden = () => false) {
     order.doctorName ? `${forLabel}: ${order.doctorName}` : null,
     order.appointmentDate ? `Date: ${formatSlotDate(order.appointmentDate)}` : null,
     order.appointmentTime ? `Time: ${formatSlotTime(order.appointmentTime)}` : null,
-    `Services:`,
-    formatItems(order.items, C, isHidden),
+    ...(() => {
+      // What the appointment is for - the Dr line itself is not a service.
+      const services = (order.items || []).filter((item) => item.name !== order.doctorName);
+      return services.length ? [`Services:`, formatItems(services, C, isHidden)] : [];
+    })(),
     hideMoney ? null : `Total: ${C}${formatMoney(order.total)}`,
     hideMoney
       ? `Payment: ${Number(order.remainingAmount || 0) > 0 ? "at the clinic" : "Paid"}`
       : `Payment: ${Number(order.remainingAmount || 0) > 0 ? `${C}${formatMoney(order.remainingAmount)} to pay at the clinic` : "Paid"}`,
     `------------------------`,
     `Please arrive 10 minutes before your time.`,
-    `${shop?.phone || ""}`,
-    `${shop?.address || ""}`,
+    `${clinicPhones(shop)}`,
+    `${clinicAddress(shop)}`,
     `${shopName}`,
   ]
     .filter((line) => line !== null)
@@ -128,8 +141,8 @@ function buildOrderPlacedMessage(order, shop, isHidden = () => false) {
     `Appointment Status: Processing`,
     `We appreciate your trust in ${shopName} and will keep you updated about your appointment.`,
     `Thank you for choosing us!`,
-    `${shop?.phone || "-"}`,
-    `${shop?.address || "-"}`,
+    `${clinicPhones(shop) || "-"}`,
+    `${clinicAddress(shop) || "-"}`,
     `${shopName}`,
     `Quality - Trust - Service`,
   ]
@@ -163,8 +176,8 @@ function buildOrderCompletedMessage(order, shop) {
     `Appointment Status: Completed`,
     `Thank you so much for shopping with ${shopName}!`,
     `Your support means a lot to us. We look forward to serving you again.`,
-    `${shop?.phone || "-"}`,
-    `${shop?.address || "-"}`,
+    `${clinicPhones(shop) || "-"}`,
+    `${clinicAddress(shop) || "-"}`,
     `${shopName}`,
     `Quality - Trust - Service`,
   ].join("\n");

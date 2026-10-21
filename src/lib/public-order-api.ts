@@ -126,6 +126,8 @@ export interface PublicOrderStatus {
   items: Array<{ name: string; price: number; quantity: number; variation: string; priceHidden?: boolean }>;
   // Some line's price is hidden by the clinic - totals come as 0 too.
   pricesHidden?: boolean;
+  // Clinic phone number(s) to call if the WhatsApp confirmation is late.
+  contactNumbers?: string;
   customerChangeRequest: PublicChangeRequest | null;
 }
 

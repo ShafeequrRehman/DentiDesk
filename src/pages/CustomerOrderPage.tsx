@@ -726,6 +726,16 @@ function OrderStatusPanel({
           {status.status === 'cancelled' ? TRACKING_LABELS.cancelled.label : status.status === 'completed' ? 'Appointment completed - thank you!' : tracking.label}
         </div>
 
+        {!isFinished && status.trackingStatus === 'awaiting_confirmation' ? (
+          <ConfirmationNotice phones={status.contactNumbers || ''} />
+        ) : null}
+        {!isFinished && status.trackingStatus !== 'awaiting_confirmation' && status.trackingStatus !== 'cancelled' ? (
+          <div className="mt-4 rounded-2xl border-2 border-emerald-300 bg-emerald-50 px-4 py-4 text-left">
+            <p className="text-lg font-black text-emerald-800">Your appointment is CONFIRMED</p>
+            <p className="mt-1 text-sm font-bold text-emerald-700">The confirmation message has been sent to you on WhatsApp.</p>
+          </div>
+        ) : null}
+
         <OrderProgressStepper status={status} />
 
         <div className="mt-6 space-y-1.5 rounded-[20px] bg-white/50 p-4 text-left text-sm shadow-inner">
@@ -1673,8 +1683,10 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                   value={customerName}
                   onChange={(e) => setCustomerName(e.target.value)}
                   readOnly={Boolean(knownName)}
-                  placeholder="Your name"
-                  className={`w-full rounded-xl border px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE] ${knownName ? 'border-emerald-200 bg-emerald-50 font-bold text-emerald-800' : 'border-gray-200 bg-gray-50'}`}
+                  // Number first - the name box opens once the number is complete.
+                  disabled={customerPhone.replace(/\D/g, '').length < 10}
+                  placeholder={customerPhone.replace(/\D/g, '').length < 10 ? 'Enter your phone number first' : 'Your name'}
+                  className={`w-full rounded-xl border px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE] disabled:cursor-not-allowed disabled:opacity-60 ${knownName ? 'border-emerald-200 bg-emerald-50 font-bold text-emerald-800' : 'border-gray-200 bg-gray-50'}`}
                 />
                 {knownName ? (
                   <p className="mt-1.5 text-[11px] font-bold text-emerald-700">Welcome back! This number is saved with the clinic under this name. Not you? Use your own number.</p>
@@ -1813,6 +1825,45 @@ function CardDetails({ text }: { text: string }) {
           {open ? 'Show less' : 'Read more'}
         </button>
       ) : null}
+    </div>
+  );
+}
+
+// Right after booking online: a big, clear notice - the request is in, the
+// receptionist confirms it and sends a WhatsApp message; if nothing comes
+// in 5-10 minutes, call the clinic (numbers tap to call).
+function ConfirmationNotice({ phones }: { phones: string }) {
+  const numbers = phones
+    .split(/[,/|;\n]+/)
+    .map((n) => n.trim())
+    .filter((n) => n.replace(/\D/g, '').length >= 7);
+  return (
+    <div className="mt-4 rounded-[22px] border-2 border-amber-300 bg-amber-50 px-5 py-5 text-left shadow-sm">
+      <p className="flex items-center gap-2 text-xl font-black text-amber-900">
+        <CheckCircle2 size={24} className="shrink-0 text-emerald-600" /> Your appointment request is received!
+      </p>
+      <p className="mt-3 text-base font-bold leading-snug text-gray-800">
+        Our receptionist will <span className="text-emerald-700">confirm your appointment</span> and send you a{' '}
+        <span className="rounded bg-[#25D366]/15 px-1 text-[#128C7E]">confirmation message on WhatsApp</span>.
+      </p>
+      <p className="mt-3 text-base font-bold leading-snug text-gray-800">
+        If you do not get the WhatsApp confirmation within <span className="text-rose-600">5-10 minutes</span>, please call us:
+      </p>
+      {numbers.length ? (
+        <div className="mt-3 flex flex-wrap gap-2">
+          {numbers.map((number) => (
+            <a
+              key={number}
+              href={`tel:${number.replace(/[^\d+]/g, '')}`}
+              className="inline-flex items-center gap-2 rounded-2xl bg-white px-4 py-2.5 text-base font-black text-gray-900 shadow ring-1 ring-amber-200 hover:bg-amber-100"
+            >
+              <Phone size={18} className="text-emerald-600" /> {number}
+            </a>
+          ))}
+        </div>
+      ) : (
+        <p className="mt-2 text-sm font-bold text-gray-600">Please call the clinic.</p>
+      )}
     </div>
   );
 }

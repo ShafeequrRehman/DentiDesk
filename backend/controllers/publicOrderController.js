@@ -286,7 +286,10 @@ exports.getOrderStatus = async (req, res) => {
       .lean();
     if (!order) return res.status(404).json({ message: "Appointment not found." });
     const categories = anyPriceHiddenSetting(req.shop) ? await categoryLookup(req.shop._id) : null;
-    res.json(publicOrderShape(order, req.shop, categories));
+    // The clinic's phone numbers (Settings > Manage Receipt > Contact) - the
+    // patient calls these if the WhatsApp confirmation doesn't arrive.
+    const contactNumbers = String(req.shop?.receiptSettings?.receiptContact || req.shop?.phone || "").trim();
+    res.json({ ...publicOrderShape(order, req.shop, categories), contactNumbers });
   } catch (error) {
     res.status(500).json({ message: error.message });
   }
