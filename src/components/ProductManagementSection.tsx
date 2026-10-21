@@ -384,6 +384,40 @@ export function ProductManagementSection({
     }
   }
 
+  // A service with options: delete it together with ALL its options.
+  async function handleDeleteGroup(group: ProductGroup) {
+    const confirmed = await confirm(`Delete "${group.name}" and all its ${group.variations.length} options? This cannot be undone.`, {
+      title: t("productManagement.toasts.deleteConfirmTitle"),
+      confirmText: t("common.delete"),
+      tone: "danger",
+    });
+    if (!confirmed) return;
+    const removed: Array<string | number> = [];
+    try {
+      for (const v of group.variations) {
+        await deleteProduct(v.id);
+        removed.push(v.id);
+      }
+      setStatusMessage({ tone: "success", text: `"${group.name}" and its options were deleted.` });
+    } catch (error) {
+      popup({ tone: "error", title: t("productManagement.toasts.deleteFailedTitle"), message: error instanceof Error ? error.message : t("productManagement.toasts.deleteFailedFallback") });
+    } finally {
+      setProducts((prev) => prev.filter((p) => !removed.includes(p.id)));
+      if (editingId && removed.includes(editingId)) resetForm();
+    }
+  }
+
+  // One option changed from the edit panel (name / price / photo).
+  async function handleUpdateOption(product: Product, row: { name: string; price: string; image: string }) {
+    const updated = await updateProduct(product.id, { variation: row.name.trim(), price: Number(row.price), image: row.image });
+    if (updated) {
+      setProducts((prev) => prev.map((p) => (p.id === product.id ? updated : p)));
+      setStatusMessage({ tone: "success", text: `Option "${row.name.trim()}" updated.` });
+      return true;
+    }
+    return false;
+  }
+
   // Handles a file picked (or dropped) via the "Upload Photo" button/input -
   // resizes it client-side and sets the resulting data: URI as the form's
   // `image` string.
@@ -733,6 +767,8 @@ export function ProductManagementSection({
             setOptions={setOptions}
             busy={optionBusy}
             t={t}
+            onUpdateOption={handleUpdateOption}
+            onDeleteOption={handleDeleteVariation}
             onAddToExisting={async (option) => {
               setOptionBusy(true);
               try {
@@ -879,7 +915,26 @@ export function ProductManagementSection({
                         <span>{totalStock > 0 ? t("productManagement.directory.inStock", { count: totalStock }) : t("common.unlimited")}</span>
                       </div>
                     </div>
-                    {hasMultiple ? null : (
+                    {hasMultiple ? (
+                      <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
+                        <button
+                          type="button"
+                          title="Edit this service and its options"
+                          onClick={() => handleEditClick(group.variations.find((v) => v.variation && v.variation !== "Standard") || single)}
+                          className="p-3 text-slate-400 hover:text-indigo-600 hover:bg-indigo-50 border border-transparent hover:border-indigo-100 rounded-xl transition-all shadow-sm"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          type="button"
+                          title="Delete this service with all its options"
+                          onClick={() => void handleDeleteGroup(group)}
+                          className="p-3 text-slate-400 hover:text-rose-600 hover:bg-rose-50 border border-transparent hover:border-rose-100 rounded-xl transition-all shadow-sm"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </div>
+                    ) : (
                       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity shrink-0">
                         <button
                           onClick={() => handleEditClick(single)}
@@ -945,7 +1000,7 @@ type OptionRow = { name: string; price: string; image: string };
 // Editing: lists its options and adds new ones straight away (edit or
 // delete an option from the directory list below).
 function ServiceOptionsPanel({
-  editing, serviceName, existing, hasOptions, setHasOptions, options, setOptions, busy, t, onAddToExisting,
+  editing, serviceName, existing, hasOptions, setHasOptions, options, setOptions, busy, t, onAddToExisting, onUpdateOption, onDeleteOption,
 }: {
   editing: boolean;
   serviceName: string;
@@ -957,6 +1012,8 @@ function ServiceOptionsPanel({
   busy: boolean;
   t: (key: string, vars?: Record<string, string | number>) => string;
   onAddToExisting: (option: OptionRow) => Promise<boolean>;
+  onUpdateOption: (product: Product, row: OptionRow) => Promise<boolean>;
+  onDeleteOption: (product: Product) => Promise<void>;
 }) {
   const [draft, setDraft] = useState<OptionRow>({ name: "", price: "", image: "" });
   const fileRefs = useRef<Record<number, HTMLInputElement | null>>({});
@@ -978,8 +1035,15 @@ function ServiceOptionsPanel({
     return (
       <div className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4">
         <p className="text-[11px] font-black uppercase tracking-widest text-indigo-700">Options of {serviceName || "this service"}</p>
-        <p className="mb-3 text-[11px] font-bold text-slate-500">Patients and POS tick one or more options - each is its own bill line. Once a service has options, its plain "Standard" entry and price are not offered any more (shown crossed out). Edit or delete an option from the list below.</p>
-        {existing.length > 1 || real.length ? (
+        <p className="mb-3 text-[11px] font-bold text-slate-500">Patients and POS tick one or more options - each is its own bill line. Once a service has options, its plain "Standard" entry and price are not offered any more. Change an option here and press Save, or delete it; add more options at the bottom.</p>
+        {real.length ? (
+          <div className="mb-3 space-y-2">
+            {real.map((p) => (
+              <OptionEditRow key={String(p.id)} product={p} t={t} inputCls={inputCls} onSave={(row) => onUpdateOption(p, row)} onDelete={() => onDeleteOption(p)} />
+            ))}
+          </div>
+        ) : null}
+        {existing.length > 1 && !real.length ? (
           <div className="mb-3 flex flex-wrap gap-2">
             {existing.map((p) => (
               <span key={String(p.id)} className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${real.length && (!p.variation || p.variation === "Standard") ? "bg-slate-100 text-slate-400 line-through ring-slate-200" : "bg-white text-slate-700 ring-slate-200"}`}>
@@ -1043,6 +1107,63 @@ function ServiceOptionsPanel({
           </button>
         </div>
       ) : null}
+    </div>
+  );
+}
+
+// One existing option, editable in place: name, price, photo -> Save, or Delete.
+function OptionEditRow({ product, t, inputCls, onSave, onDelete }: {
+  product: Product;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+  inputCls: string;
+  onSave: (row: OptionRow) => Promise<boolean>;
+  onDelete: () => Promise<void>;
+}) {
+  const [row, setRow] = useState<OptionRow>({ name: product.variation || "", price: String(product.price ?? ""), image: product.image || "" });
+  const [saving, setSaving] = useState(false);
+  const fileRef = useRef<HTMLInputElement | null>(null);
+  const changed = row.name.trim() !== (product.variation || "") || Number(row.price) !== Number(product.price) || row.image !== (product.image || "");
+  return (
+    <div className="grid grid-cols-1 gap-2 rounded-xl bg-white p-2 ring-1 ring-slate-100 sm:grid-cols-[1fr_110px_auto_auto_auto]">
+      <input value={row.name} onChange={(e) => setRow({ ...row, name: e.target.value })} className={inputCls} />
+      <input type="number" value={row.price} onChange={(e) => setRow({ ...row, price: e.target.value })} className={inputCls} />
+      <button type="button" onClick={() => fileRef.current?.click()} className="flex items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-black text-indigo-700 ring-1 ring-indigo-200">
+        {row.image ? <img src={resolveProductImage({ image: row.image, name: product.name, category: product.category })} alt="" className="h-6 w-6 rounded object-cover" /> : <Upload size={13} />} Photo
+      </button>
+      <input
+        ref={fileRef}
+        type="file"
+        accept="image/*"
+        className="hidden"
+        onChange={async (e) => {
+          const file = e.target.files?.[0];
+          if (!file) return;
+          try {
+            const img = await resizeImageToDataUrl(file, t);
+            setRow((r) => ({ ...r, image: img }));
+          } catch {
+            // unreadable picture - ignore
+          }
+        }}
+      />
+      <button
+        type="button"
+        disabled={!changed || saving || !row.name.trim() || row.price === ""}
+        onClick={async () => {
+          setSaving(true);
+          try {
+            await onSave(row);
+          } finally {
+            setSaving(false);
+          }
+        }}
+        className="flex items-center justify-center gap-1 rounded-xl bg-indigo-600 px-3 py-2 text-xs font-black text-white disabled:opacity-40"
+      >
+        <Edit size={12} /> {saving ? "Saving..." : "Save"}
+      </button>
+      <button type="button" title="Delete this option" onClick={() => void onDelete()} className="flex items-center justify-center rounded-xl bg-rose-50 px-3 py-2 text-rose-600 hover:bg-rose-100">
+        <Trash2 size={14} />
+      </button>
     </div>
   );
 }
