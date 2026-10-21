@@ -41,6 +41,8 @@ type ProductGroup = {
   isDeal: boolean;
   dealItems?: string[];
   variations: Product[];
+  // Has real options (not just "Standard") - always opens the option picker.
+  hasOptions?: boolean;
 };
 
 export default function POSPage() {
@@ -500,7 +502,12 @@ export default function POSPage() {
         });
       }
     }
-    return Array.from(map.values());
+    // A service with real options (e.g. which tooth): the plain "Standard"
+    // entry and its price are no longer offered - only the options.
+    return Array.from(map.values()).map((group) => {
+      const options = group.variations.filter((v) => v.variation && v.variation !== 'Standard');
+      return options.length && !group.isDeal ? { ...group, variations: options, hasOptions: true } : group;
+    });
   }, [products]);
 
   // Memoized so this filter only actually re-runs when the product list,
@@ -540,7 +547,7 @@ export default function POSPage() {
     // sides, anything never given a size/flavor breakdown) add straight
     // to the cart exactly like before. Only a group with 2+ variations
     // (e.g. Pizza: Small/Medium/Large) opens the picker.
-    if (group.isDeal || group.variations.length <= 1) {
+    if (group.isDeal || (group.variations.length <= 1 && !group.hasOptions)) {
       addToCart(group.variations[0]);
       return;
     }
@@ -1451,7 +1458,7 @@ export default function POSPage() {
             {isLoadingProducts ? <SurfaceMessage text={t('pos.loadingProducts')} /> : null}
             {!isLoadingProducts && filteredGroups.length === 0 ? <SurfaceMessage text={t('pos.noProductsMatched')} /> : null}
             {!isLoadingProducts && visibleGroups.length > 0 ? visibleGroups.map((group, groupIndex) => {
-              const hasVariations = group.variations.length > 1;
+              const hasVariations = group.variations.length > 1 || Boolean(group.hasOptions);
               const cheapestPrice = Math.min(...group.variations.map((v) => v.price));
               // Keyboard Shortcuts - grid navigation: a visible ring around
               // whichever card the Arrow keys currently point to (see the

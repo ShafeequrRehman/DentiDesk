@@ -978,11 +978,11 @@ function ServiceOptionsPanel({
     return (
       <div className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4">
         <p className="text-[11px] font-black uppercase tracking-widest text-indigo-700">Options of {serviceName || "this service"}</p>
-        <p className="mb-3 text-[11px] font-bold text-slate-500">Patients and POS tick one or more options - each is its own bill line. Edit or delete an option from the list below.</p>
+        <p className="mb-3 text-[11px] font-bold text-slate-500">Patients and POS tick one or more options - each is its own bill line. Once a service has options, its plain "Standard" entry and price are not offered any more (shown crossed out). Edit or delete an option from the list below.</p>
         {existing.length > 1 || real.length ? (
           <div className="mb-3 flex flex-wrap gap-2">
             {existing.map((p) => (
-              <span key={String(p.id)} className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700 ring-1 ring-slate-200">
+              <span key={String(p.id)} className={`rounded-full px-3 py-1 text-xs font-black ring-1 ${real.length && (!p.variation || p.variation === "Standard") ? "bg-slate-100 text-slate-400 line-through ring-slate-200" : "bg-white text-slate-700 ring-slate-200"}`}>
                 {p.variation || "Standard"} · {currencyCode()} {p.price}
               </span>
             ))}

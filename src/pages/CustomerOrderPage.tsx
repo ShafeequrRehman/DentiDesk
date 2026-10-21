@@ -76,6 +76,8 @@ type ProductGroup = {
   description: string;
   isDeal: boolean;
   variations: PublicMenuProduct[];
+  // Has real options (not just "Standard") - always opens the option picker.
+  hasOptions?: boolean;
 };
 
 function groupMenuProducts(products: PublicMenuProduct[]): ProductGroup[] {
@@ -98,7 +100,11 @@ function groupMenuProducts(products: PublicMenuProduct[]): ProductGroup[] {
       });
     }
   }
-  return Array.from(map.values());
+  // A service with real options: the plain "Standard" entry is not offered.
+  return Array.from(map.values()).map((group) => {
+    const options = group.variations.filter((v) => v.variation && v.variation !== 'Standard');
+    return options.length && !group.isDeal ? { ...group, variations: options, hasOptions: true } : group;
+  });
 }
 
 // One entry per shop, holding whatever order this device currently
@@ -495,7 +501,7 @@ function ChangeRequestModal({
                     // Same "one tile per name, picker for 2+ sizes" pattern
                     // as the main menu below and desktop's POSPage.tsx - see
                     // groupMenuProducts' own comment.
-                    if (group.variations.length <= 1) {
+                    if (group.variations.length <= 1 && !group.hasOptions) {
                       const product = group.variations[0];
                       const key = itemKey(product.name, product.variation);
                       const qty = addQuantities.get(key) || 0;
@@ -1242,7 +1248,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   // (the vast majority of items) adds straight to the cart; only a group
   // with 2+ sizes/options opens the picker.
   function handleGroupTap(group: ProductGroup) {
-    if (group.variations.length <= 1) {
+    if (group.variations.length <= 1 && !group.hasOptions) {
       addToCart(group.variations[0]);
       return;
     }
@@ -1407,7 +1413,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
           // shows a "from $X" price and always opens the size picker on
           // tap, same as desktop - no inline stepper on the tile itself
           // since it wouldn't be clear which size it's adjusting.
-          const hasVariations = group.variations.length > 1;
+          const hasVariations = group.variations.length > 1 || Boolean(group.hasOptions);
           const single = group.variations[0];
           const line = !hasVariations ? cart.get(cartKey(single)) : undefined;
           const groupCartCount = hasVariations
