@@ -473,9 +473,15 @@ function AppointmentRow({ order, showDate, offline, onCheckup, onReopen }: { ord
           <p className="truncate text-base font-black text-gray-900">{order.customer?.name || 'Patient'}</p>
           <SourceTag order={order} />
           <PaymentTag order={order} />
+          {/* What the appointment is for - one tag per service / option */}
+          {services.map((item, index) => (
+            <span key={`${item.name}-${item.variation}-${index}`} className="inline-flex max-w-[220px] items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-700 ring-1 ring-amber-200" title={`${item.name}${item.variation && item.variation !== 'Standard' ? ` - ${item.variation}` : ''}`}>
+              <Stethoscope size={10} className="shrink-0" />
+              <span className="truncate">{item.name}{item.variation && item.variation !== 'Standard' ? ` · ${item.variation}` : ''}</span>
+            </span>
+          ))}
         </div>
         {phone ? <p className="flex items-center gap-1 text-xs font-bold text-gray-500"><Phone size={12} />{phone}</p> : null}
-        {services.length > 0 ? <p className="truncate text-xs font-semibold text-gray-500">Services: {services.map((s) => s.name).join(', ')}</p> : null}
         {order.note ? <p className="truncate text-xs font-semibold text-indigo-600">Note: {order.note}</p> : null}
         {done && order.diagnosis ? <p className="truncate text-xs font-semibold text-rose-700">Disease: {order.diagnosis}</p> : null}
         {done && order.prescription ? <p className="line-clamp-2 whitespace-pre-line text-xs font-semibold text-emerald-700">Rx: {order.prescription}</p> : null}
