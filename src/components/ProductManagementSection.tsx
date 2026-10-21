@@ -124,6 +124,15 @@ export function ProductManagementSection({
   const [workEnd, setWorkEnd] = useState("");
   // For a Service: which Drs can do it (empty = any Dr).
   const [serviceDoctors, setServiceDoctors] = useState<string[]>([]);
+  // Service options (e.g. which tooth for a Crown): ticked -> the service is
+  // saved as one entry per option (each its own name, price, photo). The
+  // patient / POS then ticks one or more options; each is a bill line.
+  const [hasOptions, setHasOptions] = useState(false);
+  const [options, setOptions] = useState<Array<{ name: string; price: string; image: string }>>([{ name: '', price: '', image: '' }]);
+  const [optionBusy, setOptionBusy] = useState(false);
+  // Name/category of the entry being edited, as it was - its sibling
+  // options get the shared details (schedule, Drs, note...) too.
+  const [editingGroup, setEditingGroup] = useState<{ name: string; category: string } | null>(null);
   const [allDrNames, setAllDrNames] = useState<string[]>([]);
   useEffect(() => {
     void fetchProducts()
@@ -202,6 +211,9 @@ export function ProductManagementSection({
     setWorkStart("");
     setWorkEnd("");
     setServiceDoctors([]);
+    setHasOptions(false);
+    setOptions([{ name: '', price: '', image: '' }]);
+    setEditingGroup(null);
     setUnit("pcs");
     setPreservedDealFields({ isDeal: false, dealItems: [], description: "" });
   }
@@ -239,6 +251,39 @@ export function ProductManagementSection({
       return;
     }
 
+    // New service with options: one entry per option, no main price.
+    if (!editingId && hasOptions && !isDoctorProduct({ name, category })) {
+      const list = options.map((o) => ({ ...o, name: o.name.trim() })).filter((o) => o.name);
+      if (list.length === 0) {
+        popup({ tone: "error", title: t("productManagement.toasts.missingInfoTitle"), message: "Add at least one option (name and price)." });
+        return;
+      }
+      if (list.some((o) => !o.price || Number(o.price) < 0)) {
+        popup({ tone: "error", title: t("productManagement.toasts.missingInfoTitle"), message: "Every option needs a price." });
+        return;
+      }
+      if (new Set(list.map((o) => o.name.toLowerCase())).size !== list.length) {
+        popup({ tone: "error", title: t("productManagement.toasts.missingInfoTitle"), message: "Two options have the same name." });
+        return;
+      }
+      try {
+        setIsSaving(true);
+        const createdList: Product[] = [];
+        for (const option of list) {
+          const created = await createProduct({ ...getBasePayload(), image: option.image || image, price: Number(option.price), stock: 0, variation: option.name, productCode: "" });
+          if (created) createdList.push(created);
+        }
+        setProducts((prev) => [...prev, ...createdList]);
+        setStatusMessage({ tone: "success", text: `"${name.trim()}" added with ${createdList.length} option${createdList.length === 1 ? "" : "s"}.` });
+        resetForm();
+      } catch (error) {
+        popup({ tone: "error", title: t("productManagement.toasts.saveFailedTitle"), message: error instanceof Error ? error.message : t("productManagement.toasts.saveFailedFallback") });
+      } finally {
+        setIsSaving(false);
+      }
+      return;
+    }
+
     if (!price) {
       popup({ tone: "error", title: t("productManagement.toasts.missingInfoTitle"), message: t("productManagement.toasts.priceRequired") });
       return;
@@ -257,7 +302,12 @@ export function ProductManagementSection({
         };
         const updated = await updateProduct(editingId, payload);
         if (updated) {
-          setProducts((prev) => prev.map((p) => (p.id === editingId ? updated : p)));
+          // Options of the same service share everything but name/price/photo.
+          const siblings = editingGroup ? products.filter((p) => p.id !== editingId && p.name === editingGroup.name && p.category === editingGroup.category) : [];
+          const { image: _ownImage, ...shared } = getBasePayload();
+          void _ownImage;
+          const syncedSiblings = (await Promise.all(siblings.map((p) => updateProduct(p.id, shared).catch(() => null)))).filter(Boolean) as Product[];
+          setProducts((prev) => prev.map((p) => (p.id === editingId ? updated : syncedSiblings.find((x) => x.id === p.id) || p)));
           setStatusMessage({ tone: "success", text: t("productManagement.toasts.productUpdated", { name: updated.name }) });
           resetForm();
         }
@@ -285,6 +335,7 @@ export function ProductManagementSection({
 
   function handleEditClick(product: Product) {
     setEditingId(product.id);
+    setEditingGroup({ name: product.name, category: product.category });
     setName(product.name);
     setPrice(product.price.toString());
     setQty(product.stock > 0 ? product.stock.toString() : "");
@@ -670,6 +721,37 @@ export function ProductManagementSection({
           </div>
         </div>
 
+        {/* Service options (e.g. Crown -> Tooth 1 upper, Tooth 2 ...) */}
+        {!isDoctorProduct({ name, category }) && !preservedDealFields.isDeal ? (
+          <ServiceOptionsPanel
+            editing={Boolean(editingId)}
+            serviceName={name}
+            existing={editingId ? products.filter((p) => p.name === name && p.category === category) : []}
+            hasOptions={hasOptions}
+            setHasOptions={setHasOptions}
+            options={options}
+            setOptions={setOptions}
+            busy={optionBusy}
+            t={t}
+            onAddToExisting={async (option) => {
+              setOptionBusy(true);
+              try {
+                const created = await createProduct({ ...getBasePayload(), image: option.image || image, price: Number(option.price), stock: 0, variation: option.name, productCode: "" });
+                if (created) {
+                  setProducts((prev) => [...prev, created]);
+                  setStatusMessage({ tone: "success", text: `Option "${option.name}" added to ${name.trim()}.` });
+                  return true;
+                }
+              } catch (error) {
+                popup({ tone: "error", title: t("productManagement.toasts.saveFailedTitle"), message: error instanceof Error ? error.message : t("productManagement.toasts.saveFailedFallback") });
+              } finally {
+                setOptionBusy(false);
+              }
+              return false;
+            }}
+          />
+        ) : null}
+
         <div className="pt-6 border-t border-slate-200 flex items-center gap-3">
           <button
             type="button"
@@ -852,6 +934,115 @@ export function ProductManagementSection({
           }) : null}
         </div>
       </div>
+    </div>
+  );
+}
+
+type OptionRow = { name: string; price: string; image: string };
+
+// "This service has options" - e.g. a Crown with one option per tooth.
+// New service: fill the option rows, Publish creates one entry per option.
+// Editing: lists its options and adds new ones straight away (edit or
+// delete an option from the directory list below).
+function ServiceOptionsPanel({
+  editing, serviceName, existing, hasOptions, setHasOptions, options, setOptions, busy, t, onAddToExisting,
+}: {
+  editing: boolean;
+  serviceName: string;
+  existing: Product[];
+  hasOptions: boolean;
+  setHasOptions: (value: boolean) => void;
+  options: OptionRow[];
+  setOptions: (value: OptionRow[]) => void;
+  busy: boolean;
+  t: (key: string, vars?: Record<string, string | number>) => string;
+  onAddToExisting: (option: OptionRow) => Promise<boolean>;
+}) {
+  const [draft, setDraft] = useState<OptionRow>({ name: "", price: "", image: "" });
+  const fileRefs = useRef<Record<number, HTMLInputElement | null>>({});
+  const draftFileRef = useRef<HTMLInputElement | null>(null);
+
+  async function pickImage(file: File | null, apply: (dataUrl: string) => void) {
+    if (!file) return;
+    try {
+      apply(await resizeImageToDataUrl(file, t));
+    } catch {
+      // unreadable picture - ignore
+    }
+  }
+
+  const inputCls = "w-full rounded-xl border-none ring-1 ring-slate-200 bg-white px-3 py-2.5 text-sm font-bold outline-none focus:ring-2 focus:ring-indigo-500";
+
+  if (editing) {
+    const real = existing.filter((p) => p.variation && p.variation !== "Standard");
+    return (
+      <div className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4">
+        <p className="text-[11px] font-black uppercase tracking-widest text-indigo-700">Options of {serviceName || "this service"}</p>
+        <p className="mb-3 text-[11px] font-bold text-slate-500">Patients and POS tick one or more options - each is its own bill line. Edit or delete an option from the list below.</p>
+        {existing.length > 1 || real.length ? (
+          <div className="mb-3 flex flex-wrap gap-2">
+            {existing.map((p) => (
+              <span key={String(p.id)} className="rounded-full bg-white px-3 py-1 text-xs font-black text-slate-700 ring-1 ring-slate-200">
+                {p.variation || "Standard"} · {currencyCode()} {p.price}
+              </span>
+            ))}
+          </div>
+        ) : null}
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_120px_auto_auto]">
+          <input value={draft.name} onChange={(e) => setDraft({ ...draft, name: e.target.value })} placeholder="Option name, e.g. Upper tooth 1" className={inputCls} />
+          <input type="number" value={draft.price} onChange={(e) => setDraft({ ...draft, price: e.target.value })} placeholder="Price" className={inputCls} />
+          <button type="button" onClick={() => draftFileRef.current?.click()} className="flex items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-black text-indigo-700 ring-1 ring-indigo-200">
+            {draft.image ? <img src={draft.image} alt="" className="h-6 w-6 rounded object-cover" /> : <Upload size={13} />} Photo
+          </button>
+          <input ref={draftFileRef} type="file" accept="image/*" className="hidden" onChange={(e) => void pickImage(e.target.files?.[0] ?? null, (img) => setDraft((d) => ({ ...d, image: img })))} />
+          <button
+            type="button"
+            disabled={busy || !draft.name.trim() || !draft.price || existing.some((p) => (p.variation || "").toLowerCase() === draft.name.trim().toLowerCase())}
+            onClick={async () => {
+              if (await onAddToExisting({ ...draft, name: draft.name.trim() })) setDraft({ name: "", price: "", image: "" });
+            }}
+            className="flex items-center justify-center gap-1.5 rounded-xl bg-indigo-600 px-4 py-2 text-xs font-black text-white disabled:opacity-50"
+          >
+            <Plus size={13} /> {busy ? "Adding..." : "Add option"}
+          </button>
+        </div>
+      </div>
+    );
+  }
+
+  return (
+    <div className="mt-6 rounded-2xl border border-indigo-100 bg-indigo-50/40 p-4">
+      <label className="flex cursor-pointer items-center gap-3">
+        <input type="checkbox" checked={hasOptions} onChange={(e) => setHasOptions(e.target.checked)} className="h-4 w-4" />
+        <span className="text-sm font-black text-slate-800">This service has options (e.g. which tooth)</span>
+      </label>
+      <p className="ml-7 text-[11px] font-bold text-slate-500">Each option has its own name, price and photo. Patients and POS tick one or more; each ticked option is added to the bill. The main Price above is not used.</p>
+      {hasOptions ? (
+        <div className="mt-3 space-y-2">
+          {options.map((row, index) => (
+            <div key={index} className="grid grid-cols-1 gap-2 sm:grid-cols-[1fr_120px_auto_auto]">
+              <input value={row.name} onChange={(e) => setOptions(options.map((r, i) => (i === index ? { ...r, name: e.target.value } : r)))} placeholder={`Option ${index + 1}, e.g. Upper tooth ${index + 1}`} className={inputCls} />
+              <input type="number" value={row.price} onChange={(e) => setOptions(options.map((r, i) => (i === index ? { ...r, price: e.target.value } : r)))} placeholder="Price" className={inputCls} />
+              <button type="button" onClick={() => fileRefs.current[index]?.click()} className="flex items-center justify-center gap-1.5 rounded-xl bg-white px-3 py-2 text-xs font-black text-indigo-700 ring-1 ring-indigo-200">
+                {row.image ? <img src={row.image} alt="" className="h-6 w-6 rounded object-cover" /> : <Upload size={13} />} Photo
+              </button>
+              <input
+                ref={(el) => { fileRefs.current[index] = el; }}
+                type="file"
+                accept="image/*"
+                className="hidden"
+                onChange={(e) => void pickImage(e.target.files?.[0] ?? null, (img) => setOptions(options.map((r, i) => (i === index ? { ...r, image: img } : r))))}
+              />
+              <button type="button" disabled={options.length === 1} onClick={() => setOptions(options.filter((_, i) => i !== index))} className="flex items-center justify-center rounded-xl bg-rose-50 px-3 py-2 text-rose-600 disabled:opacity-40">
+                <X size={14} />
+              </button>
+            </div>
+          ))}
+          <button type="button" onClick={() => setOptions([...options, { name: "", price: "", image: "" }])} className="flex items-center gap-1.5 rounded-xl bg-white px-4 py-2 text-xs font-black text-indigo-700 ring-1 ring-indigo-200">
+            <Plus size={13} /> Add another option
+          </button>
+        </div>
+      ) : null}
     </div>
   );
 }

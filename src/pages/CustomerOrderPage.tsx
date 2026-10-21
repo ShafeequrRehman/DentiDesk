@@ -260,7 +260,21 @@ function ScheduleInfo({ product, compact }: { product: PublicMenuProduct; compac
 // own tap-to-add behavior exactly (no separate quantity stepper inside
 // here; further quantity changes happen back on the card/cart list, same
 // as everywhere else on this page).
-function VariationPickerSheet({ group, onSelect, onClose }: { group: ProductGroup; onSelect: (variation: PublicMenuProduct) => void; onClose: () => void }) {
+function VariationPickerSheet({ group, inCart, onApply, onClose }: { group: ProductGroup; inCart: (variation: PublicMenuProduct) => boolean; onApply: (selected: PublicMenuProduct[]) => void; onClose: () => void }) {
+  // Options of a service (e.g. which tooth) - tick one or several; each
+  // ticked option is its own line on the appointment, with its own price.
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(group.variations.filter(inCart).map((v) => v.id)));
+  const chosen = group.variations.filter((v) => picked.has(v.id));
+  const anyHidden = chosen.some((v) => v.priceHidden);
+  const sum = chosen.reduce((n, v) => n + Number(v.price || 0), 0);
+  function toggle(id: string) {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   return (
     <div className="glass-overlay fixed inset-0 z-40 flex items-end sm:items-center sm:justify-center" onClick={onClose}>
       <div className="glass-strong w-full max-w-sm rounded-t-[28px] p-6 sm:rounded-[28px]" onClick={(event) => event.stopPropagation()}>
@@ -270,26 +284,41 @@ function VariationPickerSheet({ group, onSelect, onClose }: { group: ProductGrou
           </div>
           <div className="min-w-0">
             <h3 className="truncate text-lg font-black text-gray-900">{group.name}</h3>
-            <p className="text-xs font-bold text-gray-400">Choose a size / variation</p>
+            <p className="text-xs font-bold text-gray-400">Tick one or more options</p>
           </div>
         </div>
-        <div className="max-h-[320px] space-y-2 overflow-y-auto">
-          {group.variations.map((variation) => (
-            <button
-              key={variation.id}
-              type="button"
-              onClick={() => onSelect(variation)}
-              className="flex w-full items-center justify-between rounded-2xl border border-white/50 bg-white/50 px-4 py-3 text-left shadow-inner transition hover:border-[#00B0C7]/70 hover:bg-[#EBFAFC]/70"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-black text-gray-900">{variation.variation || 'Standard'}</p>
-                <ScheduleInfo product={variation} compact />
-              </div>
-              {variation.priceHidden ? null : <span className="shrink-0 text-sm font-black text-gray-900">{cs()}{formatter.format(variation.price)}</span>}
-            </button>
-          ))}
+        <div className="max-h-[340px] space-y-2 overflow-y-auto">
+          {group.variations.map((variation) => {
+            const on = picked.has(variation.id);
+            const img = getProductImageUrl(variation.image);
+            return (
+              <button
+                key={variation.id}
+                type="button"
+                onClick={() => toggle(variation.id)}
+                className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left shadow-inner transition ${on ? 'border-[#00B0C7] bg-[#EBFAFC]' : 'border-white/50 bg-white/50 hover:border-[#00B0C7]/70'}`}
+              >
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 ${on ? 'border-[#009AAE] bg-[#14BCD1] text-white' : 'border-gray-300 bg-white'}`}>
+                  {on ? <Check size={13} strokeWidth={3} /> : null}
+                </span>
+                {img && img !== getProductImageUrl(group.image) ? <img src={img} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" /> : null}
+                <div className="min-w-0 flex-1">
+                  <p className="truncate text-sm font-black text-gray-900">{variation.variation || 'Standard'}</p>
+                  <ScheduleInfo product={variation} compact />
+                </div>
+                {variation.priceHidden ? null : <span className="shrink-0 text-sm font-black text-gray-900">{cs()}{formatter.format(variation.price)}</span>}
+              </button>
+            );
+          })}
         </div>
-        <button type="button" onClick={onClose} className="glass-pill mt-4 w-full rounded-2xl py-3 text-sm font-black text-gray-600 transition hover:bg-white/70">
+        <button
+          type="button"
+          onClick={() => onApply(chosen)}
+          className="mt-4 w-full rounded-2xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] py-3 text-sm font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(0,110,125,0.4)] transition hover:brightness-105"
+        >
+          {chosen.length === 0 ? 'Done (none selected)' : `Add ${chosen.length} option${chosen.length === 1 ? '' : 's'}${anyHidden ? '' : ` · ${cs()}${formatter.format(sum)}`}`}
+        </button>
+        <button type="button" onClick={onClose} className="glass-pill mt-2 w-full rounded-2xl py-3 text-sm font-black text-gray-600 transition hover:bg-white/70">
           Cancel
         </button>
       </div>
@@ -510,9 +539,10 @@ function ChangeRequestModal({
         {pickerGroup ? (
           <VariationPickerSheet
             group={pickerGroup}
-            onSelect={(variation) => {
-              const key = itemKey(variation.name, variation.variation);
-              setAddQty(variation, (addQuantities.get(key) || 0) + 1);
+            inCart={(variation) => addQuantities.has(itemKey(variation.name, variation.variation))}
+            onApply={(selected) => {
+              const ids = new Set(selected.map((v) => v.id));
+              pickerGroup.variations.forEach((v) => setAddQty(v, ids.has(v.id) ? 1 : 0));
               setPickerGroup(null);
             }}
             onClose={() => setPickerGroup(null)}
@@ -1454,8 +1484,15 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
       {variationPickerGroup ? (
         <VariationPickerSheet
           group={variationPickerGroup}
-          onSelect={(variation) => {
-            addToCart(variation);
+          inCart={(variation) => cart.has(cartKey(variation))}
+          onApply={(selected) => {
+            // The ticked options become the cart lines of this service.
+            setCart((previous) => {
+              const next = new Map(previous);
+              variationPickerGroup.variations.forEach((v) => next.delete(cartKey(v)));
+              selected.forEach((v) => next.set(cartKey(v), { product: v, quantity: 1 }));
+              return next;
+            });
             setVariationPickerGroup(null);
           }}
           onClose={() => setVariationPickerGroup(null)}

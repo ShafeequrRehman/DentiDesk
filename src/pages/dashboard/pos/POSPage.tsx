@@ -1842,8 +1842,15 @@ export default function POSPage() {
       {variationPickerGroup ? (
         <VariationPickerModal
           group={variationPickerGroup}
-          onSelect={(variation) => {
-            addToCart(variation);
+          inCart={(variation) => cart.some((item) => item.id === variation.id && item.variation === variation.variation)}
+          onApply={(selected) => {
+            // The ticked options become this service's bill lines.
+            const groupIds = new Set(variationPickerGroup.variations.map((v) => String(v.id)));
+            setCart((previousCart) => {
+              const kept = previousCart.filter((item) => !groupIds.has(String(item.id)));
+              const added = selected.map((v) => ({ id: v.id, name: v.name, price: v.price, quantity: 1, variation: v.variation, image: v.image, specialType: v.specialType }));
+              return [...kept, ...added];
+            });
             setVariationPickerGroup(null);
           }}
           onClose={() => setVariationPickerGroup(null)}
@@ -1888,8 +1895,21 @@ function FormField({ label, children }: { label: string; children: React.ReactNo
   );
 }
 
-function VariationPickerModal({ group, onSelect, onClose }: { group: ProductGroup; onSelect: (variation: Product) => void; onClose: () => void }) {
+function VariationPickerModal({ group, inCart, onApply, onClose }: { group: ProductGroup; inCart: (variation: Product) => boolean; onApply: (selected: Product[]) => void; onClose: () => void }) {
   const { t } = useLanguage();
+  // Options of a service (e.g. which tooth) - tick one or several; each
+  // ticked option becomes its own bill line with its own price.
+  const [picked, setPicked] = useState<Set<string>>(() => new Set(group.variations.filter(inCart).map((v) => String(v.id))));
+  const chosen = group.variations.filter((v) => picked.has(String(v.id)));
+  const sum = chosen.reduce((n, v) => n + Number(v.price || 0), 0);
+  function toggle(id: string) {
+    setPicked((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  }
   // Keyboard Shortcuts: Esc closes this popup instantly, same as the shared
   // toast.tsx confirm/popup dialogs - this one's local since the picker
   // isn't part of that shared system.
@@ -1912,26 +1932,38 @@ function VariationPickerModal({ group, onSelect, onClose }: { group: ProductGrou
           </div>
           <div className="min-w-0">
             <h3 className="truncate text-lg font-black text-gray-900">{group.name}</h3>
-            <p className="text-xs font-bold text-gray-400">{t('pos.chooseVariation')}</p>
+            <p className="text-xs font-bold text-gray-400">Tick one or more options</p>
           </div>
         </div>
-        <div className="max-h-[320px] space-y-2 overflow-y-auto">
-          {group.variations.map((variation) => (
-            <button
-              key={variation.id}
-              type="button"
-              onClick={() => onSelect(variation)}
-              className="flex w-full items-center justify-between rounded-2xl border border-white/50 bg-white/50 px-4 py-3 text-left rtl:text-right shadow-inner transition hover:border-[#00B0C7]/70 hover:bg-[#EBFAFC]/70"
-            >
-              <div className="min-w-0">
-                <p className="truncate text-sm font-black text-gray-900">{variation.variation || t('pos.standardVariation')}</p>
-                <p className="text-[10px] font-bold text-gray-400">{variation.stock > 0 ? t('pos.inStock', { count: variation.stock }) : t('pos.unlimitedStock')}</p>
-              </div>
-              <span className="shrink-0 text-sm font-black text-gray-900">{cs()}{variation.price}</span>
-            </button>
-          ))}
+        <div className="max-h-[340px] space-y-2 overflow-y-auto">
+          {group.variations.map((variation) => {
+            const on = picked.has(String(variation.id));
+            const ownImage = variation.image && variation.image !== group.variations[0].image ? resolveProductImage(variation) : '';
+            return (
+              <button
+                key={variation.id}
+                type="button"
+                onClick={() => toggle(String(variation.id))}
+                className={`flex w-full items-center gap-3 rounded-2xl border px-3 py-2.5 text-left rtl:text-right shadow-inner transition ${on ? 'border-[#00B0C7] bg-[#EBFAFC]' : 'border-white/50 bg-white/50 hover:border-[#00B0C7]/70'}`}
+              >
+                <span className={`flex h-5 w-5 shrink-0 items-center justify-center rounded-md border-2 text-[11px] font-black ${on ? 'border-[#009AAE] bg-[#14BCD1] text-white' : 'border-gray-300 bg-white'}`}>
+                  {on ? '✓' : null}
+                </span>
+                {ownImage ? <img src={ownImage} alt="" className="h-10 w-10 shrink-0 rounded-lg object-cover" /> : null}
+                <p className="min-w-0 flex-1 truncate text-sm font-black text-gray-900">{variation.variation || t('pos.standardVariation')}</p>
+                <span className="shrink-0 text-sm font-black text-gray-900">{cs()}{variation.price}</span>
+              </button>
+            );
+          })}
         </div>
-        <button type="button" onClick={onClose} className="glass-pill mt-4 w-full rounded-2xl py-3 text-sm font-black text-gray-600 transition hover:bg-white/70">
+        <button
+          type="button"
+          onClick={() => onApply(chosen)}
+          className="mt-4 w-full rounded-2xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] py-3 text-sm font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(0,110,125,0.4)] transition hover:brightness-105"
+        >
+          {chosen.length === 0 ? 'Done (none selected)' : `Add ${chosen.length} option${chosen.length === 1 ? '' : 's'} · ${cs()}${sum}`}
+        </button>
+        <button type="button" onClick={onClose} className="glass-pill mt-2 w-full rounded-2xl py-3 text-sm font-black text-gray-600 transition hover:bg-white/70">
           {t('common.cancel')}
         </button>
       </div>
