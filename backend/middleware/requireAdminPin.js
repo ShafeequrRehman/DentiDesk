@@ -26,7 +26,8 @@ module.exports = async function requireAdminPin(req, res, next) {
       return res.status(403).json({ message: "The Super Admin verify PIN is not set yet - run the setSuperAdmin script on the server.", reason: "pin_not_set" });
     }
     const pin = String(req.headers["x-admin-pin"] || "");
-    if (!pin) return res.status(401).json({ message: "Enter the verify PIN to make this change.", reason: "pin_required" });
+    // 403 (not 401) so the app doesn't treat it as "session expired".
+    if (!pin) return res.status(403).json({ message: "Enter the verify PIN to make this change.", reason: "pin_required" });
     const ok = await bcrypt.compare(pin, user.adminPinHash);
     if (!ok) {
       const count = (state?.count || 0) + 1;

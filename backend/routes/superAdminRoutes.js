@@ -11,6 +11,11 @@ const requireAdminPin = require("../middleware/requireAdminPin");
 // Every change (not reads) also needs the Super Admin verify PIN.
 router.use(authenticate, requireSuperAdmin, requireAdminPin);
 
+// The PIN box checks the PIN here first (requireAdminPin above already
+// rejected a wrong one) - so a wrong PIN shows in the box, a right one
+// lets the real change go through.
+router.post("/verify-pin", (req, res) => res.json({ ok: true }));
+
 // Shops
 router.get("/shops", ctrl.listShops);
 router.post("/shops", ctrl.createShop);
