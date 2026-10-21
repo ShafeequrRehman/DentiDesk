@@ -67,6 +67,10 @@ const userSchema = new mongoose.Schema(
     // Services. Such an employee only sees / changes THIS Dr's
     // appointments, checkups and availability. "" = not a Dr account.
     linkedDoctor: { type: String, default: "", trim: true },
+    // Super Admin only: bcrypt hash of the verify PIN asked before any
+    // change on the Super Admin panel (new clinic, plan, suspend...). Set
+    // with backend/scripts/setSuperAdmin.js. Never sent to the browser.
+    adminPinHash: { type: String, default: "", select: false },
     // Staff directory fields (Manage Staff page) - only meaningful for
     // role: "employee". `designation` is the job title shown throughout
     // the app (Chief, Manager, Cashier, Order Taker, Waiter, etc.) and is

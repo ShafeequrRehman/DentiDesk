@@ -7,7 +7,9 @@ const ctrl = require("../controllers/superAdminController");
 // Every route here requires a valid Super Admin session. Deliberately NOT
 // behind requireLicenseValid - the Super Admin's own access is never
 // gated by any shop's license.
-router.use(authenticate, requireSuperAdmin);
+const requireAdminPin = require("../middleware/requireAdminPin");
+// Every change (not reads) also needs the Super Admin verify PIN.
+router.use(authenticate, requireSuperAdmin, requireAdminPin);
 
 // Shops
 router.get("/shops", ctrl.listShops);

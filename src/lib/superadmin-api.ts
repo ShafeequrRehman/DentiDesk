@@ -1,4 +1,8 @@
 import { api } from "@/lib/api";
+import { installAdminPinPrompt } from "@/lib/admin-pin";
+
+// Every change on the Super Admin panel asks for the verify PIN first.
+installAdminPinPrompt();
 
 // Thin wrappers around backend/routes/superAdminRoutes.js. All of these
 // require a Super Admin session - the backend enforces that via
