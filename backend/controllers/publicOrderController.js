@@ -55,7 +55,9 @@ function normalizePhone(phone) {
 // production/staging always have VITE_API_URL configured, so they never
 // reach this fallback at all.
 function publicOrigin(req) {
-  const configured = process.env.VITE_API_URL ? process.env.VITE_API_URL.replace(/\/api\/?$/, "") : "";
+  // "https://host//api" -> "https://host" (no trailing slash - a double
+  // slash in start_url/scope made iPhone reject the patient app manifest).
+  const configured = process.env.VITE_API_URL ? process.env.VITE_API_URL.replace(/\/+api\/*$/, "").replace(/\/+$/, "") : "";
   if (configured) return configured;
   if (process.env.NODE_ENV !== "production") return "http://localhost:5173";
   return `${req.protocol}://${req.get("host")}`;
