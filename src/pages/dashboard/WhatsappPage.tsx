@@ -22,6 +22,9 @@ export default function WhatsAppManager() {
   
   // Manual message state
   const [manualPhone, setManualPhone] = useState('');
+  // Patient search: type part of a name or number, pick from the list.
+  const [phoneFocused, setPhoneFocused] = useState(false);
+  const [pickedName, setPickedName] = useState('');
   const [manualMessage, setManualMessage] = useState('');
   const [isSendingManual, setIsSendingManual] = useState(false);
   const [manualStatus, setManualStatus] = useState<{ type: 'success' | 'error' | null, message: string }>({ type: null, message: '' });
@@ -250,11 +253,40 @@ export default function WhatsAppManager() {
                     <input 
                       type="text" 
                       value={manualPhone}
-                      onChange={(e) => setManualPhone(e.target.value)}
-                      placeholder="e.g. 03001234567" 
+                      onChange={(e) => { setManualPhone(e.target.value); setPickedName(''); }}
+                      onFocus={() => setPhoneFocused(true)}
+                      onBlur={() => setTimeout(() => setPhoneFocused(false), 150)}
+                      autoComplete="off"
+                      placeholder="Type a name or number, e.g. Ali or 0300" 
                       className="pl-10 block w-full rounded-md border-gray-300 shadow-sm focus:border-indigo-500 focus:ring-indigo-500 sm:text-sm border p-2.5"
                     />
+                    {(() => {
+                      const q = manualPhone.trim().toLowerCase();
+                      const digits = q.replace(/\D/g, '');
+                      if (!phoneFocused || q.length < 2 || pickedName) return null;
+                      const matches = customers
+                        .filter((c) => (c.name || '').toLowerCase().includes(q) || (digits.length >= 2 && c.phone.replace(/\D/g, '').includes(digits)))
+                        .slice(0, 8);
+                      if (matches.length === 0) return null;
+                      return (
+                        <div className="absolute left-0 right-0 top-full z-20 mt-1 max-h-72 overflow-y-auto rounded-md border border-gray-200 bg-white shadow-lg">
+                          {matches.map((c) => (
+                            <button
+                              key={c.id || c.phone}
+                              type="button"
+                              onMouseDown={(e) => e.preventDefault()}
+                              onClick={() => { setManualPhone(c.phone); setPickedName(c.name || c.phone); setPhoneFocused(false); }}
+                              className="flex w-full items-center justify-between gap-3 px-3 py-2 text-left text-sm hover:bg-indigo-50"
+                            >
+                              <span className="truncate font-semibold text-gray-800">{c.name || 'No name'}</span>
+                              <span className="shrink-0 text-gray-500">{c.phone}</span>
+                            </button>
+                          ))}
+                        </div>
+                      );
+                    })()}
                   </div>
+                  {pickedName ? <p className="mt-1 text-xs font-semibold text-emerald-600">Sending to {pickedName}</p> : null}
                 </div>
                 
                 <div>
