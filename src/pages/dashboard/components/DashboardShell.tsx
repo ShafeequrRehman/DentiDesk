@@ -99,7 +99,7 @@ export default function DashboardShell() {
     ? DASHBOARD_PAGES.filter((page) => page.key !== 'dashboard' && (pathname === page.href || pathname.startsWith(`${page.href}/`)))
         .sort((a, b) => b.href.length - a.href.length)[0] || (pathname === '/dashboard' || pathname === '/dashboard/' ? DASHBOARD_PAGES[0] : undefined)
     : undefined;
-  const pageBlocked = Boolean(blockedPage && !canOpenPage(blockedPage.key));
+  const pageBlocked = Boolean(blockedPage && !canOpenPage(blockedPage.key, blockedPage.permission));
   useEffect(() => {
     if (pageBlocked) navigate(getFirstAccessiblePage(), { replace: true });
   }, [pageBlocked, navigate]);

@@ -174,19 +174,26 @@ export function hasAnyPermission(keys: string[]): boolean {
 // (a "page.<key>" permission), they see ONLY the ticked pages. With none
 // ticked, the older rule applies (each page shows when its feature
 // permission is there). Owners / Super Admin are never restricted.
-// An account with ONLY page ticks (backend adds "pages.only" - e.g. the
-// Doctor role) sees just the ticked pages. One that also has normal
-// feature permissions sees its normal pages PLUS the ticked ones.
+// Rule once ANY page is ticked for an employee: a page shows when it is
+// ticked, OR the employee's OWN feature permissions cover it (e.g. Create
+// Sales -> POS). Permissions that only came from a ticked page (marked
+// "via.page.<key>" by the backend) don't count, and a page with no feature
+// permission (Help) shows only when ticked. "pages.only" (Doctor role:
+// page ticks and nothing else) = ticked pages only.
 export function isPageRestricted(): boolean {
-  return getAuthRole() === 'employee' && getPermissions().includes('pages.only');
+  return getAuthRole() === 'employee' && getPermissions().some((key) => key.startsWith('page.'));
 }
 
 export function canOpenPage(pageKey: string, permission?: string | string[]): boolean {
-  const ticked = getAuthRole() === 'employee' && getPermissions().includes(`page.${pageKey}`);
-  if (isPageRestricted()) return ticked;
-  if (ticked) return true;
-  if (!permission) return true;
-  return Array.isArray(permission) ? hasAnyPermission(permission) : hasPermission(permission);
+  if (!isPageRestricted()) {
+    if (!permission) return true;
+    return Array.isArray(permission) ? hasAnyPermission(permission) : hasPermission(permission);
+  }
+  const perms = getPermissions();
+  if (perms.includes(`page.${pageKey}`)) return true;
+  if (perms.includes('pages.only') || !permission) return false;
+  const own = (key: string) => perms.includes(key) && !perms.includes(`via.page.${key}`);
+  return (Array.isArray(permission) ? permission : [permission]).some(own);
 }
 
 // Unlike hasPermission, this is NOT role-gated - a Shop Owner is only

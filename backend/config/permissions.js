@@ -110,7 +110,7 @@ SIDEBAR_PAGES.forEach(([key, label]) => {
     key: `page.${key}`,
     label: `Page: ${label}`,
     module: "Sidebar Pages",
-    description: `Show the "${label}" page in this employee's sidebar. Tick at least one page and they will see ONLY the ticked pages.`,
+    description: `Show the "${label}" page in this employee's sidebar. Once any page is ticked, a page shows only if it is ticked or this employee's own feature permissions cover it.`,
   });
 });
 
@@ -122,9 +122,15 @@ const PAGE_GRANTS = Object.fromEntries(SIDEBAR_PAGES.map(([key, , grants]) => [`
 // role): it sees just those pages. An account with normal feature
 // permissions too (e.g. Receptionist + "Page: Dues") keeps all its normal
 // pages AND gets the ticked ones.
+// Grants that come ONLY from a ticked page are also marked "via.page.<key>"
+// so the sidebar doesn't treat them as the employee's own permission
+// (ticking Dues gives "dues.manage" - that must not also open Ledger/Bank).
 function expandPagePermissions(keys) {
   const out = new Set(keys);
-  keys.forEach((key) => (PAGE_GRANTS[key] || []).forEach((grant) => out.add(grant)));
+  keys.forEach((key) => (PAGE_GRANTS[key] || []).forEach((grant) => {
+    if (!keys.includes(grant)) out.add(`via.page.${grant}`);
+    out.add(grant);
+  }));
   const hasPages = keys.some((key) => key.startsWith("page."));
   const hasFeatures = keys.some((key) => !key.startsWith("page.") && !WORKSPACE_ACCESS_DEFAULTS.includes(key));
   if (hasPages && !hasFeatures) out.add("pages.only");
