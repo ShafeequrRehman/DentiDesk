@@ -224,6 +224,13 @@ export function buildOrderReceiptLines(order: SavedOrder, previousDues = 0): Rec
     lines.push({ kind: 'dashed' });
     balance.forEach((l) => row(l.label, l.value, !!l.bold));
   }
+  // Staff names: who booked it, and who took the money.
+  const collector = [...(order.payments || [])].reverse().find((p) => Number(p.amount) > 0 && p.createdBy)?.createdBy;
+  if (order.bookedBy || collector) {
+    lines.push({ kind: 'dashed' });
+    if (order.bookedBy) text(`BOOKED BY: ${order.bookedBy.toUpperCase()}`);
+    if (collector) text(`RECEIVED BY: ${collector.toUpperCase()}`);
+  }
   return lines;
 }
 

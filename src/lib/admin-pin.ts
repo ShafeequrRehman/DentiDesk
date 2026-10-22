@@ -69,8 +69,12 @@ async function checkWithServer(pin: string): Promise<string | null> {
     await api.post('/superadmin/verify-pin', {}, { headers: { 'x-admin-pin': pin } });
     return null;
   } catch (error) {
-    const data = (error as { response?: { data?: { message?: string } } })?.response?.data;
-    return data?.message || 'Could not check the PIN - check the connection and try again.';
+    const response = (error as { response?: { status?: number; data?: { message?: string } } })?.response;
+    if (response?.data && typeof response.data === 'object' && response.data.message) return response.data.message;
+    // No PIN check on the server yet = it is still running the old backend.
+    if (response?.status === 404) return 'The server is still running the old version - restart the backend (aaPanel Stop, then Start), then try again.';
+    if (response?.status) return `Could not check the PIN (server error ${response.status}) - try again.`;
+    return 'Could not reach the server - check the connection and try again.';
   }
 }
 

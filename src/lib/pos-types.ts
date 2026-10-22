@@ -1037,6 +1037,10 @@ export interface OrderPayload {
 }
 
 export interface SavedOrder extends OrderPayload {
+  // Who booked it (staff name or "Online") and the payment ledger - the
+  // slip shows "Booked by" / "Received by".
+  bookedBy?: string;
+  payments?: Array<{ kind?: string; amount: number; method?: string; createdBy?: string; date?: string }>;
   // Part of paidAmount taken from the patient's advance, and part of the
   // payment that went to older dues (backend advanceService / completeAndSettle).
   advanceApplied?: number;

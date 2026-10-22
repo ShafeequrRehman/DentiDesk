@@ -205,6 +205,8 @@ const orderSchema = new mongoose.Schema(
     bankId: { type: mongoose.Schema.Types.ObjectId, ref: "Bank", default: null },
     bankName: { type: String, default: "" },
     payments: { type: [paymentEntrySchema], default: [] },
+    // Who booked the appointment (staff name, or "Online") - on the slip.
+    bookedBy: { type: String, default: "" },
     paidAmount: { type: Number, default: 0 },
     remainingAmount: { type: Number, default: 0 },
     // Part of paidAmount that came from the patient's advance (paid

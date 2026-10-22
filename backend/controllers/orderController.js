@@ -724,6 +724,7 @@ exports.createOrder = async (req, res) => {
     const order = await Order.create({
       ...payload,
       ...buildShopScope(req),
+      bookedBy: await currentUserDisplayName(req),
       userId: req.user?.id ? String(req.user.id) : payload.userId,
       subtotal: totals.subtotal,
       tax: totals.tax,

@@ -567,6 +567,7 @@ exports.createOrder = async (req, res) => {
       paidAmount: 0,
       remainingAmount: total,
       source: "customer-qr",
+      bookedBy: "Online",
       trackingStatus: "awaiting_confirmation",
       paymentStatus: isGatewayPayment ? "awaiting_confirmation" : "unpaid",
       deliveryLocation,

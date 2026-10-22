@@ -118,9 +118,16 @@ const PAGE_GRANTS = Object.fromEntries(SIDEBAR_PAGES.map(([key, , grants]) => [`
 
 // An employee's final permission list: their keys + whatever each ticked
 // page needs to work.
+// "pages.only" marks an account that has ONLY page ticks (e.g. a Doctor
+// role): it sees just those pages. An account with normal feature
+// permissions too (e.g. Receptionist + "Page: Dues") keeps all its normal
+// pages AND gets the ticked ones.
 function expandPagePermissions(keys) {
   const out = new Set(keys);
   keys.forEach((key) => (PAGE_GRANTS[key] || []).forEach((grant) => out.add(grant)));
+  const hasPages = keys.some((key) => key.startsWith("page."));
+  const hasFeatures = keys.some((key) => !key.startsWith("page.") && !WORKSPACE_ACCESS_DEFAULTS.includes(key));
+  if (hasPages && !hasFeatures) out.add("pages.only");
   return Array.from(out);
 }
 

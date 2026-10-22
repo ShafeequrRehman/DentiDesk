@@ -174,12 +174,17 @@ export function hasAnyPermission(keys: string[]): boolean {
 // (a "page.<key>" permission), they see ONLY the ticked pages. With none
 // ticked, the older rule applies (each page shows when its feature
 // permission is there). Owners / Super Admin are never restricted.
+// An account with ONLY page ticks (backend adds "pages.only" - e.g. the
+// Doctor role) sees just the ticked pages. One that also has normal
+// feature permissions sees its normal pages PLUS the ticked ones.
 export function isPageRestricted(): boolean {
-  return getAuthRole() === 'employee' && getPermissions().some((key) => key.startsWith('page.'));
+  return getAuthRole() === 'employee' && getPermissions().includes('pages.only');
 }
 
 export function canOpenPage(pageKey: string, permission?: string | string[]): boolean {
-  if (isPageRestricted()) return getPermissions().includes(`page.${pageKey}`);
+  const ticked = getAuthRole() === 'employee' && getPermissions().includes(`page.${pageKey}`);
+  if (isPageRestricted()) return ticked;
+  if (ticked) return true;
   if (!permission) return true;
   return Array.isArray(permission) ? hasAnyPermission(permission) : hasPermission(permission);
 }
