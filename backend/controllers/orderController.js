@@ -9,7 +9,18 @@ const Shop = require("../models/Shop");
 const User = require("../models/User");
 const { shopScope } = require("../middleware/attachShopScope");
 const { notifyRiderForDelivery, notifyAssignedRider } = require("../services/riderNotificationService");
-const { notifyCustomerConfirmed, notifyCustomerCompleted } = require("../services/customerNotificationService");
+const { notifyCustomerConfirmed, notifyCustomerCompleted, notifyCustomerCancelled } = require("../services/customerNotificationService");
+
+// WhatsApp the patient that their appointment was cancelled (fire-and-forget).
+const CANCEL_SHOP_FIELDS = "name phone address currency receiptSettings";
+async function sendCancelledMessage(order) {
+  try {
+    const shop = await Shop.findById(order.shopId).select(CANCEL_SHOP_FIELDS).lean();
+    if (shop) await notifyCustomerCancelled(order, shop);
+  } catch (error) {
+    console.error("Non-fatal: cancel WhatsApp failed", error.message);
+  }
+}
 const { deductStockForItems, restoreStockForOrder, restoreStockForItems } = require("../services/stockService");
 const { findLeaveFor, leaveMessage, findScheduleProblem } = require("../services/leaveService");
 const { recordCashMovement } = require("../controllers/cashController");
@@ -1729,6 +1740,7 @@ async function cancelOrderCore(orderId, key, reason, req) {
   }
 
   const user = req.user?.id ? await User.findById(req.user.id).select("name username").lean() : null;
+  const wasPending = order.status === "pending";
 
   order.status = "cancelled";
   order.cancelledAt = new Date();
@@ -1799,6 +1811,8 @@ async function cancelOrderCore(orderId, key, reason, req) {
       });
     }
   }
+  // Only a still-pending appointment - the patient was expecting to come.
+  if (wasPending) void sendCancelledMessage(order);
   return order;
 }
 
@@ -1916,6 +1930,7 @@ exports.updateTrackingStatus = async (req, res) => {
 
     order.version = Number(order.version || 0) + 1;
     await order.save();
+    if (trackingStatus === "cancelled") void sendCancelledMessage(order);
     res.json({ ...order.toObject(), id: String(order._id) });
   } catch (error) {
     res.status(500).json({ message: error.message });

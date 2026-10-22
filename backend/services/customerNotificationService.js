@@ -222,6 +222,39 @@ async function notifyCustomerConfirmed(order, shop) {
   return sendCustomerMessage(order, shop, order.appointmentTime ? buildAppointmentConfirmedMessage(order, shop, isHidden) : buildOrderPlacedMessage(order, shop, isHidden));
 }
 
+// Sent when a pending appointment is cancelled (Appointments page Cancel,
+// or the clinic declining an online one).
+function buildAppointmentCancelledMessage(order, shop) {
+  const shopName = shop?.name || "";
+  const forLabel = /^dr\.?\s/i.test(order.doctorName || "") ? "Dr" : "Service";
+  const reason = String(order.cancelReason || "").trim();
+  const showReason = reason && !/^(no reason provided|declined by clinic)$/i.test(reason);
+  return [
+    `*Your appointment is cancelled* ❌`,
+    `Hello ${order.customer?.name || "there"},`,
+    `Your appointment at ${shopName} has been cancelled.`,
+    ``,
+    `*Appointment Details*`,
+    `------------------------`,
+    `Appointment No: ${orderNumberOf(order)}`,
+    order.doctorName ? `${forLabel}: ${order.doctorName}` : null,
+    order.appointmentDate ? `Date: ${formatSlotDate(order.appointmentDate)}` : null,
+    order.appointmentTime ? `Time: ${formatSlotTime(order.appointmentTime)}` : null,
+    showReason ? `Reason: ${reason}` : null,
+    `------------------------`,
+    `To book a new time, please call us:`,
+    `${clinicPhones(shop)}`,
+    `${clinicAddress(shop)}`,
+    `${shopName}`,
+  ]
+    .filter((line) => line !== null)
+    .join("\n");
+}
+
+async function notifyCustomerCancelled(order, shop) {
+  return sendCustomerMessage(order, shop, buildAppointmentCancelledMessage(order, shop));
+}
+
 async function notifyCustomerCompleted(order, shop) {
   return sendCustomerMessage(order, shop, buildOrderCompletedMessage(order, shop));
 }
@@ -229,6 +262,7 @@ async function notifyCustomerCompleted(order, shop) {
 module.exports = {
   notifyCustomerConfirmed,
   notifyCustomerCompleted,
+  notifyCustomerCancelled,
   buildOrderPlacedMessage,
   buildOrderCompletedMessage,
 };
