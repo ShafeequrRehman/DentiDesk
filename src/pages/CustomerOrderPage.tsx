@@ -21,6 +21,7 @@ import {
 } from '@/lib/public-order-api';
 import { getApiBaseCandidates } from '@/lib/api';
 import TestimonialMedia from '@/components/TestimonialMedia';
+import RefreshAppButton from '@/components/RefreshAppButton';
 import { fetchPublicTestimonials, type PublicTestimonial } from '@/lib/public-order-api';
 import { clinicEnd, clinicStart, dayOpen, describeSchedule, drsForService, inToday, sortByShowOrder, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, NO_EXTRA, scheduleOf, setClinicHours, slotOpen, todayISO, useTimeSlots, type ExtraDay, WEEKDAY_LONG, WEEKDAY_SHORT, weekdayOfISO } from '@/lib/appointments';
 
@@ -1370,6 +1371,8 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
             <h1 className="text-xl font-black">{menu?.shopName || 'Menu'}</h1>
             <p className="text-xs font-semibold text-white/60">Book your appointment online</p>
           </div>
+          <div className="flex items-center gap-2">
+          <RefreshAppButton dark />
           {installPromptEvent ? (
             <button
               type="button"
@@ -1383,6 +1386,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
               <Download size={14} /> Install
             </button>
           ) : null}
+          </div>
         </div>
       </header>
 

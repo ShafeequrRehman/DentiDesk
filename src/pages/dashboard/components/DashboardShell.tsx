@@ -25,6 +25,7 @@ import { getIpcRenderer } from '@/lib/electron-bridge';
 import ShopClosingSummaryModal from '@/pages/dashboard/components/ShopClosingSummaryModal';
 import { useLanguage } from '@/i18n';
 import { LanguageSwitcher } from '@/components/LanguageSwitcher';
+import RefreshAppButton from '@/components/RefreshAppButton';
 
 // Icons keyed by DASHBOARD_PAGES's `key` - kept separate from that shared
 // list since it lives in lib/ and can't hold JSX.
@@ -346,6 +347,7 @@ export default function DashboardShell() {
                 its own full-width row - it just needs its own contents
                 pushed to that row's right edge). */}
             <div className="flex w-full flex-wrap items-center justify-end gap-1.5 sm:ml-auto sm:w-auto sm:gap-2">
+              <RefreshAppButton />
               <InstallAppButton />
               <TopAction icon={<Search size={15} />} className="hidden sm:flex" />
               <TopAction icon={<Cloud size={15} />} className="hidden sm:flex" />
