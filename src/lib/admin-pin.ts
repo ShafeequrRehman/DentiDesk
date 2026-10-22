@@ -8,16 +8,19 @@ import { api } from '@/lib/api';
 
 type PinCheck = (pin: string) => Promise<string | null>; // null = ok, else the error to show
 
-function askPin(check: PinCheck): Promise<string | null> {
+type PinLabels = { title: string; text: string; placeholder: string };
+const ADMIN_LABELS: PinLabels = { title: 'Super Admin PIN', text: 'Enter the Super Admin verify PIN to make this change.', placeholder: 'PIN' };
+
+export function askPin(check: PinCheck, labels: PinLabels = ADMIN_LABELS): Promise<string | null> {
   return new Promise((resolve) => {
     const overlay = document.createElement('div');
     overlay.style.cssText = 'position:fixed;inset:0;z-index:99999;background:rgba(15,23,42,.45);display:flex;align-items:center;justify-content:center;padding:16px;backdrop-filter:blur(3px)';
     overlay.innerHTML = `
       <form style="width:100%;max-width:360px;background:#fff;border-radius:24px;padding:24px;box-shadow:0 20px 50px rgba(0,0,0,.25);font-family:inherit">
         <p style="margin:0;font-size:11px;font-weight:900;letter-spacing:.15em;text-transform:uppercase;color:#6366f1">Verify</p>
-        <h3 style="margin:4px 0 6px;font-size:20px;font-weight:900;color:#0f172a">Super Admin PIN</h3>
-        <p style="margin:0 0 14px;font-size:13px;font-weight:600;color:#64748b">Enter the Super Admin verify PIN to make this change.</p>
-        <input data-pin type="password" inputmode="numeric" autocomplete="off" maxlength="12" placeholder="PIN"
+        <h3 data-title style="margin:4px 0 6px;font-size:20px;font-weight:900;color:#0f172a"></h3>
+        <p data-text style="margin:0 0 14px;font-size:13px;font-weight:600;color:#64748b"></p>
+        <input data-pin type="password" autocomplete="off" maxlength="64"
           style="width:100%;box-sizing:border-box;border:1px solid #cbd5e1;border-radius:14px;padding:12px 14px;font-size:18px;font-weight:800;letter-spacing:.3em;outline:none" />
         <p data-error style="display:none;margin:8px 0 0;font-size:13px;font-weight:800;color:#e11d48"></p>
         <div style="display:flex;gap:8px;margin-top:16px">
@@ -25,6 +28,9 @@ function askPin(check: PinCheck): Promise<string | null> {
           <button type="submit" data-ok style="flex:1;border:0;border-radius:14px;padding:12px;font-weight:900;background:#4f46e5;color:#fff;cursor:pointer">Verify</button>
         </div>
       </form>`;
+    (overlay.querySelector('[data-title]') as HTMLElement).textContent = labels.title;
+    (overlay.querySelector('[data-text]') as HTMLElement).textContent = labels.text;
+    (overlay.querySelector('[data-pin]') as HTMLInputElement).placeholder = labels.placeholder;
     const form = overlay.querySelector('form') as HTMLFormElement;
     const input = overlay.querySelector('[data-pin]') as HTMLInputElement;
     const error = overlay.querySelector('[data-error]') as HTMLElement;

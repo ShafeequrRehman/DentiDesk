@@ -11,6 +11,42 @@ const { recordCashMovement } = require("./cashController");
 const { recordCustomerBankMovement } = require("./bankController");
 const { PERMISSIONS, PERMISSION_KEYS, DEFAULT_ROLE_PRESETS } = require("../config/permissions");
 
+// Permission changes (a staff member's role / extra or removed permissions,
+// a role's permission list) need the clinic's Page Visibility Key - the one
+// the Super Admin set - sent as the "x-page-key" header. No key set for the
+// clinic = no check. 5 wrong keys lock it for 15 minutes.
+const pageKeyFails = new Map(); // shopId -> { count, lockedUntil }
+async function checkPageKey(req, res) {
+  const shopId = String(req.user.shopId || "");
+  const shop = await Shop.findById(shopId).select("pageVisibilityKeyHash").lean();
+  if (!shop?.pageVisibilityKeyHash) return true;
+  const state = pageKeyFails.get(shopId);
+  if (state?.lockedUntil && state.lockedUntil > Date.now()) {
+    const minutes = Math.ceil((state.lockedUntil - Date.now()) / 60000);
+    res.status(429).json({ message: `Too many wrong keys - try again in ${minutes} minute(s).`, reason: "page_key_locked" });
+    return false;
+  }
+  const key = String(req.headers["x-page-key"] || "");
+  if (!key) {
+    res.status(403).json({ message: "Enter the Page Visibility Key to save permission changes.", reason: "page_key_required" });
+    return false;
+  }
+  if (!(await bcrypt.compare(key, shop.pageVisibilityKeyHash))) {
+    const count = (state?.count || 0) + 1;
+    pageKeyFails.set(shopId, count >= 5 ? { count: 0, lockedUntil: Date.now() + 15 * 60 * 1000 } : { count, lockedUntil: 0 });
+    res.status(403).json({ message: "Wrong Page Visibility Key.", reason: "page_key_wrong" });
+    return false;
+  }
+  pageKeyFails.delete(shopId);
+  return true;
+}
+
+function sameKeys(a, b) {
+  const x = [...new Set((a || []).map(String))].sort();
+  const y = [...new Set((b || []).map(String))].sort();
+  return x.length === y.length && x.every((v, i) => v === y[i]);
+}
+
 function safeUser(user) {
   const obj = user.toObject ? user.toObject() : user;
   delete obj.password;
@@ -57,6 +93,7 @@ exports.createEmployee = async (req, res) => {
     if (revokedPermissions !== undefined && !validatePermissionKeys(revokedPermissions)) {
       return res.status(400).json({ message: "revokedPermissions contains an unknown permission key", reason: "invalid_permissions" });
     }
+    if (((extraPermissions || []).length > 0 || (revokedPermissions || []).length > 0) && !(await checkPageKey(req, res))) return;
 
     const role = await Role.findOne({ _id: roleId, shopId: req.user.shopId }).lean();
     if (!role) {
@@ -126,6 +163,11 @@ exports.updateEmployee = async (req, res) => {
     if (revokedPermissions !== undefined && !validatePermissionKeys(revokedPermissions)) {
       return res.status(400).json({ message: "revokedPermissions contains an unknown permission key", reason: "invalid_permissions" });
     }
+    const permissionsChanged =
+      (extraPermissions !== undefined && !sameKeys(extraPermissions, employee.extraPermissions)) ||
+      (revokedPermissions !== undefined && !sameKeys(revokedPermissions, employee.revokedPermissions)) ||
+      (roleId && String(roleId) !== String(employee.employeeRoleId || ""));
+    if (permissionsChanged && !(await checkPageKey(req, res))) return;
 
     if (username && username !== employee.username) {
       const clash = await User.findOne({ username, _id: { $ne: employee._id } }).lean();
@@ -424,6 +466,7 @@ exports.createRole = async (req, res) => {
       return res.status(400).json({ message: "permissions contains an unknown permission key", reason: "invalid_permissions" });
     }
 
+    if (((permissions || []).length > 0 || hideDashboard) && !(await checkPageKey(req, res))) return;
     const role = await Role.create({ shopId: req.user.shopId, name, permissions: permissions || [], hideDashboard: Boolean(hideDashboard) });
     res.status(201).json(role);
   } catch (error) {
@@ -439,6 +482,10 @@ exports.updateRole = async (req, res) => {
     if (!role) return res.status(404).json({ message: "Role not found" });
 
     const { name, permissions, hideDashboard } = req.body;
+    const roleChanged =
+      (permissions !== undefined && !sameKeys(permissions, role.permissions)) ||
+      (hideDashboard !== undefined && Boolean(hideDashboard) !== Boolean(role.hideDashboard));
+    if (roleChanged && !(await checkPageKey(req, res))) return;
     if (permissions !== undefined) {
       if (!validatePermissionKeys(permissions)) {
         return res.status(400).json({ message: "permissions contains an unknown permission key", reason: "invalid_permissions" });

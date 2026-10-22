@@ -1,4 +1,7 @@
 import { api } from "@/lib/api";
+import { installPageKeyPrompt } from '@/lib/page-key';
+
+installPageKeyPrompt();
 
 // Thin wrappers around backend/routes/shopOwnerRoutes.js (employees, roles,
 // permission catalog, own-shop profile). Requires a Shop Owner session -
