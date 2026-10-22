@@ -29,6 +29,9 @@ export interface PublicMenuProduct {
   workStart?: string;
   workEnd?: string;
   serviceDoctors?: string[];
+  sortOrder?: number;
+  // The clinic books this one itself - no online booking.
+  bookingOff?: boolean;
   isDeal: boolean;
 }
 

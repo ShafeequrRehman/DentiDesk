@@ -28,6 +28,12 @@ const productSchema = new mongoose.Schema(
     // slots (so a Dr busy on a service can't be double-booked).
     // Empty = any Dr.
     serviceDoctors: { type: [String], default: [] },
+    // Display order on POS and the online page (Manage Appointments).
+    // 1 shows first; 0 / empty = after the numbered ones.
+    sortOrder: { type: Number, default: 0 },
+    // On = patients can't book this Dr/Service online (the card still shows,
+    // the Book button is off). The clinic still books it from POS.
+    onlineBookingOff: { type: Boolean, default: false },
     isDeal: { type: Boolean, default: false },
     dealItems: { type: [String], default: [] },
     // Product Code / SKU: an optional string the staff can type on the POS

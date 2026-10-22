@@ -225,6 +225,8 @@ exports.getMenu = async (req, res) => {
         workStart: product.workStart || "",
         workEnd: product.workEnd || "",
         serviceDoctors: product.serviceDoctors || [],
+        sortOrder: Number(product.sortOrder) || 0,
+        bookingOff: Boolean(product.onlineBookingOff),
         isDeal: Boolean(product.isDeal),
       })),
     });
@@ -466,6 +468,12 @@ exports.createOrder = async (req, res) => {
     // A Service is booked with the Dr the patient picked - in that Dr's
     // slots - when the clinic has Drs for it.
     const pickedDoctor = String(payload.appointmentDoctor || "").trim();
+    // Drs/Services the clinic books only itself (Manage Appointments toggle).
+    const offItem = items.find((item) => productFor(item)?.onlineBookingOff);
+    if (offItem || (pickedDoctor && byKey.get(pickedDoctor)?.onlineBookingOff)) {
+      const what = offItem ? offItem.name : pickedDoctor;
+      return res.status(400).json({ message: `${what} can't be booked online - please call the clinic to book.`, reason: "online_booking_off" });
+    }
     if (doctorItem && !isDoctorProduct(productFor(doctorItem)) && pickedDoctor) {
       const drProduct = byKey.get(pickedDoctor);
       if (!drProduct || !isDoctorProduct(drProduct)) {

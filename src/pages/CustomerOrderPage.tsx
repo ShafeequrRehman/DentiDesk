@@ -22,7 +22,7 @@ import {
 import { getApiBaseCandidates } from '@/lib/api';
 import TestimonialMedia from '@/components/TestimonialMedia';
 import { fetchPublicTestimonials, type PublicTestimonial } from '@/lib/public-order-api';
-import { clinicEnd, clinicStart, dayOpen, describeSchedule, drsForService, inToday, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, NO_EXTRA, scheduleOf, setClinicHours, slotOpen, todayISO, useTimeSlots, type ExtraDay, WEEKDAY_LONG, WEEKDAY_SHORT, weekdayOfISO } from '@/lib/appointments';
+import { clinicEnd, clinicStart, dayOpen, describeSchedule, drsForService, inToday, sortByShowOrder, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, NO_EXTRA, scheduleOf, setClinicHours, slotOpen, todayISO, useTimeSlots, type ExtraDay, WEEKDAY_LONG, WEEKDAY_SHORT, weekdayOfISO } from '@/lib/appointments';
 
 // A plain numbered table ("5") still needs the "Table " prefix to read as
 // a table at all - a custom label already reads fine on its own. Only ever
@@ -101,10 +101,10 @@ function groupMenuProducts(products: PublicMenuProduct[]): ProductGroup[] {
     }
   }
   // A service with real options: the plain "Standard" entry is not offered.
-  return Array.from(map.values()).map((group) => {
+  return sortByShowOrder(Array.from(map.values()).map((group) => {
     const options = group.variations.filter((v) => v.variation && v.variation !== 'Standard');
     return options.length && !group.isDeal ? { ...group, variations: options, hasOptions: true } : group;
-  });
+  }));
 }
 
 // One entry per shop, holding whatever order this device currently
@@ -1144,6 +1144,8 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   }, [shopId, customerPhone]);
 
   const products = menu?.products || [];
+  // Drs the clinic books itself aren't offered for a Service online either.
+  const bookableProducts = products.filter((p) => !p.bookingOff);
   // Category -> product name -> size/variation, same three-level browse as
   // desktop's POSPage.tsx (see groupMenuProducts' own comment) - "Pizza"
   // (category) contains "Special Pizza" (one tile/group), which opens a
@@ -1166,7 +1168,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
   // own slots. A Service with no Drs in the clinic keeps its own slots.
   const cartDrName = cartLines.find((line) => isDoctorProduct(line.product))?.product.name || '';
   const cartService = !cartDrName ? cartLines[0]?.product || null : null;
-  const serviceDrs = useMemo(() => drsForService(cartService, products), [cartService, products]);
+  const serviceDrs = useMemo(() => drsForService(cartService, bookableProducts), [cartService, products]);
   const [serviceDoctor, setServiceDoctor] = useState('');
   useEffect(() => {
     if (serviceDoctor && !serviceDrs.some((d) => d.name === serviceDoctor)) setServiceDoctor('');
@@ -1456,7 +1458,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
               ) : null}
               {(() => {
                 // A Service: which Drs do it, and who's in today.
-                const drs = drsForService(single, products);
+                const drs = drsForService(single, bookableProducts);
                 if (drs.length === 0) return null;
                 const inNow = drs.filter((d) => inToday(d, offToday, extraToday)).map((d) => d.name);
                 return (
@@ -1468,7 +1470,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
                   </div>
                 );
               })()}
-              {drsForService(single, products).length > 0 ? null : !hasVariations || new Set(group.variations.map((v) => JSON.stringify(scheduleOf(v)))).size === 1 ? (
+              {drsForService(single, bookableProducts).length > 0 ? null : !hasVariations || new Set(group.variations.map((v) => JSON.stringify(scheduleOf(v)))).size === 1 ? (
                 <ScheduleInfo product={single} />
               ) : (
                 <p className="mt-1 flex items-center gap-1 text-[10px] font-bold text-gray-500"><Clock size={11} className="text-[#007F90]" /> Days differ per option - tap Select</p>
@@ -1478,7 +1480,11 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
               {(hasVariations ? pricedOptions.length === 0 : single.priceHidden) ? null : (
                 <p className="mt-1 text-sm font-black text-gray-900">{hasVariations ? `From ${cs()}${formatter.format(cheapest)}` : `${cs()}${formatter.format(single.price)}`}</p>
               )}
-              {hasVariations ? (
+              {group.variations.some((v) => v.bookingOff) ? (
+                <button type="button" disabled title="This one is booked by the clinic - please call to book." className="mt-2 w-full cursor-not-allowed rounded-xl bg-gray-100 py-2 text-xs font-black text-gray-400 ring-1 ring-gray-200">
+                  Book at clinic (call us)
+                </button>
+              ) : hasVariations ? (
                 <button type="button" onClick={() => handleGroupTap(group)} className="mt-2 w-full rounded-xl border-[0.5px] border-white/50 bg-gradient-to-b from-[#A8E9F1] to-[#14BCD1] py-2 text-xs font-black text-black shadow-[inset_0_1px_0_rgba(255,255,255,0.6),inset_0_-2px_6px_rgba(0,110,125,0.4)] transition hover:brightness-105">
                   {groupCartCount > 0 ? `${groupCartCount} in cart - Select` : 'Select'}
                 </button>

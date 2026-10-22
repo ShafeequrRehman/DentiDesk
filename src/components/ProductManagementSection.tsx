@@ -1,7 +1,7 @@
 
 import { cs, currencyCode } from '@/lib/currency';
 import { useEffect, useMemo, useRef, useState } from "react";
-import { clinicEnd, clinicStart, formatSlot, isDoctorProduct, useTimeSlots, WEEKDAY_SHORT } from '@/lib/appointments';
+import { clinicEnd, clinicStart, formatSlot, isDoctorProduct, sortByShowOrder, useTimeSlots, WEEKDAY_SHORT } from '@/lib/appointments';
 import { Plus, Package, Edit, Archive, X, Trash2, Search, ChevronDown, ChevronRight, Upload } from "lucide-react";
 import { createProduct, deleteProduct, fetchProducts, updateProduct } from "@/lib/pos-api";
 import { IngredientUnit, Product } from "@/lib/pos-types";
@@ -148,6 +148,9 @@ export function ProductManagementSection({
   const [workEnd, setWorkEnd] = useState("");
   // For a Service: which Drs can do it (empty = any Dr).
   const [serviceDoctors, setServiceDoctors] = useState<string[]>([]);
+  // Show order on POS / online (1 first) and "patients can't book online".
+  const [sortOrder, setSortOrder] = useState("");
+  const [bookingOff, setBookingOff] = useState(false);
   // Service options (e.g. which tooth for a Crown): ticked -> the service is
   // saved as one entry per option (each its own name, price, photo). The
   // patient / POS then ticks one or more options; each is a bill line.
@@ -235,6 +238,8 @@ export function ProductManagementSection({
     setWorkStart("");
     setWorkEnd("");
     setServiceDoctors([]);
+    setSortOrder("");
+    setBookingOff(false);
     setHasOptions(false);
     setOptions([{ name: '', price: '', image: '' }]);
     setEditingGroup(null);
@@ -254,6 +259,8 @@ export function ProductManagementSection({
       workStart,
       workEnd,
       serviceDoctors: isDoctorProduct({ name, category }) ? [] : serviceDoctors,
+      sortOrder: Math.max(0, Math.floor(Number(sortOrder) || 0)),
+      onlineBookingOff: bookingOff,
       unit,
       // Preserved as-is from whatever was already on the product being
       // edited (or the "not a deal" defaults for a brand new product) -
@@ -371,6 +378,8 @@ export function ProductManagementSection({
     setWorkStart(product.workStart || "");
     setWorkEnd(product.workEnd || "");
     setServiceDoctors(product.serviceDoctors || []);
+    setSortOrder(product.sortOrder ? String(product.sortOrder) : "");
+    setBookingOff(Boolean(product.onlineBookingOff));
     setCategory(product.category);
     setCompany(product.company || "");
     setUnit(product.unit || "pcs");
@@ -490,7 +499,7 @@ export function ProductManagementSection({
       }
       group.variations.push(p);
     }
-    return order.map((key) => map.get(key)!);
+    return sortByShowOrder(order.map((key) => map.get(key)!));
   }, [products]);
 
   return (
@@ -610,6 +619,35 @@ export function ProductManagementSection({
             />
             <p className="text-[10px] font-bold text-slate-400 ml-1">Shown only to patients on the online appointment page, under &quot;Details&quot; on this card. Not printed on any slip.</p>
           </div>
+          <div className="space-y-2">
+            <label className="text-[11px] font-black text-slate-400 uppercase tracking-widest ml-1">Show order (number)</label>
+            <input
+              type="number"
+              min={0}
+              step={1}
+              inputMode="numeric"
+              value={sortOrder}
+              onChange={(e) => setSortOrder(e.target.value.replace(/[^0-9]/g, ""))}
+              placeholder="e.g. 1"
+              className="w-full rounded-2xl border-none ring-1 ring-slate-200 bg-white px-4 py-3.5 text-sm font-bold shadow-sm outline-none focus:ring-2 focus:ring-indigo-500 transition-all"
+            />
+            <p className="text-[10px] font-bold text-slate-400 ml-1">Order on POS and the online appointment page: 1 shows first, then 2, 3... Empty = after the numbered ones.</p>
+          </div>
+          <label className="flex cursor-pointer items-center justify-between gap-3 rounded-2xl bg-white px-4 py-3 ring-1 ring-slate-200">
+            <span>
+              <span className="block text-sm font-black text-slate-700">Stop online booking</span>
+              <span className="block text-[10px] font-bold text-slate-400">On = patients see this card online but can&apos;t book it (the clinic books it from POS). POS is not affected.</span>
+            </span>
+            <button
+              type="button"
+              role="switch"
+              aria-checked={bookingOff}
+              onClick={() => setBookingOff((v) => !v)}
+              className={`relative h-6 w-11 shrink-0 rounded-full transition ${bookingOff ? "bg-rose-500" : "bg-slate-300"}`}
+            >
+              <span className={`absolute top-0.5 h-5 w-5 rounded-full bg-white shadow transition-all ${bookingOff ? "left-[22px]" : "left-0.5"}`} />
+            </button>
+          </label>
           {/* For a Service: the Drs who can do it. On POS and the online page
               the patient picks one of them, and the appointment is booked
               in that Dr's own time slots. */}
@@ -926,7 +964,7 @@ export function ProductManagementSection({
                         {group.isDeal && <span className="bg-rose-100 text-rose-600 px-2 py-0.5 rounded-lg text-[10px] uppercase font-black tracking-wider shadow-sm">{t("productManagement.directory.dealBundle")}</span>}
                       </div>
                       <p className="text-[10px] uppercase font-bold text-slate-400 tracking-widest mt-1">
-                        {group.category}{group.company ? ` · ${group.company}` : ""}
+                        {group.category}{group.company ? ` · ${group.company}` : ""}{group.variations.some((v) => v.sortOrder) ? ` · #${Math.min(...group.variations.map((v) => v.sortOrder || Infinity))}` : ""}{group.variations.some((v) => v.onlineBookingOff) ? " · Online off" : ""}
                       </p>
                       {group.isDeal && single.dealItems && single.dealItems.length > 0 ? (
                         <div className="mt-2 flex flex-wrap gap-1.5">

@@ -387,3 +387,14 @@ export async function printPrescriptionWithImages(order: SavedOrder, images?: st
   }
   return printPrescription(order, pictures || [], await lookupWorkAs(order.doctorName));
 }
+
+// Manage Appointments "Show order": groups sorted by their number (lowest
+// of the group's entries) - 1 first; un-numbered (0) keep their old order
+// after the numbered ones.
+export function sortByShowOrder<G extends { variations: Array<{ sortOrder?: number }> }>(groups: G[]): G[] {
+  const rank = (g: G) => {
+    const nums = g.variations.map((v) => Number(v.sortOrder) || 0).filter((n) => n > 0);
+    return nums.length ? Math.min(...nums) : Number.POSITIVE_INFINITY;
+  };
+  return groups.map((g, i) => ({ g, i, r: rank(g) })).sort((a, b) => a.r - b.r || a.i - b.i).map((x) => x.g);
+}

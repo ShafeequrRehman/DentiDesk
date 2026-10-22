@@ -19,7 +19,7 @@ import { isTypingTarget, useBackspaceToClose } from '@/lib/keyboard-shortcuts';
 import { useLanguage } from '@/i18n';
 import CompleteOrderModal from '@/components/CompleteOrderModal';
 import { isValidWhatsappNumber, sendAppointmentSlip } from '@/lib/whatsapp-slips';
-import { drsForService, inToday, useTimeSlots, dayOpen, slotOpen, extraFor, describeSchedule, scheduleOf, WEEKDAY_LONG, weekdayOfISO, describeUpcomingLeave, describeUpcomingExtra, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo } from '@/lib/appointments';
+import { drsForService, inToday, useTimeSlots, dayOpen, slotOpen, extraFor, describeSchedule, scheduleOf, WEEKDAY_LONG, weekdayOfISO, describeUpcomingLeave, describeUpcomingExtra, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo, sortByShowOrder } from '@/lib/appointments';
 
 
 // A "product group" is every Product record that shares the same name +
@@ -504,10 +504,10 @@ export default function POSPage() {
     }
     // A service with real options (e.g. which tooth): the plain "Standard"
     // entry and its price are no longer offered - only the options.
-    return Array.from(map.values()).map((group) => {
+    return sortByShowOrder(Array.from(map.values()).map((group) => {
       const options = group.variations.filter((v) => v.variation && v.variation !== 'Standard');
       return options.length && !group.isDeal ? { ...group, variations: options, hasOptions: true } : group;
-    });
+    }));
   }, [products]);
 
   // Memoized so this filter only actually re-runs when the product list,

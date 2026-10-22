@@ -29,6 +29,10 @@ export interface Product {
   workEnd?: string;
   // For a Service: the Drs (names) who can do it - empty = any Dr.
   serviceDoctors?: string[];
+  // Display order on POS / online (1 first; 0 = after the numbered ones).
+  sortOrder?: number;
+  // On = can't be booked from the online page (POS still can).
+  onlineBookingOff?: boolean;
   // Product Code / SKU: optional, typed or barcode-scanned on the POS
   // screen to instantly add this product/deal to the cart - see
   // POSPage.tsx's product-code entry box. Unique per shop when set (see
