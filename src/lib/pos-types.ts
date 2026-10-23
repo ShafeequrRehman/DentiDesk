@@ -203,6 +203,9 @@ export interface DashboardSummary {
   // currently in credit, nothing else. Sorted biggest-advance-first by the
   // backend already.
   customerAdvances?: { name: string; phone: string; amount: number }[];
+  // Dashboard "Details" lists for Patient Due and Sale on Due.
+  patientDues?: { name: string; phone: string; amount: number; fromAppointments: number; oldDues: number }[];
+  saleOnCreditRows?: { orderNumber: number | null; name: string; phone: string; amount: number; createdAt: string }[];
 }
 
 // Task 1: every Accounting Overview tile is editable - see

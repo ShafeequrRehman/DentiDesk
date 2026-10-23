@@ -183,6 +183,7 @@ function DashboardPageClientInner() {
   const [showStockValueDetail, setShowStockValueDetail] = useState(false);
   const [showVendorBalanceDetail, setShowVendorBalanceDetail] = useState(false);
   const [showSaleOnCashDetail, setShowSaleOnCashDetail] = useState(false);
+  const [dueList, setDueList] = useState<'patient' | 'sale' | null>(null);
 
   // Accounting Overview's Day/This Month/Custom filter ("yahan bhe date
   // honi chahy... day month aur year aur custom date ka hissab say states
@@ -418,6 +419,7 @@ function DashboardPageClientInner() {
         onOpenStockValueDetail={() => setShowStockValueDetail(true)}
         onOpenVendorBalanceDetail={() => setShowVendorBalanceDetail(true)}
         onOpenSaleOnCashDetail={() => setShowSaleOnCashDetail(true)}
+        onOpenDueList={(kind) => setDueList(kind)}
       />
 
       <div className="grid grid-cols-12 gap-6">
@@ -564,6 +566,8 @@ function DashboardPageClientInner() {
 
       {historyTileKey ? <TileHistoryModal tileKey={historyTileKey} canChange={hasPermission('dues.manage')} onChanged={() => void loadSummary()} onClose={() => setHistoryTileKey(null)} /> : null}
 
+      {dueList ? <DueListModal kind={dueList} summary={summary} onClose={() => setDueList(null)} /> : null}
+
       {showCustomerAdvances ? (
         <CustomerAdvancesModal advances={summary?.customerAdvances || []} onClose={() => setShowCustomerAdvances(false)} />
       ) : null}
@@ -614,6 +618,7 @@ function AccountingOverview({
   onOpenStockValueDetail,
   onOpenVendorBalanceDetail,
   onOpenSaleOnCashDetail,
+  onOpenDueList,
 }: {
   summary: DashboardSummary | null;
   formatter: Intl.NumberFormat;
@@ -635,6 +640,7 @@ function AccountingOverview({
   onOpenStockValueDetail: () => void;
   onOpenVendorBalanceDetail: () => void;
   onOpenSaleOnCashDetail: () => void;
+  onOpenDueList: (kind: 'patient' | 'sale') => void;
 }) {
   const money = (value: number | undefined) => `${cs()}${formatter.format(value ?? 0)}`;
   // Every "(Today)"-suffixed tile's label follows whichever range is
@@ -734,7 +740,7 @@ function AccountingOverview({
       ) : null}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <OverviewTile icon={<Target size={18} />} color="bg-orange-50 text-orange-500" label={`Total Sale (${periodLabel})`} value={money(summary?.totalSaleToday)} actions={actionsFor('totalSaleToday')} />
-        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label="Patient Due" value={money(summary?.customerUdharTotal)} valueColor="text-rose-600" actions={actionsFor('customerUdharTotal')} />
+        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label="Patient Due" value={money(summary?.customerUdharTotal)} valueColor="text-rose-600" actions={[{ icon: <List size={12} />, onClick: () => onOpenDueList('patient'), label: 'Details' }, ...actionsFor('customerUdharTotal')]} />
         <OverviewTile
           icon={<PiggyBank size={18} />}
           color="bg-emerald-50 text-emerald-500"
@@ -788,7 +794,7 @@ function AccountingOverview({
           actions={[{ icon: <List size={12} />, onClick: onOpenSaleOnCashDetail, label: 'Details' }, ...adjustOnlyFor('saleOnCash')]}
         />
         <OverviewTile icon={<Landmark size={18} />} color="bg-indigo-50 text-indigo-500" label={`Sale on Bank (${periodLabel})`} value={money(summary?.saleOnBank)} actions={actionsFor('saleOnBank')} />
-        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label={`Sale on Due (Credit · ${periodLabel})`} value={money(summary?.saleOnCredit)} valueColor="text-rose-600" actions={actionsFor('saleOnCredit')} />
+        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label={`Sale on Due (Credit · ${periodLabel})`} value={money(summary?.saleOnCredit)} valueColor="text-rose-600" actions={[{ icon: <List size={12} />, onClick: () => onOpenDueList('sale'), label: 'Details' }, ...actionsFor('saleOnCredit')]} />
         <OverviewTile
           icon={<CheckCircle2 size={18} />}
           color="bg-emerald-50 text-emerald-500"
@@ -1723,6 +1729,64 @@ function SaleOnCashDetailModal({
                   </p>
                 </div>
                 <p className="text-sm font-black text-blue-600">{cs()}{order.amount.toLocaleString()}</p>
+              </div>
+            ))}</Paged>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+// Patient Due / Sale on Due "Details": who owes, and which appointments
+// were left unpaid in the range shown.
+function DueListModal({ kind, summary, onClose }: { kind: 'patient' | 'sale'; summary: DashboardSummary | null; onClose: () => void }) {
+  useBackspaceToClose(onClose);
+  const patientRows = summary?.patientDues || [];
+  const saleRows = summary?.saleOnCreditRows || [];
+  const total = kind === 'patient' ? patientRows.reduce((sum, r) => sum + r.amount, 0) : saleRows.reduce((sum, r) => sum + r.amount, 0);
+  const count = kind === 'patient' ? patientRows.length : saleRows.length;
+  return (
+    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[85vh] w-full max-w-sm flex-col rounded-[32px] bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-black text-gray-900">{kind === 'patient' ? 'Patient Due' : 'Sale on Due'}</h2>
+            <p className="mt-1 text-xs text-gray-400">
+              {kind === 'patient' ? 'Every patient who owes right now (all days).' : 'Appointments left unpaid in this range.'}
+            </p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-full bg-[#F6F7FB] p-2.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900">
+            <XCircle size={18} />
+          </button>
+        </div>
+        <p className="mt-3 text-sm font-black text-rose-600">Total: {cs()}{total.toLocaleString()}</p>
+        <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
+          {count === 0 ? (
+            <p className="py-8 text-center text-xs font-bold text-gray-400">Nothing due.</p>
+          ) : kind === 'patient' ? (
+            <Paged items={patientRows}>{(rows) => rows.map((row, index) => (
+              <div key={`${row.phone}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl bg-[#F8F9FB] p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-gray-800">{row.name}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                    {row.phone}
+                    {row.fromAppointments > 0 && row.oldDues !== 0 ? ` · Appts ${cs()}${row.fromAppointments.toLocaleString()} · Old ${cs()}${row.oldDues.toLocaleString()}` : ''}
+                  </p>
+                </div>
+                <p className="shrink-0 text-sm font-black text-rose-600">{cs()}{row.amount.toLocaleString()}</p>
+              </div>
+            ))}</Paged>
+          ) : (
+            <Paged items={saleRows}>{(rows) => rows.map((row, index) => (
+              <div key={`${row.orderNumber ?? 'na'}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl bg-[#F8F9FB] p-3">
+                <div className="min-w-0">
+                  <p className="truncate text-sm font-bold text-gray-800">{row.orderNumber ? `#${row.orderNumber}` : 'Appointment'} · {row.name}</p>
+                  <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                    {row.phone ? `${row.phone} · ` : ''}{new Date(row.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                  </p>
+                </div>
+                <p className="shrink-0 text-sm font-black text-rose-600">{cs()}{row.amount.toLocaleString()}</p>
               </div>
             ))}</Paged>
           )}

@@ -527,7 +527,7 @@ exports.getDashboardSummary = async (req, res) => {
       // pass over today's non-cancelled orders, split by paymentMethod the
       // same way getLedgerTransactions already reads it.
       Order.find({ shopId: shopObjectId, status: { $ne: "cancelled" }, createdAt: { $gte: start, $lte: end } })
-        .select("total paidAmount remainingAmount paymentMethod")
+        .select("total paidAmount remainingAmount paymentMethod dailyOrderNumber customer createdAt")
         .lean(),
       // Total Sale: only COMPLETED appointments, on the day they were
       // completed (saving / online booking alone is not a sale yet). Old
@@ -588,7 +588,7 @@ exports.getDashboardSummary = async (req, res) => {
       Customer.find({ shopId: shopObjectId }).select("name phone previousDues duesHistory").lean(),
       Order.aggregate([
         { $match: { shopId: shopObjectId, status: { $ne: "cancelled" }, "customer.phone": { $exists: true, $ne: "" } } },
-        { $group: { _id: "$customer.phone", due: { $sum: "$remainingAmount" } } },
+        { $group: { _id: "$customer.phone", due: { $sum: "$remainingAmount" }, name: { $last: "$customer.name" } } },
       ]),
       // Manual per-tile corrections (Task 1's "every box editable" ask) -
       // see DashboardAdjustment.js's own comment on why cashInHand/
@@ -641,8 +641,19 @@ exports.getDashboardSummary = async (req, res) => {
     let saleOnCredit = 0;
     let totalSaleToday = 0;
     for (const order of completedOrders) totalSaleToday += Number(order.total || 0);
+    // Sale on Due "Details": every appointment in the range left unpaid.
+    const saleOnCreditRows = [];
     for (const order of todaysOrders) {
       saleOnCredit += Number(order.remainingAmount || 0);
+      if (Number(order.remainingAmount || 0) > 0) {
+        saleOnCreditRows.push({
+          orderNumber: order.dailyOrderNumber ?? null,
+          name: order.customer?.name || "Walk-in",
+          phone: order.customer?.phone || "",
+          amount: Number(order.remainingAmount || 0),
+          createdAt: order.createdAt,
+        });
+      }
       // Advance used on the appointment was already counted when it was
       // received - only the money taken for it now counts as a sale.
       const takenNow = Math.max(Number(order.paidAmount || 0) - Number(order.advanceApplied || 0), 0);
@@ -682,10 +693,20 @@ exports.getDashboardSummary = async (req, res) => {
     // is currently in credit (totalDue < 0, i.e. they've paid the shop more
     // than they currently owe it).
     const customerAdvances = [];
+    // Patient Due "Details": every patient who owes, split into unpaid
+    // appointments and old/opening dues.
+    const patientDues = [];
     for (const customer of customers) {
       const totalDue = (orderDueByPhone.get(customer.phone) || 0) + Number(customer.previousDues || 0);
       if (totalDue > 0) {
         customerUdharTotal += totalDue;
+        patientDues.push({
+          name: customer.name || customer.phone,
+          phone: customer.phone,
+          amount: totalDue,
+          fromAppointments: orderDueByPhone.get(customer.phone) || 0,
+          oldDues: Number(customer.previousDues || 0),
+        });
       } else if (totalDue < 0) {
         customerAdvanceTotal += Math.abs(totalDue);
         customerAdvances.push({ name: customer.name || customer.phone, phone: customer.phone, amount: Math.abs(totalDue) });
@@ -699,7 +720,18 @@ exports.getDashboardSummary = async (req, res) => {
         }
       }
     }
+    // Patients who have an unpaid appointment but aren't in the patient
+    // list yet - their due still counts, so Patient Due moves together
+    // with Sale on Due.
+    const knownPhones = new Set(customers.map((c) => c.phone));
+    for (const row of customerOrderDueAgg) {
+      if (knownPhones.has(row._id) || !(Number(row.due) > 0)) continue;
+      customerUdharTotal += Number(row.due);
+      patientDues.push({ name: row.name || row._id, phone: row._id, amount: Number(row.due), fromAppointments: Number(row.due), oldDues: 0 });
+    }
     customerAdvances.sort((a, b) => b.amount - a.amount);
+    patientDues.sort((a, b) => b.amount - a.amount);
+    saleOnCreditRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
 
     // Task 1: fold each tile's manual correction on top of its own real
     // computed figure - see DashboardAdjustment.js's own comment. cashInHand
@@ -733,6 +765,8 @@ exports.getDashboardSummary = async (req, res) => {
       customerUdharTotal: adjusted("customerUdharTotal", customerUdharTotal),
       customerAdvanceTotal: adjusted("customerAdvanceTotal", customerAdvanceTotal),
       customerAdvances,
+      patientDues,
+      saleOnCreditRows,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });
