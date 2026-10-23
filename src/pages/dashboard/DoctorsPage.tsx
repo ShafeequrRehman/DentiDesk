@@ -9,9 +9,9 @@
 //
 // Services tab: every other Drs/Services item, with its price.
 import { cs } from '@/lib/currency';
-import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import { Building2, CalendarDays, CheckCircle2, Globe, Wallet, ClipboardList, Clock, Phone, Printer, RefreshCcw, RotateCcw, Search, Stethoscope, Undo2, UserRound, X, MessageCircle, ImagePlus, Loader2, Save, Paperclip } from 'lucide-react';
-import { addPrescriptionImage, fetchPrescriptionImages, fetchProducts, removePrescriptionImage, saveCheckup, type PrescriptionImage } from '@/lib/pos-api';
+import { addPrescriptionImage, fetchCustomerBalances, fetchPrescriptionImages, fetchProducts, removePrescriptionImage, saveCheckup, type PrescriptionImage } from '@/lib/pos-api';
 import type { Product, SavedOrder } from '@/lib/pos-types';
 import { getReferenceData } from '@/lib/local-hub-api';
 import { isDesktopApp } from '@/lib/api';
@@ -216,6 +216,25 @@ export default function DoctorsPage() {
   const onlineCount = appointments.filter((a) => a.source === 'customer-qr').length;
   const unpaidCount = appointments.filter((a) => paymentState(a).label !== 'Paid').length;
 
+  // Whole balance of each patient on the list (dues / advance tag).
+  const [balances, setBalances] = useState<Record<string, number>>({});
+  const balancePhones = useMemo(
+    () => Array.from(new Set(appointments.map((a) => a.customer?.phone || '').filter((p) => p && p !== '03000000000'))).sort().join(','),
+    [appointments],
+  );
+  useEffect(() => {
+    if (!balancePhones || fromCache) return;
+    let cancelled = false;
+    fetchCustomerBalances(balancePhones.split(','))
+      .then((result) => {
+        if (!cancelled) setBalances(result);
+      })
+      .catch(() => undefined);
+    return () => {
+      cancelled = true;
+    };
+  }, [balancePhones, fromCache, appointments]);
+
   function handleSaved(updated: SavedOrder) {
     setAppointments((previous) => previous.map((a) => (a.id === updated.id ? { ...a, ...updated } : a)));
     setCheckupTarget(null);
@@ -237,6 +256,7 @@ export default function DoctorsPage() {
   const selectedDoctorCard = [...doctors, ...serviceCards].find((d) => d.name === selectedDoctor) || null;
 
   return (
+    <BalancesContext.Provider value={balances}>
     <div className="space-y-6">
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
@@ -420,6 +440,7 @@ export default function DoctorsPage() {
 
       {checkupTarget ? <CheckupModal order={checkupTarget} onClose={() => setCheckupTarget(null)} onSaved={handleSaved} /> : null}
     </div>
+    </BalancesContext.Provider>
   );
 }
 
@@ -444,6 +465,26 @@ function paymentState(order: SavedOrder): { label: string; tone: string } {
   if (order.paymentStatus === 'awaiting_confirmation') return { label: 'Payment pending', tone: 'bg-amber-100 text-amber-700' };
   if (paid > 0) return { label: `Partly paid · ${money(remaining)} due`, tone: 'bg-orange-100 text-orange-700' };
   return { label: `Unpaid · ${money(remaining || total)}`, tone: 'bg-rose-100 text-rose-700' };
+}
+
+// Each patient's whole balance (all appointments + old dues) by phone.
+const BalancesContext = createContext<Record<string, number>>({});
+
+function BalanceTag({ order }: { order: SavedOrder }) {
+  const balances = useContext(BalancesContext);
+  const phone = order.customer?.phone || '';
+  if (!phone || !(phone in balances)) return null;
+  const balance = Math.round(balances[phone] || 0);
+  if (balance === 0) return null;
+  const isDue = balance > 0;
+  return (
+    <span
+      title={isDue ? 'Total this patient owes (all appointments + old dues)' : 'Advance this patient has paid'}
+      className={`flex items-center gap-1 rounded-full px-2.5 py-0.5 text-[10px] font-black uppercase tracking-wide ring-1 ${isDue ? 'bg-rose-50 text-rose-700 ring-rose-200' : 'bg-emerald-50 text-emerald-700 ring-emerald-200'}`}
+    >
+      {isDue ? `Total dues · ${money(balance)}` : `Advance · ${money(-balance)}`}
+    </span>
+  );
 }
 
 function PaymentTag({ order }: { order: SavedOrder }) {
@@ -473,6 +514,7 @@ function AppointmentRow({ order, showDate, offline, onCheckup, onReopen }: { ord
           <p className="truncate text-base font-black text-gray-900">{order.customer?.name || 'Patient'}</p>
           <SourceTag order={order} />
           <PaymentTag order={order} />
+          <BalanceTag order={order} />
           {/* What the appointment is for - one tag per service / option */}
           {services.map((item, index) => (
             <span key={`${item.name}-${item.variation}-${index}`} className="inline-flex max-w-[220px] items-center gap-1 rounded-full bg-amber-50 px-2 py-0.5 text-[10px] font-black uppercase tracking-wide text-amber-700 ring-1 ring-amber-200" title={`${item.name}${item.variation && item.variation !== 'Standard' ? ` - ${item.variation}` : ''}`}>
@@ -636,6 +678,7 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
         <div className="mb-3 flex flex-wrap gap-1.5">
           <SourceTag order={order} />
           <PaymentTag order={order} />
+          <BalanceTag order={order} />
         </div>
 
         {order.note ? <p className="mb-3 rounded-xl bg-indigo-50 px-3 py-2 text-xs font-semibold text-indigo-700">Appointment note: {order.note}</p> : null}

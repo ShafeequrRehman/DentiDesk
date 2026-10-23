@@ -33,6 +33,7 @@ const canWriteCustomer = requireAnyPermission("sales.create", "customers.manage"
 
 router.get("/search", canReadCustomers, customerController.searchCustomers);
 router.get("/ledger", canReadCustomers, customerController.getCustomerLedger);
+router.get("/balances", canReadCustomers, customerController.getCustomerBalances);
 router.get("/:phone/outstanding", canReadCustomers, customerController.getCustomerOutstanding);
 router.get("/", canReadCustomers, customerController.getAllCustomers);
 router.post("/", canWriteCustomer, customerController.createCustomer);

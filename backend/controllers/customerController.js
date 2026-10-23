@@ -402,6 +402,47 @@ exports.getCustomerLedger = async (req, res) => {
   }
 };
 
+// GET /api/customers/balances?phones=0300...,0321...
+// Each patient's whole balance in one go (Drs & Services appointment tags):
+// every unpaid appointment + old dues - what the clinic owes them for
+// purchases. Above 0 = dues, below 0 = advance. Read-only.
+exports.getCustomerBalances = async (req, res) => {
+  try {
+    const scope = shopScope(req);
+    const phones = [...new Set(String(req.query.phones || "").split(",").map((p) => p.trim()).filter(Boolean))].slice(0, 300);
+    if (phones.length === 0) return res.json({ balances: {} });
+    const [customers, orders] = await Promise.all([
+      Customer.find({ ...scope, phone: { $in: phones } }, "phone previousDues").lean(),
+      Order.find({ ...scope, "customer.phone": { $in: phones }, status: { $ne: "cancelled" } }, "customer.phone total paidAmount remainingAmount").lean(),
+    ]);
+    const balances = Object.fromEntries(phones.map((phone) => [phone, 0]));
+    for (const order of orders) {
+      const phone = order.customer?.phone;
+      if (!(phone in balances)) continue;
+      const remaining = typeof order.remainingAmount === "number" ? order.remainingAmount : Math.max((order.total || 0) - (order.paidAmount || 0), 0);
+      balances[phone] += remaining;
+    }
+    const idByPhone = new Map();
+    for (const customer of customers) {
+      balances[customer.phone] += Number(customer.previousDues || 0);
+      idByPhone.set(String(customer._id), customer.phone);
+    }
+    if (idByPhone.size > 0) {
+      const purchases = await IngredientPurchase.find(
+        { ...scope, linkedCustomerId: { $in: [...idByPhone.keys()] }, status: "received" },
+        "linkedCustomerId remainingAmount",
+      ).lean();
+      for (const purchase of purchases) {
+        const phone = idByPhone.get(String(purchase.linkedCustomerId));
+        if (phone) balances[phone] -= Number(purchase.remainingAmount || 0);
+      }
+    }
+    res.json({ balances });
+  } catch (error) {
+    res.status(500).json({ message: error.message });
+  }
+};
+
 // GET /api/customers/:phone/outstanding?excludeOrderId=<id>
 // A customer is now allowed to have more than one order open at once (see
 // orderController.createOrder - the old "one pending order at a time"

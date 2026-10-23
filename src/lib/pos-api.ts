@@ -446,6 +446,14 @@ export async function fetchSaleOnCashDetail(params?: { range?: 'today' | 'month'
 // total owed right now - every other non-cancelled order's unpaid balance
 // plus the older lump-sum previousDues - separate from whatever order is
 // currently being paid (excludeOrderId).
+// Whole balance per patient (above 0 = dues, below 0 = advance).
+export async function fetchCustomerBalances(phones: string[]): Promise<Record<string, number>> {
+  const list = Array.from(new Set(phones.filter(Boolean)));
+  if (list.length === 0) return {};
+  const response = await api.get<{ balances: Record<string, number> }>('/customers/balances', { params: { phones: list.join(',') } });
+  return response.data?.balances || {};
+}
+
 export async function fetchCustomerOutstanding(phone: string, excludeOrderId?: string) {
   try {
     const response = await api.get<{ outstanding: number; ordersBalance: number; previousDues: number; pendingOrderCount: number }>(
