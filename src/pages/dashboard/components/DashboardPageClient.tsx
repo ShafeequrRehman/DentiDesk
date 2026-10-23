@@ -740,7 +740,7 @@ function AccountingOverview({
       ) : null}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
         <OverviewTile icon={<Target size={18} />} color="bg-orange-50 text-orange-500" label={`Total Sale (${periodLabel})`} value={money(summary?.totalSaleToday)} actions={actionsFor('totalSaleToday')} />
-        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label="Patient Due" value={money(summary?.customerUdharTotal)} valueColor="text-rose-600" actions={[{ icon: <List size={12} />, onClick: () => onOpenDueList('patient'), label: 'Details' }, ...actionsFor('customerUdharTotal')]} />
+        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label="Patient Due" value={money(summary?.customerUdharTotal)} valueColor="text-rose-600" actions={[{ icon: <HistoryIcon size={12} />, onClick: () => onOpenDueList('patient'), label: 'History' }, ...adjustOnlyFor('customerUdharTotal')]} />
         <OverviewTile
           icon={<PiggyBank size={18} />}
           color="bg-emerald-50 text-emerald-500"
@@ -794,7 +794,7 @@ function AccountingOverview({
           actions={[{ icon: <List size={12} />, onClick: onOpenSaleOnCashDetail, label: 'Details' }, ...adjustOnlyFor('saleOnCash')]}
         />
         <OverviewTile icon={<Landmark size={18} />} color="bg-indigo-50 text-indigo-500" label={`Sale on Bank (${periodLabel})`} value={money(summary?.saleOnBank)} actions={actionsFor('saleOnBank')} />
-        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label={`Sale on Due (Credit · ${periodLabel})`} value={money(summary?.saleOnCredit)} valueColor="text-rose-600" actions={[{ icon: <List size={12} />, onClick: () => onOpenDueList('sale'), label: 'Details' }, ...actionsFor('saleOnCredit')]} />
+        <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label={`Sale on Due (Credit · ${periodLabel})`} value={money(summary?.saleOnCredit)} valueColor="text-rose-600" actions={[{ icon: <HistoryIcon size={12} />, onClick: () => onOpenDueList('sale'), label: 'History' }, ...adjustOnlyFor('saleOnCredit')]} />
         <OverviewTile
           icon={<CheckCircle2 size={18} />}
           color="bg-emerald-50 text-emerald-500"
@@ -1234,7 +1234,8 @@ function CashHistoryModal({ onClose, onChanged, canChange }: { onClose: () => vo
         canChange: canChange && entry.type === 'adjustment',
         direction: entry.direction,
         amount: entry.amount,
-        note: entry.note || entry.type,
+        // Whose money it was (patient / vendor) next to what it was for.
+        note: [entry.note || entry.type, entry.relatedCustomerName ? `${entry.direction === 'out' ? 'To' : 'From'}: ${entry.relatedCustomerName}${entry.relatedCustomerPhone ? ` (${entry.relatedCustomerPhone})` : ''}` : ''].filter(Boolean).join(' · '),
         createdBy: entry.createdBy || '',
         createdAt: entry.createdAt,
         balanceAfter: entry.balanceAfter,
@@ -1746,12 +1747,66 @@ function DueListModal({ kind, summary, onClose }: { kind: 'patient' | 'sale'; su
   const saleRows = summary?.saleOnCreditRows || [];
   const total = kind === 'patient' ? patientRows.reduce((sum, r) => sum + r.amount, 0) : saleRows.reduce((sum, r) => sum + r.amount, 0);
   const count = kind === 'patient' ? patientRows.length : saleRows.length;
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const title = kind === 'patient' ? 'Patient Due' : 'Sale on Due';
+  async function downloadPdf() {
+    setPdfBusy(true);
+    try {
+      const { ReportPdfDocument, downloadPdfDocument } = await import('@/lib/pdf-export');
+      const m = (n: number) => `${cs()}${n.toLocaleString()}`;
+      const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit' });
+      const asOf = new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' });
+      const range = summary?.startDate ? (summary.startDate === summary.endDate ? summary.startDate : `${summary.startDate} to ${summary.endDate}`) : '';
+      const doc = (
+        <ReportPdfDocument
+          title={title}
+          subtitle={kind === 'patient' ? `As of ${asOf}` : range}
+          stats={[
+            { label: 'Total', value: m(total) },
+            { label: kind === 'patient' ? 'Patients' : 'Appointments', value: String(count) },
+          ]}
+          tables={[
+            kind === 'patient'
+              ? {
+                  title: 'Patients',
+                  columns: [
+                    { label: 'Patient', width: 1.8 },
+                    { label: 'Phone', width: 1.4 },
+                    { label: 'Appointments', width: 1.1, align: 'right' },
+                    { label: 'Old Due', width: 1, align: 'right' },
+                    { label: 'Total Due', width: 1.1, align: 'right' },
+                  ],
+                  rows: patientRows.map((r) => [r.name, r.phone || '\u2014', m(r.fromAppointments), m(r.oldDues), m(r.amount)]),
+                  footer: ['', '', '', 'Total', m(total)],
+                  emptyMessage: 'Nothing due.',
+                }
+              : {
+                  title: 'Appointments',
+                  columns: [
+                    { label: 'Date', width: 1.5 },
+                    { label: 'No.', width: 0.6 },
+                    { label: 'Patient', width: 1.7 },
+                    { label: 'Phone', width: 1.3 },
+                    { label: 'Due', width: 1, align: 'right' },
+                  ],
+                  rows: saleRows.map((r) => [when(r.createdAt), r.orderNumber ? `#${r.orderNumber}` : '\u2014', r.name, r.phone || '\u2014', m(r.amount)]),
+                  footer: ['', '', '', 'Total', m(total)],
+                  emptyMessage: 'Nothing due.',
+                },
+          ]}
+        />
+      );
+      await downloadPdfDocument(doc, kind === 'patient' ? 'patient_due.pdf' : 'sale_on_due.pdf');
+    } finally {
+      setPdfBusy(false);
+    }
+  }
   return (
     <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
       <div className="flex max-h-[85vh] w-full max-w-sm flex-col rounded-[32px] bg-white p-6 shadow-2xl">
         <div className="flex items-start justify-between">
           <div>
-            <h2 className="text-lg font-black text-gray-900">{kind === 'patient' ? 'Patient Due' : 'Sale on Due'}</h2>
+            <h2 className="text-lg font-black text-gray-900">{title}</h2>
             <p className="mt-1 text-xs text-gray-400">
               {kind === 'patient' ? 'Every patient who owes right now (all days).' : 'Appointments left unpaid in this range.'}
             </p>
@@ -1760,7 +1815,12 @@ function DueListModal({ kind, summary, onClose }: { kind: 'patient' | 'sale'; su
             <XCircle size={18} />
           </button>
         </div>
-        <p className="mt-3 text-sm font-black text-rose-600">Total: {cs()}{total.toLocaleString()}</p>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <p className="text-sm font-black text-rose-600">Total: {cs()}{total.toLocaleString()}</p>
+          <button type="button" onClick={() => void downloadPdf()} disabled={pdfBusy || count === 0} className="rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-black text-emerald-600 transition hover:bg-emerald-100 disabled:opacity-40">
+            {pdfBusy ? '...' : 'PDF'}
+          </button>
+        </div>
         <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
           {count === 0 ? (
             <p className="py-8 text-center text-xs font-bold text-gray-400">Nothing due.</p>
