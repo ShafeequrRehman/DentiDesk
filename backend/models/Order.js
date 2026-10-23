@@ -195,6 +195,9 @@ const orderSchema = new mongoose.Schema(
     checkedAt: { type: Date, default: null },
     checkedBy: { type: String, default: "" },
     status: { type: String, enum: ["pending", "completed", "cancelled", "paid"], default: "pending" },
+    // When the appointment was completed - Dashboard "Total Sale" counts it
+    // on THIS day (not the day it was saved/booked). Set by the hook below.
+    completedAt: { type: Date, default: null },
     paymentMethod: { type: String, enum: ["Cash", "Card", "E-Wallet", "Bank"], default: "Cash" },
     // Dashboard "Cash in Hand / Balance on Bank" routing: which Bank
     // (backend/models/Bank.js) a Bank-method payment actually landed in -
@@ -457,6 +460,12 @@ orderSchema.methods.logOrderPayment = function logOrderPayment(amount, meta = {}
 };
 
 // Mongoose 9: document middleware has no next() - just return.
+orderSchema.pre("save", function stampCompletedAt() {
+  if (this.isModified("status") && (this.status === "completed" || this.status === "paid") && !this.completedAt) {
+    this.completedAt = new Date();
+  }
+});
+
 orderSchema.pre("save", function logUnexplainedPaidChange() {
   const orig = this.isNew ? 0 : Number(this.$locals.origPaid ?? this.paidAmount ?? 0);
   const now = Number(this.paidAmount || 0);

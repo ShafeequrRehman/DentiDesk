@@ -511,6 +511,7 @@ exports.getDashboardSummary = async (req, res) => {
 
     const [
       todaysOrders,
+      completedOrders,
       products,
       ingredients,
       banks,
@@ -527,6 +528,19 @@ exports.getDashboardSummary = async (req, res) => {
       // same way getLedgerTransactions already reads it.
       Order.find({ shopId: shopObjectId, status: { $ne: "cancelled" }, createdAt: { $gte: start, $lte: end } })
         .select("total paidAmount remainingAmount paymentMethod")
+        .lean(),
+      // Total Sale: only COMPLETED appointments, on the day they were
+      // completed (saving / online booking alone is not a sale yet). Old
+      // ones from before completedAt existed use their saved day.
+      Order.find({
+        shopId: shopObjectId,
+        status: { $in: ["completed", "paid"] },
+        $or: [
+          { completedAt: { $gte: start, $lte: end } },
+          { completedAt: null, createdAt: { $gte: start, $lte: end } },
+        ],
+      })
+        .select("total")
         .lean(),
       // Stock Value fallback - selling-price x current stock, used ONLY for
       // a Product that has no matching raw-stock Ingredient (see below).
@@ -626,8 +640,8 @@ exports.getDashboardSummary = async (req, res) => {
     let saleOnBank = 0;
     let saleOnCredit = 0;
     let totalSaleToday = 0;
+    for (const order of completedOrders) totalSaleToday += Number(order.total || 0);
     for (const order of todaysOrders) {
-      totalSaleToday += Number(order.total || 0);
       saleOnCredit += Number(order.remainingAmount || 0);
       // Advance used on the appointment was already counted when it was
       // received - only the money taken for it now counts as a sale.
