@@ -21,6 +21,9 @@ import CompleteOrderModal from '@/components/CompleteOrderModal';
 import { isValidWhatsappNumber, sendAppointmentSlip } from '@/lib/whatsapp-slips';
 import { drsForService, inToday, useTimeSlots, dayOpen, slotOpen, extraFor, describeSchedule, scheduleOf, WEEKDAY_LONG, weekdayOfISO, describeUpcomingLeave, describeUpcomingExtra, formatAppointmentDate, formatSlot, isDoctorProduct, isSlotInPast, loadBookedSlots, loadLeaveInfo, NO_LEAVE, todayISO, type LeaveInfo, sortByShowOrder } from '@/lib/appointments';
 
+// A phone number: 7-15 digits, optional + in front (Pakistan or abroad).
+const PHONE_OK = /^\+?\d{7,15}$/;
+
 
 // A "product group" is every Product record that shares the same name +
 // category - which is exactly how ProductManagementSection.tsx's "Add
@@ -187,7 +190,7 @@ export default function POSPage() {
   // copy of it).
   function getMissingDeliveryField(): 'phone' | 'customer' | 'address' | null {
     if (orderFormData.orderType !== 'Delivery') return null;
-    if (!orderFormData.phone.trim() || !/^03\d{9}$/.test(orderFormData.phone)) return 'phone';
+    if (!orderFormData.phone.trim() || !PHONE_OK.test(orderFormData.phone)) return 'phone';
     if (!orderFormData.customer.trim()) return 'customer';
     if (!orderFormData.address.trim()) return 'address';
     return null;
@@ -882,8 +885,10 @@ export default function POSPage() {
     shopToast.success(t('pos.customerLoaded', { name: customer.name }));
   }
 
+  // Any number: 03XXXXXXXXX, or international with + (e.g. +971..., +6...).
   function formatPhoneToDigits(value: string) {
-    return value.replace(/\D/g, '').slice(0, 11);
+    const plus = value.trim().startsWith('+') ? '+' : '';
+    return plus + value.replace(/\D/g, '').slice(0, 15);
   }
 
   function handlePhoneChange(event: React.ChangeEvent<HTMLInputElement>) {
@@ -992,7 +997,7 @@ export default function POSPage() {
     // (or an invalid one) is more
     // likely a typo than a deliberate walk-in, and a due left on a
     // phone-but-no-name order can't reliably be found again later.
-    if (orderFormData.phone && !/^03\d{9}$/.test(orderFormData.phone)) return showValidationError(t('pos.invalidPhoneFormat'));
+    if (orderFormData.phone && !PHONE_OK.test(orderFormData.phone)) return showValidationError(t('pos.invalidPhoneFormat'));
     if (orderFormData.phone && !orderFormData.customer.trim()) return showValidationError(t('pos.nameRequiredWithPhone'));
 
     // Electricity Bill / Cash: these are "open amount" products (see

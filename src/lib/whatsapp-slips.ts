@@ -16,9 +16,12 @@ const WALKIN_PHONE = '03000000000';
 
 // Same number rules as the backend (whatsappService.normalizePhone).
 export function isValidWhatsappNumber(phone?: string | null) {
-  const num = String(phone || '').replace(/\D/g, '');
+  const raw = String(phone || '').trim();
+  const num = raw.replace(/\D/g, '');
   if (!num || num === WALKIN_PHONE) return false;
-  return (num.startsWith('0') && num.length === 11) || num.length === 10 || (num.startsWith('92') && num.length === 12) || num.startsWith('0092');
+  if (raw.startsWith('+')) return num.length >= 8 && num.length <= 15;
+  if (num.startsWith('00')) return num.length >= 10 && num.length <= 17;
+  return (num.startsWith('0') && num.length === 11) || num.length === 10 || (num.startsWith('92') && num.length === 12) || (!num.startsWith('0') && num.length >= 11 && num.length <= 15);
 }
 
 export function slipPhoneProblem(order: Pick<SavedOrder, 'customer'>) {

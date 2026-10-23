@@ -39,12 +39,17 @@ const AUTH_ROOT_DIR = path.join(basePath, ".auth_whatsapp");
 
 function normalizePhone(phone) {
   if (!phone) return null;
-  const num = phone.toString().trim().replace(/\D/g, "");
+  const raw = phone.toString().trim();
+  const num = raw.replace(/\D/g, "");
 
+  // International: "+971..." / "00971..." - send as-is (country code first).
+  if (raw.startsWith("+") && num.length >= 8 && num.length <= 15) return num;
+  if (num.startsWith("00") && num.length >= 10 && num.length <= 17) return num.replace(/^00/, "");
   if (num.startsWith("0") && num.length === 11) return `92${num.substring(1)}`;
   if (num.length === 10) return `92${num}`;
   if (num.startsWith("92") && num.length === 12) return num;
-  if (num.startsWith("0092")) return num.replace(/^00/, "");
+  // Any other full number with its country code (no + typed).
+  if (!num.startsWith("0") && num.length >= 11 && num.length <= 15) return num;
   return null;
 }
 

@@ -1687,7 +1687,7 @@ function CustomerOrderingFlow({ shopId }: { shopId: string }) {
             ) : null}
 
             <div className="mt-5 space-y-3">
-              <input value={customerPhone} onChange={(e) => setCustomerPhone(e.target.value.replace(/[^\d]/g, ''))} placeholder="Phone number (e.g. 03001234567)" inputMode="numeric" maxLength={13} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE]" />
+              <input value={customerPhone} onChange={(e) => setCustomerPhone((e.target.value.trim().startsWith('+') ? '+' : '') + e.target.value.replace(/[^\d]/g, '').slice(0, 15))} placeholder="Phone number (e.g. 03001234567 or +971...)" inputMode="tel" maxLength={16} className="w-full rounded-xl border border-gray-200 bg-gray-50 px-4 py-3 text-sm shadow-inner outline-none transition focus:border-[#009AAE]" />
               <div>
                 <input
                   value={customerName}

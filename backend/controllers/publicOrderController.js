@@ -385,7 +385,8 @@ exports.createOrder = async (req, res) => {
       return res.status(400).json({ message: "Please enter your name.", reason: "invalid_name" });
     }
     const phoneDigits = customerPhone.replace(/\D/g, "");
-    if (phoneDigits.length < 10 || phoneDigits.length > 11) {
+    // 03XXXXXXXXX or an international number (+971..., +6...).
+    if (phoneDigits.length < 10 || phoneDigits.length > 15) {
       return res.status(400).json({ message: "Please enter a valid phone number.", reason: "invalid_phone" });
     }
     if (orderType === "Delivery" && customerAddress.length < 5) {
