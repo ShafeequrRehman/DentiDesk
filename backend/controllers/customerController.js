@@ -113,17 +113,44 @@ exports.createCustomer = async (req, res) => {
 };
 
 exports.updateCustomer = async (req, res) => {
-  const { shopId, ...updates } = req.body;
-  const customer = await Customer.findOneAndUpdate(
-    { _id: req.params.id, ...shopScope(req) },
-    updates,
-    { new: true }
-  );
-  if (!customer) {
-    return res.status(404).json({ error: "Patient not found" });
+  try {
+    const { shopId, ...updates } = req.body;
+    const scope = shopScope(req);
+    const before = await Customer.findOne({ _id: req.params.id, ...scope }).select("name phone").lean();
+    if (!before) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
+    const customer = await Customer.findOneAndUpdate({ _id: req.params.id, ...scope }, updates, { new: true });
+    if (!customer) {
+      return res.status(404).json({ error: "Patient not found" });
+    }
+    // Every appointment / cash / bank record of this patient carries its
+    // own copy of the name + phone - fix them all to the new spelling, so
+    // the patient shows as ONE person everywhere (Appointments, Drs &
+    // Services, slips, Dashboard). Runs on every save, so re-saving a
+    // patient also repairs records that were typed differently before.
+    try {
+      await syncPatientEverywhere(scope, before.phone, customer.name, customer.phone);
+    } catch (error) {
+      console.error("Non-fatal: could not update the patient's name on old records", error.message);
+    }
+    res.json(serializeCustomer(customer));
+  } catch (error) {
+    res.status(500).json({ error: error.message });
   }
-  res.json(serializeCustomer(customer));
 };
+
+async function syncPatientEverywhere(scope, oldPhone, name, newPhone) {
+  if (!oldPhone) return;
+  const phone = newPhone || oldPhone;
+  const CashRegister = require("../models/CashRegister");
+  const Bank = require("../models/Bank");
+  await Order.updateMany({ ...scope, "customer.phone": oldPhone }, { $set: { "customer.name": name, "customer.phone": phone } });
+  const historyFix = { $set: { "history.$[h].relatedCustomerName": name, "history.$[h].relatedCustomerPhone": phone } };
+  const options = { arrayFilters: [{ "h.relatedCustomerPhone": oldPhone }] };
+  await CashRegister.updateMany({ ...scope, "history.relatedCustomerPhone": oldPhone }, historyFix, options);
+  await Bank.updateMany({ ...scope, "history.relatedCustomerPhone": oldPhone }, historyFix, options);
+}
 
 // Hard delete - safe because Order/IngredientPurchase never actually
 // reference a Customer by id: an Order snapshots its own
