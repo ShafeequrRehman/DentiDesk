@@ -560,7 +560,7 @@ exports.getDashboardSummary = async (req, res) => {
       // history is only actually walked when needsHistoricalBalance is true
       // (see balanceAsOfEnd above) but is always selected here since which
       // range is active is only known after this query already ran.
-      Bank.find({ shopId: shopObjectId }).select("balance history").lean(),
+      Bank.find({ shopId: shopObjectId }).select("name balance history").lean(),
       CashRegister.findOne({ shopId: shopObjectId }).select("balance history").lean(),
       // Vendor Balance - total still owed to suppliers across every
       // received (not pending/cancelled) stock batch ever logged, same
@@ -621,6 +621,8 @@ exports.getDashboardSummary = async (req, res) => {
       "totalPurchaseToday",
       "totalExpensesToday",
       "totalRecoveryToday",
+      "cashInToday",
+      "bankInToday",
     ]);
     const adjustmentByKey = {};
     dashboardAdjustmentDocs.forEach((doc) => {
@@ -693,6 +695,33 @@ exports.getDashboardSummary = async (req, res) => {
     const stockValue = ingredientStockValue + untrackedProductStockValue;
     const balanceOnBank = banks.reduce((sum, b) => sum + balanceAsOfEnd(b.balance, b.history), 0);
     const cashInHand = balanceAsOfEnd(cashRegister?.balance, cashRegister?.history);
+
+    // Cash In / Bank In (range): every rupee that really came INTO the till
+    // or a bank in this range - sales, dues paid, advances, deposits - so
+    // "Bank In (Today)" matches what Balance on Bank went up by. Manual
+    // till corrections are left out (they have their own History).
+    const inRange = (date) => {
+      const t = date ? new Date(date).getTime() : NaN;
+      return !Number.isNaN(t) && t >= start.getTime() && t <= end.getTime();
+    };
+    let cashInToday = 0;
+    const cashInRows = [];
+    for (const entry of cashRegister?.history || []) {
+      if (entry.direction !== "in" || entry.type === "adjustment" || entry.undone || !inRange(entry.createdAt)) continue;
+      cashInToday += Number(entry.amount || 0);
+      cashInRows.push({ amount: Number(entry.amount || 0), note: entry.note || entry.type || "", name: entry.relatedCustomerName || "", phone: entry.relatedCustomerPhone || "", by: entry.createdBy || "", createdAt: entry.createdAt, where: "Cash" });
+    }
+    let bankInToday = 0;
+    const bankInRows = [];
+    for (const bank of banks) {
+      for (const entry of bank.history || []) {
+        if (entry.type !== "deposit" || !inRange(entry.createdAt)) continue;
+        bankInToday += Number(entry.amount || 0);
+        bankInRows.push({ amount: Number(entry.amount || 0), note: entry.note || "Deposit", name: entry.relatedCustomerName || "", phone: entry.relatedCustomerPhone || "", by: entry.createdBy || "", createdAt: entry.createdAt, where: bank.name || "Bank" });
+      }
+    }
+    cashInRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
+    bankInRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     const vendorBalance = vendorDueAgg[0]?.total || 0;
     const totalPurchaseToday = todaysPurchaseAgg[0]?.total || 0;
     const totalExpensesToday = todaysExpenseAgg[0]?.total || 0;
@@ -767,6 +796,10 @@ exports.getDashboardSummary = async (req, res) => {
       totalSaleToday: adjusted("totalSaleToday", totalSaleToday),
       saleOnCash: adjusted("saleOnCash", saleOnCash),
       saleOnBank: adjusted("saleOnBank", saleOnBank),
+      cashInToday: adjusted("cashInToday", cashInToday),
+      bankInToday: adjusted("bankInToday", bankInToday),
+      cashInRows,
+      bankInRows,
       saleOnCredit: adjusted("saleOnCredit", saleOnCredit),
       totalPurchaseToday: adjusted("totalPurchaseToday", totalPurchaseToday),
       totalExpensesToday: adjusted("totalExpensesToday", totalExpensesToday),

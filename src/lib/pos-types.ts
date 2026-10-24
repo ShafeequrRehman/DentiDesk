@@ -189,6 +189,11 @@ export interface DashboardSummary {
   totalSaleToday: number;
   saleOnCash: number;
   saleOnBank: number;
+  // Money that came INTO the till / banks in the range (sales, dues, advances).
+  cashInToday?: number;
+  bankInToday?: number;
+  cashInRows?: MoneyInRow[];
+  bankInRows?: MoneyInRow[];
   saleOnCredit: number;
   totalPurchaseToday: number;
   totalExpensesToday: number;
@@ -223,7 +228,19 @@ export type DashboardAdjustmentKey =
   | 'saleOnCash'
   | 'saleOnBank'
   | 'saleOnCredit'
-  | 'totalRecoveryToday';
+  | 'totalRecoveryToday'
+  | 'cashInToday'
+  | 'bankInToday';
+
+export interface MoneyInRow {
+  amount: number;
+  note: string;
+  name: string;
+  phone: string;
+  by: string;
+  createdAt: string;
+  where: string;
+}
 
 export interface DashboardAdjustmentHistoryEntry {
   ref?: string;

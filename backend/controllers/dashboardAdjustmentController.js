@@ -30,6 +30,8 @@ const ALLOWED_KEYS = new Set([
   "saleOnBank",
   "saleOnCredit",
   "totalRecoveryToday",
+  "cashInToday",
+  "bankInToday",
 ]);
 
 async function getOrCreate(shopId, key) {

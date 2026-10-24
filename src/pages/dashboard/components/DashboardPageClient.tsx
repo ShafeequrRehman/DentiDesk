@@ -183,7 +183,7 @@ function DashboardPageClientInner() {
   const [showStockValueDetail, setShowStockValueDetail] = useState(false);
   const [showVendorBalanceDetail, setShowVendorBalanceDetail] = useState(false);
   const [showSaleOnCashDetail, setShowSaleOnCashDetail] = useState(false);
-  const [dueList, setDueList] = useState<'patient' | 'sale' | 'total' | null>(null);
+  const [dueList, setDueList] = useState<'patient' | 'sale' | 'total' | 'cashIn' | 'bankIn' | null>(null);
 
   // Accounting Overview's Day/This Month/Custom filter ("yahan bhe date
   // honi chahy... day month aur year aur custom date ka hissab say states
@@ -566,7 +566,11 @@ function DashboardPageClientInner() {
 
       {historyTileKey ? <TileHistoryModal tileKey={historyTileKey} canChange={hasPermission('dues.manage')} onChanged={() => void loadSummary()} onClose={() => setHistoryTileKey(null)} /> : null}
 
-      {dueList ? <DueListModal kind={dueList} summary={summary} onClose={() => setDueList(null)} /> : null}
+      {dueList === 'cashIn' || dueList === 'bankIn' ? (
+        <MoneyInModal kind={dueList} summary={summary} onClose={() => setDueList(null)} />
+      ) : dueList ? (
+        <DueListModal kind={dueList} summary={summary} onClose={() => setDueList(null)} />
+      ) : null}
 
       {showCustomerAdvances ? (
         <CustomerAdvancesModal advances={summary?.customerAdvances || []} onClose={() => setShowCustomerAdvances(false)} />
@@ -640,7 +644,7 @@ function AccountingOverview({
   onOpenStockValueDetail: () => void;
   onOpenVendorBalanceDetail: () => void;
   onOpenSaleOnCashDetail: () => void;
-  onOpenDueList: (kind: 'patient' | 'sale' | 'total') => void;
+  onOpenDueList: (kind: 'patient' | 'sale' | 'total' | 'cashIn' | 'bankIn') => void;
 }) {
   const money = (value: number | undefined) => `${cs()}${formatter.format(value ?? 0)}`;
   // Every "(Today)"-suffixed tile's label follows whichever range is
@@ -669,6 +673,8 @@ function AccountingOverview({
     saleOnBank: `Sale on Bank (${periodLabel})`,
     saleOnCredit: `Sale on Due (${periodLabel})`,
     totalRecoveryToday: `Total Recovery (${periodLabel})`,
+    cashInToday: `Cash In (${periodLabel})`,
+    bankInToday: `Bank In (${periodLabel})`,
   } as Record<DashboardAdjustmentKey, string>;
   // Clear (to $0) - recorded in the tile's History, undoable there.
   const clearFor = (key: DashboardAdjustmentKey) =>
@@ -794,6 +800,22 @@ function AccountingOverview({
           actions={[{ icon: <List size={12} />, onClick: onOpenSaleOnCashDetail, label: 'Details' }, ...adjustOnlyFor('saleOnCash')]}
         />
         <OverviewTile icon={<Landmark size={18} />} color="bg-indigo-50 text-indigo-500" label={`Sale on Bank (${periodLabel})`} value={money(summary?.saleOnBank)} actions={actionsFor('saleOnBank')} />
+        <OverviewTile
+          icon={<Wallet size={18} />}
+          color="bg-sky-50 text-sky-600"
+          label={`Cash In (${periodLabel})`}
+          value={money(summary?.cashInToday)}
+          valueColor="text-sky-700"
+          actions={[{ icon: <HistoryIcon size={12} />, onClick: () => onOpenDueList('cashIn'), label: 'History' }, ...adjustOnlyFor('cashInToday')]}
+        />
+        <OverviewTile
+          icon={<Landmark size={18} />}
+          color="bg-indigo-50 text-indigo-600"
+          label={`Bank In (${periodLabel})`}
+          value={money(summary?.bankInToday)}
+          valueColor="text-indigo-700"
+          actions={[{ icon: <HistoryIcon size={12} />, onClick: () => onOpenDueList('bankIn'), label: 'History' }, ...adjustOnlyFor('bankInToday')]}
+        />
         <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label={`Sale on Due (Credit · ${periodLabel})`} value={money(summary?.saleOnCredit)} valueColor="text-rose-600" actions={[{ icon: <HistoryIcon size={12} />, onClick: () => onOpenDueList('sale'), label: 'History' }, ...adjustOnlyFor('saleOnCredit')]} />
         <OverviewTile
           icon={<CheckCircle2 size={18} />}
@@ -1739,9 +1761,95 @@ function SaleOnCashDetailModal({
   );
 }
 
+// Cash In / Bank In "History": every payment that came into the till or a
+// bank in the range - who paid, what for, who took it.
+function MoneyInModal({ kind, summary, onClose }: { kind: 'cashIn' | 'bankIn'; summary: DashboardSummary | null; onClose: () => void }) {
+  useBackspaceToClose(onClose);
+  const rows = (kind === 'cashIn' ? summary?.cashInRows : summary?.bankInRows) || [];
+  const title = kind === 'cashIn' ? 'Cash In' : 'Bank In';
+  const total = rows.reduce((sum, row) => sum + row.amount, 0);
+  const [pdfBusy, setPdfBusy] = useState(false);
+  const when = (iso: string) => new Date(iso).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' });
+  async function downloadPdf() {
+    setPdfBusy(true);
+    try {
+      const { ReportPdfDocument, downloadPdfDocument } = await import('@/lib/pdf-export');
+      const m = (n: number) => `${cs()}${n.toLocaleString()}`;
+      const range = summary?.startDate ? (summary.startDate === summary.endDate ? summary.startDate : `${summary.startDate} to ${summary.endDate}`) : '';
+      const doc = (
+        <ReportPdfDocument
+          title={title}
+          subtitle={range}
+          stats={[
+            { label: 'Total', value: m(total) },
+            { label: 'Payments', value: String(rows.length) },
+          ]}
+          tables={[
+            {
+              title: 'Payments',
+              columns: [
+                { label: 'Date', width: 1.2 },
+                { label: kind === 'cashIn' ? 'For' : 'Bank / For', width: 1.9 },
+                { label: 'From', width: 1.5 },
+                { label: 'Received by', width: 1.2 },
+                { label: 'Amount', width: 1, align: 'right' },
+              ],
+              rows: rows.map((r) => [when(r.createdAt), kind === 'bankIn' ? `${r.where} · ${r.note}` : r.note, r.name ? `${r.name}${r.phone ? ` (${r.phone})` : ''}` : '\u2014', r.by || '\u2014', m(r.amount)]),
+              footer: ['', '', '', 'Total', m(total)],
+              emptyMessage: 'No money in yet.',
+            },
+          ]}
+        />
+      );
+      await downloadPdfDocument(doc, kind === 'cashIn' ? 'cash_in.pdf' : 'bank_in.pdf');
+    } finally {
+      setPdfBusy(false);
+    }
+  }
+  return (
+    <div className="fixed inset-0 z-[140] flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm">
+      <div className="flex max-h-[85vh] w-full max-w-sm flex-col rounded-[32px] bg-white p-6 shadow-2xl">
+        <div className="flex items-start justify-between">
+          <div>
+            <h2 className="text-lg font-black text-gray-900">{title}</h2>
+            <p className="mt-1 text-xs text-gray-400">{kind === 'cashIn' ? 'Every payment that came into the till in this range.' : 'Every payment that came into your banks in this range.'}</p>
+          </div>
+          <button type="button" onClick={onClose} className="rounded-full bg-[#F6F7FB] p-2.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900">
+            <XCircle size={18} />
+          </button>
+        </div>
+        <div className="mt-3 flex items-center justify-between gap-2">
+          <p className="text-sm font-black text-emerald-600">Total: {cs()}{total.toLocaleString()}</p>
+          <button type="button" onClick={() => void downloadPdf()} disabled={pdfBusy || rows.length === 0} className="rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-black text-emerald-600 transition hover:bg-emerald-100 disabled:opacity-40">
+            {pdfBusy ? '...' : 'PDF'}
+          </button>
+        </div>
+        <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
+          {rows.length === 0 ? (
+            <p className="py-8 text-center text-xs font-bold text-gray-400">No money in yet.</p>
+          ) : (
+            <Paged items={rows}>{(paged) => paged.map((row, index) => (
+              <div key={`${row.createdAt}-${index}`} className="rounded-2xl bg-[#F8F9FB] p-3">
+                <div className="flex items-start justify-between gap-3">
+                  <p className="min-w-0 truncate text-sm font-bold text-gray-800">{row.note}</p>
+                  <p className="shrink-0 text-sm font-black text-emerald-600">+{cs()}{row.amount.toLocaleString()}</p>
+                </div>
+                {row.name ? <p className="text-xs font-semibold text-gray-600">From: {row.name}{row.phone ? ` (${row.phone})` : ''}</p> : null}
+                <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
+                  {kind === 'bankIn' ? `${row.where} · ` : ''}{when(row.createdAt)}{row.by ? ` · ${row.by}` : ''}
+                </p>
+              </div>
+            ))}</Paged>
+          )}
+        </div>
+      </div>
+    </div>
+  );
+}
+
 // Patient Due / Sale on Due "Details": who owes, and which appointments
 // were left unpaid in the range shown.
-function DueListModal({ kind, summary, onClose }: { kind: 'patient' | 'sale' | 'total'; summary: DashboardSummary | null; onClose: () => void }) {
+function DueListModal({ kind, summary, onClose }: { kind: 'patient' | 'sale' | 'total' | 'cashIn' | 'bankIn'; summary: DashboardSummary | null; onClose: () => void }) {
   useBackspaceToClose(onClose);
   const patientRows = summary?.patientDues || [];
   // 'total' = Total Sale: completed appointments (same row shape).
