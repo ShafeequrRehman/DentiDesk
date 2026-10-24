@@ -1161,41 +1161,6 @@ export default function SalesPage() {
     );
   }
 
-  async function handleSendWhatsAppReciept(order: SavedOrder) {
-    if (isDesktopApp() && !isOnline) {
-      return setStatus({ tone: 'error', text: t('sales.whatsappNeedsInternet') });
-    }
-    if (!order.customer.phone || order.customer.phone === '03000000000') {
-      return setStatus({ tone: 'error', text: t('sales.noValidPhoneNumber') });
-    }
-
-    setIsSendingWA(true);
-    try {
-      const lines = [];
-      lines.push(`*The Heaven Slice*`);
-      lines.push(t('sales.whatsappOrderNo', { number: orderNumber(order) }));
-      lines.push(t('sales.whatsappTotal', { total: order.total }));
-      lines.push(`--------------------`);
-      order.items.forEach((item) => {
-        lines.push(`${item.quantity}x ${item.name} @ ${cs()}${item.price}`);
-      });
-      lines.push(`--------------------`);
-      lines.push(t('sales.whatsappThankYou'));
-
-      const message = lines.join('\n');
-      const res = await sendWhatsappMessage(order.customer.phone, message);
-
-      if (res?.success) {
-        setStatus({ tone: 'success', text: t('sales.receiptSentWhatsApp', { phone: order.customer.phone }) });
-      } else {
-        setStatus({ tone: 'error', text: res?.error || t('sales.whatsappSendFailed') });
-      }
-    } catch (err) {
-      setStatus({ tone: 'error', text: t('sales.whatsappSendFailedPrefix') + (err instanceof Error ? err.message : '') });
-    } finally {
-      setIsSendingWA(false);
-    }
-  }
 
   return (
     <div className="space-y-3 sm:space-y-6">
@@ -1396,14 +1361,9 @@ export default function SalesPage() {
                     {!isSelectedOrderHydrated ? <p className="mt-1 text-xs font-bold text-amber-600">{t('sales.loadingFullOrderDetails')}</p> : null}
                   </div>
                   <div className="flex flex-wrap justify-end gap-2">
-                    {selectedOrder.customer.phone && selectedOrder.customer.phone !== '03000000000' && (
-                      <button disabled={isSendingWA || !isSelectedOrderHydrated} type="button" onClick={() => void handleSendWhatsAppReciept(selectedOrder)} className="rounded-2xl bg-gradient-to-b from-emerald-400 to-emerald-600 px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-white shadow-[inset_0_1px_0_rgba(255,255,255,0.4)] disabled:opacity-50">
-                        {isSendingWA ? t('sales.sendingEllipsis') : 'WhatsApp'}
-                      </button>
-                    )}
                     <button disabled={!isSelectedOrderHydrated} type="button" onClick={() => printCustomerReceipt(selectedOrder)} className="glass-pill rounded-2xl px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-gray-700 disabled:opacity-50">{t('sales.printReceipt')}</button>
                     <button
-                      disabled={!isSelectedOrderHydrated}
+                      disabled={!isSelectedOrderHydrated || isSendingWA}
                       type="button"
                       title="Send the appointment slip to the patient on WhatsApp"
                       onClick={() => {
@@ -1412,13 +1372,15 @@ export default function SalesPage() {
                           toast.error(problem);
                           return;
                         }
+                        setIsSendingWA(true);
                         void sendAppointmentSlip(selectedOrder, selectedOrder.status === 'pending' ? 'booked' : 'completed', { withPdf: true })
                           .then(() => toast.success('Slip sent to the patient on WhatsApp.'))
-                          .catch((error) => toast.error(`Slip not sent: ${error instanceof Error ? error.message : 'failed'}`));
+                          .catch((error) => toast.error(`Slip not sent: ${error instanceof Error ? error.message : 'failed'}`))
+                          .finally(() => setIsSendingWA(false));
                       }}
                       className="rounded-2xl bg-[#25D366] px-3 py-2.5 text-[10px] font-black uppercase tracking-[0.14em] text-white disabled:opacity-50"
                     >
-                      WhatsApp Slip
+                      {isSendingWA ? 'Sending...' : 'WhatsApp Slip'}
                     </button>
                     <Link to={`/dashboard/sales/print/${selectedOrder.id}`} className="glass-pill rounded-2xl p-2.5 text-gray-500"><Printer size={16} /></Link>
                     <button type="button" onClick={() => void refreshOne(selectedOrder.id)} className="glass-pill rounded-2xl p-2.5 text-gray-500"><RefreshCcw size={16} /></button>

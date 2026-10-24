@@ -139,7 +139,8 @@ export async function sendAppointmentSlip(order: SavedOrder, kind: SlipKind, opt
   if (!withPdf) return;
   const { orderReceiptPdfBase64 } = await import('@/lib/receipt-pdf');
   const base64 = await orderReceiptPdfBase64(order, previousDues);
-  await sendWhatsappDocument(order.customer.phone, base64, `Appointment_${appointmentNo(order)}_${fileSafe(order.customer?.name || '')}.pdf`);
+  const sent = await sendWhatsappDocument(order.customer.phone, base64, `Appointment_${appointmentNo(order)}_${fileSafe(order.customer?.name || '')}.pdf`);
+  if (sent && sent.success === false) throw new Error(sent.error || 'Slip PDF not sent.');
 }
 
 // The Dr's prescription (disease + medicine details) as a PDF.
