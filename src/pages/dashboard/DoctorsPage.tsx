@@ -663,7 +663,7 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/40 p-4 backdrop-blur-sm" onClick={close}>
-      <div className="w-full max-w-2xl rounded-[32px] bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
+      <div className="max-h-[92vh] w-full max-w-2xl overflow-y-auto overscroll-contain rounded-[32px] bg-white p-6 shadow-2xl" onClick={(event) => event.stopPropagation()}>
         <div className="mb-4 flex items-start justify-between gap-3">
           <div>
             <p className="text-[11px] font-black uppercase tracking-widest text-indigo-500">{alreadyDone ? 'Checkup done' : 'Checkup'} · {order.doctorName}</p>

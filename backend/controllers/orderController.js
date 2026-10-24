@@ -2100,7 +2100,7 @@ exports.getAppointments = async (req, res) => {
     else if (status === "waiting") query.checkupStatus = { $ne: "done" };
 
     const orders = await Order.find(query)
-      .select("dailyOrderNumber shopSequenceNumber customer note items total paidAmount remainingAmount status orderType source paymentStatus paymentMethod appointmentDate appointmentTime doctorName checkupStatus prescription diagnosis checkedAt checkedBy createdAt prescriptionImageCount")
+      .select("dailyOrderNumber shopSequenceNumber customer note items total paidAmount remainingAmount status orderType source paymentStatus paymentMethod appointmentDate appointmentTime doctorName checkupStatus prescription diagnosis doctorNote checkedAt checkedBy createdAt prescriptionImageCount")
       .sort({ appointmentDate: 1, appointmentTime: 1 })
       .limit(500)
       .lean();
