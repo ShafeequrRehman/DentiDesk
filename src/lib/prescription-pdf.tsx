@@ -5,7 +5,7 @@ import type { SavedOrder } from '@/lib/pos-types';
 import { getStoreSettings } from '@/lib/pos-settings';
 import { PRINT_LOGO_STORAGE_KEY } from '@/lib/print-logo';
 import { poweredByLine } from '@/lib/currency';
-import { prescriptionData } from '@/lib/prescription-a4';
+import { attachColumns, prescriptionData } from '@/lib/prescription-a4';
 import { BOOKING_QR_CAPTION, CALL_CAPTION, callNumbers, socialLinks } from '@/lib/slip-extras';
 
 const PHONE_PATH = 'M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z';
@@ -55,9 +55,35 @@ export function PrescriptionPdf({ order, qr, images = [], workAs = '' }: { order
     logo = null;
   }
   const contact = [settings.receiptAddress, settings.receiptContact].filter(Boolean).join(' · ');
+
+  // ONE page only: estimate how tall the text is, shrink it if needed, and
+  // give the attachments exactly the space that is left.
+  const USABLE_H = 842 - 34 * 2;
+  const USABLE_W = 595 - 34 * 2;
+  const wrapLines = (text: string, perLine: number) => Math.max(1, Math.ceil(text.length / perLine));
+  const workLines = workAs.trim() ? workAs.trim().split('\n').length : 0;
+  const fixed =
+    Math.max(64, 30 + workLines * 11) + 14 + // header
+    50 + // patient box
+    (data.services.length ? 16 + wrapLines(data.services.join(', '), 95) * 13 : 0) +
+    (data.diagnosis ? 16 + wrapLines(data.diagnosis, 95) * 13 : 0) +
+    50 + // signature
+    (links.length || qr || call ? 18 + Math.max(links.length * 11 + 14, (qr ? 100 : 0) + (call ? 22 : 0)) : 0) +
+    30; // footer text
+  const rxHeight = (k: number) => 14 + 38 * k + data.rxLines.reduce((sum, line) => sum + wrapLines(line, Math.floor(80 / k)) * 16 * k, 0);
+  const minImages = images.length ? 110 : 0;
+  let k = 1;
+  while (k > 0.6 && fixed + rxHeight(k) + minImages > USABLE_H) k = Math.round((k - 0.05) * 100) / 100;
+  const imageArea = Math.max(minImages, USABLE_H - fixed - rxHeight(k) - 4);
+  const cols = attachColumns(images.length);
+  const rows = Math.max(1, Math.ceil(images.length / cols));
+  const GAP = 6;
+  const cellW = (USABLE_W - GAP * (cols - 1)) / cols;
+  const cellH = Math.max(40, (imageArea - 20 - GAP * (rows - 1)) / rows);
+
   return (
     <Document title={`Prescription ${data.appointmentNo}`}>
-      <Page size="A4" style={styles.page}>
+      <Page size="A4" style={styles.page} wrap={false}>
         <View style={styles.head}>
           <View style={styles.brand}>
             {logo ? <Image src={logo} style={styles.logo} /> : null}
@@ -99,10 +125,10 @@ export function PrescriptionPdf({ order, qr, images = [], workAs = '' }: { order
           </>
         ) : null}
 
-        <Text style={styles.rxSym}>Rx</Text>
+        <Text style={[styles.rxSym, { fontSize: 34 * k }]}>Rx</Text>
         {data.rxLines.length ? (
           data.rxLines.map((line, i) => (
-            <View key={i} style={styles.rxLine}>
+            <View key={i} style={[styles.rxLine, { fontSize: 12 * k, marginTop: 6 * k }]}>
               <Text style={{ width: 18 }}>{i + 1}.</Text>
               <Text style={{ flex: 1 }}>{line}</Text>
             </View>
@@ -112,17 +138,22 @@ export function PrescriptionPdf({ order, qr, images = [], workAs = '' }: { order
         )}
 
         {images.length ? (
-          <View style={{ marginTop: 14 }}>
+          <View style={{ marginTop: 4 }}>
             <Text style={styles.sectionTitle}>ATTACHMENTS</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               {images.map((src, i) => (
-                <Image key={i} src={src} style={{ width: 250, maxHeight: 260, objectFit: 'contain', marginRight: 8, marginBottom: 8 }} />
+                <View
+                  key={i}
+                  style={{ width: cellW, height: cellH, marginRight: (i + 1) % cols === 0 ? 0 : GAP, marginBottom: GAP, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}
+                >
+                  <Image src={src} style={{ maxWidth: cellW - 4, maxHeight: cellH - 4, objectFit: 'contain' }} />
+                </View>
               ))}
             </View>
           </View>
         ) : null}
 
-        <View style={styles.sign}>
+        <View style={[styles.sign, { marginTop: images.length ? 10 : 36 }]}>
           <Text style={{ fontSize: 9, textAlign: 'center', color: '#374151' }}>Doctor&apos;s Signature</Text>
         </View>
 

@@ -50,7 +50,10 @@ export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []
     @page { size: A4 portrait; margin: 0; }
     * { box-sizing: border-box; }
     html, body { margin: 0; padding: 0; background: #fff; color: #111827; font-family: 'Segoe UI', Arial, sans-serif; }
-    .page { width: 210mm; min-height: 285mm; padding: 14mm 14mm 10mm; display: flex; flex-direction: column; }
+    /* Always ONE A4 page: fixed height, nothing spills to a 2nd page. The
+       script at the end shrinks the text if it is still too long, and the
+       attachments share whatever space is left. */
+    .page { --fs: 1; width: 210mm; height: 296mm; overflow: hidden; padding: 12mm 13mm 8mm; display: flex; flex-direction: column; }
     .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 12px; border-bottom: 3px solid #0e7490; }
     .brand { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
     .brand img { max-height: 80px; max-width: 140px; object-fit: contain; }
@@ -68,15 +71,18 @@ export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []
     .info b { font-size: 13px; }
     .section { margin-top: 10px; }
     .section h3 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #0e7490; margin: 0 0 4px; }
-    .section p { margin: 2px 0; font-size: 13px; }
-    .rx { flex: 1; margin-top: 16px; }
-    .rx .sym { font-family: Georgia, 'Times New Roman', serif; font-size: 44px; font-weight: 700; color: #0e7490; line-height: 1; }
-    .rx ol { margin: 10px 0 0 6px; padding-left: 20px; font-size: 15px; line-height: 1.9; }
-    .attach { margin-top: 14px; }
+    .section p { margin: 2px 0; font-size: calc(13px * var(--fs)); }
+    .rx { flex: 1 1 auto; min-height: 0; margin-top: calc(14px * var(--fs)); }
+    .page.has-att .rx { flex: 0 0 auto; }
+    .rx .sym { font-family: Georgia, 'Times New Roman', serif; font-size: calc(40px * var(--fs)); font-weight: 700; color: #0e7490; line-height: 1; }
+    .rx ol { margin: calc(8px * var(--fs)) 0 0 6px; padding-left: 20px; font-size: calc(15px * var(--fs)); line-height: calc(1.8 * var(--fs) + 0.2 * (1 - var(--fs))); }
+    /* Attachments fill the space left on the page - more pictures = smaller */
+    .attach { flex: 1 1 0; min-height: 30mm; margin-top: 10px; display: flex; flex-direction: column; }
     .attach h3 { font-size: 11px; letter-spacing: 2px; text-transform: uppercase; color: #0e7490; margin: 0 0 6px; }
-    .attach .grid { display: flex; flex-wrap: wrap; gap: 8px; }
-    .attach img { max-width: calc(50% - 4px); max-height: 95mm; object-fit: contain; border: 1px solid #e5e7eb; border-radius: 6px; page-break-inside: avoid; }
-    .sign { display: flex; justify-content: flex-end; margin-top: 30px; }
+    .attach .grid { flex: 1 1 0; min-height: 0; display: grid; gap: 6px; grid-auto-rows: minmax(0, 1fr); }
+    .attach .cell { min-height: 0; min-width: 0; display: flex; align-items: center; justify-content: center; border: 1px solid #e5e7eb; border-radius: 6px; overflow: hidden; }
+    .attach img { width: 100%; height: 100%; object-fit: contain; }
+    .sign { display: flex; justify-content: flex-end; margin-top: calc(26px * var(--fs)); }
     .sign div { width: 220px; border-top: 1px solid #111827; text-align: center; padding-top: 4px; font-size: 12px; color: #374151; }
     .foot { margin-top: 18px; padding-top: 10px; border-top: 1px dashed #9ca3af; display: flex; justify-content: space-between; align-items: center; gap: 16px; }
     .foot .links p { margin: 1px 0; font-size: 11px; color: #374151; }
@@ -86,7 +92,7 @@ export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []
     .bottom { text-align: center; margin-top: 8px; font-size: 11px; color: #6b7280; }
     .bottom b { color: #111827; }
   </style></head><body>
-  <div class="page">
+  <div class="page${images.length ? ' has-att' : ''}">
     <div class="head">
       <div class="brand">
         ${logo ? `<img src="${logo}" alt="" />` : ''}
@@ -119,7 +125,7 @@ export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []
       ${data.rxLines.length ? `<ol>${data.rxLines.map((line) => `<li>${escapeHtml(line)}</li>`).join('')}</ol>` : '<p style="font-size:14px;color:#6b7280">-</p>'}
     </div>
 
-    ${images.length ? `<div class="attach"><h3>Attachments</h3><div class="grid">${images.map((src) => `<img src="${src}" alt="" />`).join('')}</div></div>` : ''}
+    ${images.length ? `<div class="attach"><h3>Attachments</h3><div class="grid" style="grid-template-columns: repeat(${attachColumns(images.length)}, minmax(0, 1fr))">${images.map((src) => `<div class="cell"><img src="${src}" alt="" /></div>`).join('')}</div></div>` : ''}
 
     <div class="sign"><div>Doctor's Signature</div></div>
 
@@ -132,7 +138,28 @@ export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []
       ${poweredByLine() ? escapeHtml(poweredByLine()) : ''}
     </div>
   </div>
+  <script>
+    // Long prescription: shrink the text step by step until the page fits.
+    (function () {
+      var page = document.querySelector('.page');
+      if (!page) return;
+      var fs = 1;
+      function fit() {
+        while (page.scrollHeight > page.clientHeight + 1 && fs > 0.6) {
+          fs = Math.round((fs - 0.05) * 100) / 100;
+          page.style.setProperty('--fs', String(fs));
+        }
+      }
+      fit();
+      window.addEventListener('load', fit);
+    })();
+  </script>
   </body></html>`;
+}
+
+// 1 picture = full width, 2-4 = two across, more = three across.
+export function attachColumns(count: number) {
+  return count <= 1 ? 1 : count <= 4 ? 2 : 3;
 }
 
 // "Work As" text -> safe HTML: line breaks kept, **bold** supported.
