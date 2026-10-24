@@ -540,7 +540,7 @@ exports.getDashboardSummary = async (req, res) => {
           { completedAt: null, createdAt: { $gte: start, $lte: end } },
         ],
       })
-        .select("total")
+        .select("total dailyOrderNumber customer completedAt createdAt doctorName")
         .lean(),
       // Stock Value fallback - selling-price x current stock, used ONLY for
       // a Product that has no matching raw-stock Ingredient (see below).
@@ -640,7 +640,20 @@ exports.getDashboardSummary = async (req, res) => {
     let saleOnBank = 0;
     let saleOnCredit = 0;
     let totalSaleToday = 0;
-    for (const order of completedOrders) totalSaleToday += Number(order.total || 0);
+    // Total Sale "History": the completed appointments behind the figure.
+    const completedSaleRows = [];
+    for (const order of completedOrders) {
+      totalSaleToday += Number(order.total || 0);
+      completedSaleRows.push({
+        orderNumber: order.dailyOrderNumber ?? null,
+        name: order.customer?.name || "Walk-in",
+        phone: order.customer?.phone && order.customer.phone !== "03000000000" ? order.customer.phone : "",
+        doctor: order.doctorName || "",
+        amount: Number(order.total || 0),
+        createdAt: order.completedAt || order.createdAt,
+      });
+    }
+    completedSaleRows.sort((a, b) => new Date(b.createdAt) - new Date(a.createdAt));
     // Sale on Due "Details": every appointment in the range left unpaid.
     const saleOnCreditRows = [];
     for (const order of todaysOrders) {
@@ -767,6 +780,7 @@ exports.getDashboardSummary = async (req, res) => {
       customerAdvances,
       patientDues,
       saleOnCreditRows,
+      completedSaleRows,
     });
   } catch (error) {
     res.status(500).json({ error: error.message });

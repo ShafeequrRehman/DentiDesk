@@ -1,5 +1,6 @@
-// WhatsApp prescription PDF - A4 portrait, same layout as the printed
-// prescription (prescription-a4.ts).
+// WhatsApp prescription PDF - A4 portrait, laid out to match the printed
+// prescription (prescription-a4.ts) as closely as the PDF engine allows:
+// same sizes (CSS px x 0.75 = PDF pt), same order, always ONE page.
 import { Document, Image, Page, Path, StyleSheet, Svg, Text, View } from '@react-pdf/renderer';
 import type { SavedOrder } from '@/lib/pos-types';
 import { getStoreSettings } from '@/lib/pos-settings';
@@ -11,25 +12,28 @@ import { BOOKING_QR_CAPTION, CALL_CAPTION, callNumbers, socialLinks } from '@/li
 const PHONE_PATH = 'M6.6 10.8a15.1 15.1 0 0 0 6.6 6.6l2.2-2.2a1 1 0 0 1 1-.25 11.4 11.4 0 0 0 3.6.57 1 1 0 0 1 1 1V20a1 1 0 0 1-1 1A17 17 0 0 1 3 4a1 1 0 0 1 1-1h3.5a1 1 0 0 1 1 1c0 1.25.2 2.45.57 3.6a1 1 0 0 1-.25 1z';
 
 const TEAL = '#0e7490';
+const PAD_TOP = 34; // 12mm
+const PAD_SIDE = 37; // 13mm
+const PAD_BOTTOM = 23; // 8mm
 const styles = StyleSheet.create({
-  page: { padding: 34, fontFamily: 'Helvetica', fontSize: 11, color: '#111827' },
-  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 10, borderBottomWidth: 3, borderColor: TEAL },
-  brand: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 14 },
-  logo: { maxHeight: 60, maxWidth: 100, objectFit: 'contain', marginRight: 12 },
-  clinic: { fontSize: 20, fontFamily: 'Helvetica-Bold', color: TEAL },
-  sub: { fontSize: 9, color: '#4b5563', marginTop: 2 },
-  docLabel: { fontSize: 8, color: '#6b7280', textAlign: 'left', letterSpacing: 1.5 },
-  docName: { fontSize: 18, fontFamily: 'Helvetica-Bold', textAlign: 'left' },
-  docNo: { fontSize: 9, color: '#374151', textAlign: 'left', marginTop: 2 },
-  patient: { flexDirection: 'row', marginTop: 12, padding: 9, backgroundColor: '#f0fdff', borderWidth: 1, borderColor: '#cffafe', borderRadius: 8 },
-  infoBox: { flex: 1, paddingRight: 6 },
-  infoLabel: { fontSize: 7, color: '#6b7280', letterSpacing: 1.2 },
-  infoValue: { fontSize: 10.5, fontFamily: 'Helvetica-Bold', marginTop: 1 },
-  sectionTitle: { fontSize: 8.5, color: TEAL, letterSpacing: 1.5, fontFamily: 'Helvetica-Bold', marginTop: 10, marginBottom: 3 },
-  rxSym: { fontSize: 34, fontFamily: 'Times-Bold', color: TEAL, marginTop: 14 },
-  rxLine: { fontSize: 12, marginTop: 6, flexDirection: 'row' },
-  sign: { marginTop: 36, alignSelf: 'flex-end', width: 180, borderTopWidth: 1, borderColor: '#111827', paddingTop: 3 },
-  foot: { marginTop: 18, paddingTop: 8, borderTopWidth: 1, borderStyle: 'dashed', borderColor: '#9ca3af', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
+  page: { paddingTop: PAD_TOP, paddingBottom: PAD_BOTTOM, paddingHorizontal: PAD_SIDE, fontFamily: 'Helvetica', fontSize: 9.75, color: '#111827', flexDirection: 'column' },
+  head: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'flex-start', paddingBottom: 9, borderBottomWidth: 2.25, borderColor: TEAL },
+  brand: { flexDirection: 'row', alignItems: 'center', flex: 1, marginRight: 22 },
+  logo: { maxHeight: 60, maxWidth: 105, objectFit: 'contain', marginRight: 10.5 },
+  clinic: { fontSize: 18, fontFamily: 'Helvetica-Bold', color: TEAL, letterSpacing: 0.4 },
+  sub: { fontSize: 9, color: '#4b5563', marginTop: 1.5 },
+  doc: { width: '40%', alignSelf: 'stretch', borderLeftWidth: 1.5, borderColor: TEAL, paddingLeft: 10.5 },
+  docLabel: { fontSize: 7.5, color: '#6b7280', letterSpacing: 1.5 },
+  docName: { fontSize: 13.5, fontFamily: 'Helvetica-Bold', color: '#0f172a' },
+  docWork: { fontSize: 8.6, color: '#374151', lineHeight: 1.45 },
+  docNo: { fontSize: 8.25, color: '#6b7280', marginTop: 4.5 },
+  patient: { flexDirection: 'row', marginTop: 10.5, marginBottom: 10.5, paddingVertical: 7.5, paddingHorizontal: 9, backgroundColor: '#f0fdff', borderWidth: 0.75, borderColor: '#cffafe', borderRadius: 7.5 },
+  infoBox: { flex: 1, paddingRight: 7.5 },
+  infoLabel: { fontSize: 6.75, color: '#6b7280', letterSpacing: 1.1 },
+  infoValue: { fontSize: 9.75, fontFamily: 'Helvetica-Bold', marginTop: 1 },
+  sectionTitle: { fontSize: 8.25, color: TEAL, letterSpacing: 1.5, fontFamily: 'Helvetica-Bold', marginTop: 7.5, marginBottom: 3 },
+  sign: { alignSelf: 'flex-end', width: 165, borderTopWidth: 0.75, borderColor: '#111827', paddingTop: 3 },
+  foot: { marginTop: 13.5, paddingTop: 7.5, borderTopWidth: 0.75, borderStyle: 'dashed', borderColor: '#9ca3af', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center' },
 });
 
 function Info({ label, value }: { label: string; value: string }) {
@@ -39,6 +43,22 @@ function Info({ label, value }: { label: string; value: string }) {
       <Text style={styles.infoLabel}>{label.toUpperCase()}</Text>
       <Text style={styles.infoValue}>{value}</Text>
     </View>
+  );
+}
+
+// "Work As" line with **bold** parts.
+function WorkLine({ line, first }: { line: string; first: boolean }) {
+  const parts = line.split(/(\*\*.+?\*\*)/g).filter(Boolean);
+  return (
+    <Text style={[styles.docWork, { marginTop: first ? 3 : 0 }]}>
+      {parts.map((part, i) =>
+        /^\*\*.+\*\*$/.test(part) ? (
+          <Text key={i} style={{ fontFamily: 'Helvetica-Bold', color: TEAL }}>{part.slice(2, -2)}</Text>
+        ) : (
+          <Text key={i}>{part}</Text>
+        ),
+      )}
+    </Text>
   );
 }
 
@@ -55,31 +75,32 @@ export function PrescriptionPdf({ order, qr, images = [], workAs = '' }: { order
     logo = null;
   }
   const contact = [settings.receiptAddress, settings.receiptContact].filter(Boolean).join(' · ');
+  const workLines = workAs.trim() ? workAs.trim().split('\n') : [];
 
-  // ONE page only: estimate how tall the text is, shrink it if needed, and
-  // give the attachments exactly the space that is left.
-  const USABLE_H = 842 - 34 * 2;
-  const USABLE_W = 595 - 34 * 2;
+  // ONE page only (same as the print): estimate how tall the text is,
+  // shrink it if needed, and give the attachments the space that is left.
+  const USABLE_H = 842 - PAD_TOP - PAD_BOTTOM;
+  const USABLE_W = 595 - PAD_SIDE * 2;
   const wrapLines = (text: string, perLine: number) => Math.max(1, Math.ceil(text.length / perLine));
-  const workLines = workAs.trim() ? workAs.trim().split('\n').length : 0;
+  const hasFoot = Boolean(links.length || qr || call);
   const fixed =
-    Math.max(64, 30 + workLines * 11) + 14 + // header
-    50 + // patient box
-    (data.services.length ? 16 + wrapLines(data.services.join(', '), 95) * 13 : 0) +
-    (data.diagnosis ? 16 + wrapLines(data.diagnosis, 95) * 13 : 0) +
-    50 + // signature
-    (links.length || qr || call ? 18 + Math.max(links.length * 11 + 14, (qr ? 100 : 0) + (call ? 22 : 0)) : 0) +
+    Math.max(66, 34 + workLines.length * 12.5) + 10 + // header
+    52 + // patient box
+    (data.services.length ? 15 + wrapLines(data.services.join(', '), 100) * 12 : 0) +
+    (data.diagnosis ? 15 + wrapLines(data.diagnosis, 100) * 12 : 0) +
+    (hasFoot ? 22 + Math.max(links.length * 11 + 14, (qr ? 96 : 0) + (call ? 22 : 0)) : 0) +
     30; // footer text
-  const rxHeight = (k: number) => 14 + 38 * k + data.rxLines.reduce((sum, line) => sum + wrapLines(line, Math.floor(80 / k)) * 16 * k, 0);
+  const rxHeight = (k: number) =>
+    10.5 * k + 32 * k + 6 * k + data.rxLines.reduce((sum, line) => sum + wrapLines(line, Math.floor(82 / k)) * 20 * k, 0) + 20 * k + 14; // + signature
   const minImages = images.length ? 110 : 0;
   let k = 1;
   while (k > 0.6 && fixed + rxHeight(k) + minImages > USABLE_H) k = Math.round((k - 0.05) * 100) / 100;
-  const imageArea = Math.max(minImages, USABLE_H - fixed - rxHeight(k) - 4);
+  const imageArea = Math.max(minImages, USABLE_H - fixed - rxHeight(k) - 6);
   const cols = attachColumns(images.length);
   const rows = Math.max(1, Math.ceil(images.length / cols));
-  const GAP = 6;
+  const GAP = 4.5;
   const cellW = (USABLE_W - GAP * (cols - 1)) / cols;
-  const cellH = Math.max(40, (imageArea - 20 - GAP * (rows - 1)) / rows);
+  const cellH = Math.max(40, (imageArea - 22 - GAP * (rows - 1)) / rows);
 
   return (
     <Document title={`Prescription ${data.appointmentNo}`}>
@@ -87,20 +108,16 @@ export function PrescriptionPdf({ order, qr, images = [], workAs = '' }: { order
         <View style={styles.head}>
           <View style={styles.brand}>
             {logo ? <Image src={logo} style={styles.logo} /> : null}
-            <View>
+            <View style={{ flex: 1 }}>
               <Text style={styles.clinic}>{(settings.receiptHeader || 'Clinic').toUpperCase()}</Text>
               {settings.receiptSubHeader ? <Text style={styles.sub}>{settings.receiptSubHeader}</Text> : null}
               {contact ? <Text style={styles.sub}>{contact}</Text> : null}
             </View>
           </View>
-          <View style={{ maxWidth: '42%', alignSelf: 'stretch', borderLeftWidth: 2, borderColor: TEAL, paddingLeft: 12 }}>
+          <View style={styles.doc}>
             {data.withLabel === 'Dr' ? null : <Text style={styles.docLabel}>{data.withLabel.toUpperCase()}</Text>}
             <Text style={styles.docName}>{data.withName || '-'}</Text>
-            {workAs.trim()
-              ? workAs.trim().split('\n').map((line, i) => (
-                  <Text key={i} style={{ fontSize: 8.5, color: '#374151', textAlign: 'left', marginTop: i === 0 ? 3 : 0 }}>{line.replace(/\*\*/g, '')}</Text>
-                ))
-              : null}
+            {workLines.map((line, i) => <WorkLine key={i} line={line} first={i === 0} />)}
             <Text style={styles.docNo}>Appointment #{data.appointmentNo}</Text>
           </View>
         </View>
@@ -113,38 +130,44 @@ export function PrescriptionPdf({ order, qr, images = [], workAs = '' }: { order
         </View>
 
         {data.services.length ? (
-          <>
+          <View>
             <Text style={styles.sectionTitle}>SERVICES</Text>
-            <Text>{data.services.join(', ')}</Text>
-          </>
+            <Text style={{ fontSize: 9.75 * k }}>{data.services.join(', ')}</Text>
+          </View>
         ) : null}
         {data.diagnosis ? (
-          <>
+          <View>
             <Text style={styles.sectionTitle}>DIAGNOSIS / DISEASE</Text>
-            <Text>{data.diagnosis}</Text>
-          </>
+            <Text style={{ fontSize: 9.75 * k }}>{data.diagnosis}</Text>
+          </View>
         ) : null}
 
-        <Text style={[styles.rxSym, { fontSize: 34 * k }]}>Rx</Text>
-        {data.rxLines.length ? (
-          data.rxLines.map((line, i) => (
-            <View key={i} style={[styles.rxLine, { fontSize: 12 * k, marginTop: 6 * k }]}>
-              <Text style={{ width: 18 }}>{i + 1}.</Text>
-              <Text style={{ flex: 1 }}>{line}</Text>
+        <View style={{ marginTop: 10.5 * k }}>
+          <Text style={{ fontSize: 30 * k, fontFamily: 'Times-Bold', color: TEAL }}>
+            R<Text style={{ fontSize: 17 * k }}>x</Text>
+          </Text>
+          {data.rxLines.length ? (
+            <View style={{ marginTop: 6 * k, paddingLeft: 6 }}>
+              {data.rxLines.map((line, i) => (
+                <View key={i} style={{ flexDirection: 'row', fontSize: 11.25 * k, lineHeight: 1.8 }}>
+                  <Text style={{ width: 15 * k }}>{i + 1}.</Text>
+                  <Text style={{ flex: 1 }}>{line}</Text>
+                </View>
+              ))}
             </View>
-          ))
-        ) : (
-          <Text style={{ color: '#6b7280', marginTop: 6 }}>-</Text>
-        )}
+          ) : (
+            <Text style={{ fontSize: 10.5, color: '#6b7280', marginTop: 6 }}>-</Text>
+          )}
+        </View>
 
         {images.length ? (
-          <View style={{ marginTop: 4 }}>
+          <View style={{ marginTop: 7.5 }}>
             <Text style={styles.sectionTitle}>ATTACHMENTS</Text>
             <View style={{ flexDirection: 'row', flexWrap: 'wrap' }}>
               {images.map((src, i) => (
                 <View
                   key={i}
-                  style={{ width: cellW, height: cellH, marginRight: (i + 1) % cols === 0 ? 0 : GAP, marginBottom: GAP, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 4, alignItems: 'center', justifyContent: 'center' }}
+                  style={{ width: cellW, height: cellH, marginRight: (i + 1) % cols === 0 ? 0 : GAP, marginBottom: GAP, borderWidth: 0.75, borderColor: '#e5e7eb', borderRadius: 4.5, alignItems: 'center', justifyContent: 'center' }}
                 >
                   <Image src={src} style={{ maxWidth: cellW - 4, maxHeight: cellH - 4, objectFit: 'contain' }} />
                 </View>
@@ -153,36 +176,39 @@ export function PrescriptionPdf({ order, qr, images = [], workAs = '' }: { order
           </View>
         ) : null}
 
-        <View style={[styles.sign, { marginTop: images.length ? 10 : 36 }]}>
+        {/* Pushes signature + footer to the bottom of the page, like the print */}
+        <View style={{ flexGrow: 1 }} />
+
+        <View style={[styles.sign, { marginTop: 19.5 * k }]}>
           <Text style={{ fontSize: 9, textAlign: 'center', color: '#374151' }}>Doctor&apos;s Signature</Text>
         </View>
 
-        {links.length || qr || call ? (
-          <View style={styles.foot} wrap={false}>
+        {hasFoot ? (
+          <View style={styles.foot}>
             <View style={{ flex: 1 }}>
-              {links.length ? <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold', marginBottom: 2 }}>FOLLOW US</Text> : null}
+              {links.length ? <Text style={{ fontSize: 8.25, fontFamily: 'Helvetica-Bold', letterSpacing: 1.1, marginBottom: 2 }}>FOLLOW US</Text> : null}
               {links.map((l) => (
-                <Text key={l.label} style={{ fontSize: 9, color: '#374151' }}>{l.label}: {l.value}</Text>
+                <Text key={l.label} style={{ fontSize: 8.25, color: '#374151', marginTop: 0.75 }}>{l.label}: {l.value}</Text>
               ))}
             </View>
             {qr || call ? (
-              <View style={{ alignItems: 'center', width: 150 }}>
-                {qr ? <Image src={qr} style={{ width: 80, height: 80 }} /> : null}
-                {qr ? <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', marginTop: 2, textAlign: 'center' }}>{BOOKING_QR_CAPTION}</Text> : null}
+              <View style={{ alignItems: 'center', width: 170 }}>
+                {qr ? <Image src={qr} style={{ width: 82, height: 82 }} /> : null}
+                {qr ? <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', marginTop: 1.5, textAlign: 'center' }}>{BOOKING_QR_CAPTION}</Text> : null}
                 {call ? (
-                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 5 }}>
-                    <Svg width={9} height={9} viewBox="0 0 24 24"><Path d={PHONE_PATH} fill="#000" /></Svg>
-                    <Text style={{ fontSize: 8, fontFamily: 'Helvetica-Bold', marginLeft: 3 }}>{CALL_CAPTION}</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 4.5 }}>
+                    <Svg width={8} height={8} viewBox="0 0 24 24"><Path d={PHONE_PATH} fill="#000" /></Svg>
+                    <Text style={{ fontSize: 7.5, fontFamily: 'Helvetica-Bold', marginLeft: 3 }}>{CALL_CAPTION}</Text>
                   </View>
                 ) : null}
-                {call ? <Text style={{ fontSize: 8, textAlign: 'center' }}>{call}</Text> : null}
+                {call ? <Text style={{ fontSize: 7.5, textAlign: 'center', marginTop: 1.5 }}>{call}</Text> : null}
               </View>
             ) : null}
           </View>
         ) : null}
-        <View style={{ marginTop: 8, alignItems: 'center' }}>
-          {settings.receiptFooterMessage ? <Text style={{ fontSize: 9, fontFamily: 'Helvetica-Bold' }}>{settings.receiptFooterMessage}</Text> : null}
-          {poweredByLine() ? <Text style={{ fontSize: 8, color: '#6b7280' }}>{poweredByLine()}</Text> : null}
+        <View style={{ marginTop: 6, alignItems: 'center' }}>
+          {settings.receiptFooterMessage ? <Text style={{ fontSize: 8.25, fontFamily: 'Helvetica-Bold' }}>{settings.receiptFooterMessage}</Text> : null}
+          {poweredByLine() ? <Text style={{ fontSize: 8.25, color: '#6b7280' }}>{poweredByLine()}</Text> : null}
         </View>
       </Page>
     </Document>

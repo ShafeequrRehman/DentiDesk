@@ -206,6 +206,7 @@ export interface DashboardSummary {
   // Dashboard "Details" lists for Patient Due and Sale on Due.
   patientDues?: { name: string; phone: string; amount: number; fromAppointments: number; oldDues: number }[];
   saleOnCreditRows?: { orderNumber: number | null; name: string; phone: string; amount: number; createdAt: string }[];
+  completedSaleRows?: { orderNumber: number | null; name: string; phone: string; doctor: string; amount: number; createdAt: string }[];
 }
 
 // Task 1: every Accounting Overview tile is editable - see
@@ -977,6 +978,8 @@ export interface OrderPayload {
   prescription?: string;
   // Disease/problem the Dr found at the checkup.
   diagnosis?: string;
+  // Dr's private note - checkup screen only, never printed / sent.
+  doctorNote?: string;
   checkedAt?: string | null;
   checkedBy?: string;
   // How many pictures the Dr attached to the prescription.

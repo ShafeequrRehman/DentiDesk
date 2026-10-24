@@ -181,6 +181,9 @@ const orderSchema = new mongoose.Schema(
     prescription: { type: String, default: "" },
     // What the Dr found - the disease/problem (e.g. "Tooth decay, lower left molar").
     diagnosis: { type: String, default: "" },
+    // The Dr's own private note - shown only on the checkup screen, never
+    // printed on any slip / prescription and never sent on WhatsApp.
+    doctorNote: { type: String, default: "" },
     // Pictures the Dr attached to the prescription (X-ray, report...) -
     // small JPEG data URLs, shown under the medicine details on the
     // prescription. Loaded only when opened (not in appointment lists).

@@ -2132,6 +2132,9 @@ exports.completeCheckup = async (req, res) => {
     if (typeof req.body?.diagnosis === "string") {
       order.diagnosis = req.body.diagnosis.trim().slice(0, 1000);
     }
+    if (typeof req.body?.doctorNote === "string") {
+      order.doctorNote = req.body.doctorNote.trim().slice(0, 2000);
+    }
     let stockWarning = null;
     if (saveOnly) {
       // nothing else changes

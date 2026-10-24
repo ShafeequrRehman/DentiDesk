@@ -183,7 +183,7 @@ function DashboardPageClientInner() {
   const [showStockValueDetail, setShowStockValueDetail] = useState(false);
   const [showVendorBalanceDetail, setShowVendorBalanceDetail] = useState(false);
   const [showSaleOnCashDetail, setShowSaleOnCashDetail] = useState(false);
-  const [dueList, setDueList] = useState<'patient' | 'sale' | null>(null);
+  const [dueList, setDueList] = useState<'patient' | 'sale' | 'total' | null>(null);
 
   // Accounting Overview's Day/This Month/Custom filter ("yahan bhe date
   // honi chahy... day month aur year aur custom date ka hissab say states
@@ -640,7 +640,7 @@ function AccountingOverview({
   onOpenStockValueDetail: () => void;
   onOpenVendorBalanceDetail: () => void;
   onOpenSaleOnCashDetail: () => void;
-  onOpenDueList: (kind: 'patient' | 'sale') => void;
+  onOpenDueList: (kind: 'patient' | 'sale' | 'total') => void;
 }) {
   const money = (value: number | undefined) => `${cs()}${formatter.format(value ?? 0)}`;
   // Every "(Today)"-suffixed tile's label follows whichever range is
@@ -739,7 +739,7 @@ function AccountingOverview({
         </p>
       ) : null}
       <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 lg:grid-cols-4">
-        <OverviewTile icon={<Target size={18} />} color="bg-orange-50 text-orange-500" label={`Total Sale (${periodLabel})`} value={money(summary?.totalSaleToday)} actions={actionsFor('totalSaleToday')} />
+        <OverviewTile icon={<Target size={18} />} color="bg-orange-50 text-orange-500" label={`Total Sale (${periodLabel})`} value={money(summary?.totalSaleToday)} actions={[{ icon: <HistoryIcon size={12} />, onClick: () => onOpenDueList('total'), label: 'History' }, ...adjustOnlyFor('totalSaleToday')]} />
         <OverviewTile icon={<HandCoins size={18} />} color="bg-rose-50 text-rose-500" label="Patient Due" value={money(summary?.customerUdharTotal)} valueColor="text-rose-600" actions={[{ icon: <HistoryIcon size={12} />, onClick: () => onOpenDueList('patient'), label: 'History' }, ...adjustOnlyFor('customerUdharTotal')]} />
         <OverviewTile
           icon={<PiggyBank size={18} />}
@@ -1741,14 +1741,16 @@ function SaleOnCashDetailModal({
 
 // Patient Due / Sale on Due "Details": who owes, and which appointments
 // were left unpaid in the range shown.
-function DueListModal({ kind, summary, onClose }: { kind: 'patient' | 'sale'; summary: DashboardSummary | null; onClose: () => void }) {
+function DueListModal({ kind, summary, onClose }: { kind: 'patient' | 'sale' | 'total'; summary: DashboardSummary | null; onClose: () => void }) {
   useBackspaceToClose(onClose);
   const patientRows = summary?.patientDues || [];
-  const saleRows = summary?.saleOnCreditRows || [];
+  // 'total' = Total Sale: completed appointments (same row shape).
+  const saleRows = kind === 'total' ? summary?.completedSaleRows || [] : summary?.saleOnCreditRows || [];
   const total = kind === 'patient' ? patientRows.reduce((sum, r) => sum + r.amount, 0) : saleRows.reduce((sum, r) => sum + r.amount, 0);
   const count = kind === 'patient' ? patientRows.length : saleRows.length;
   const [pdfBusy, setPdfBusy] = useState(false);
-  const title = kind === 'patient' ? 'Patient Due' : 'Sale on Due';
+  const title = kind === 'patient' ? 'Patient Due' : kind === 'total' ? 'Total Sale' : 'Sale on Due';
+  const tone = kind === 'total' ? 'text-orange-600' : 'text-rose-600';
   async function downloadPdf() {
     setPdfBusy(true);
     try {
@@ -1787,7 +1789,7 @@ function DueListModal({ kind, summary, onClose }: { kind: 'patient' | 'sale'; su
                     { label: 'No.', width: 0.6 },
                     { label: 'Patient', width: 1.7 },
                     { label: 'Phone', width: 1.3 },
-                    { label: 'Due', width: 1, align: 'right' },
+                    { label: kind === 'total' ? 'Amount' : 'Due', width: 1, align: 'right' },
                   ],
                   rows: saleRows.map((r) => [when(r.createdAt), r.orderNumber ? `#${r.orderNumber}` : '\u2014', r.name, r.phone || '\u2014', m(r.amount)]),
                   footer: ['', '', '', 'Total', m(total)],
@@ -1796,7 +1798,7 @@ function DueListModal({ kind, summary, onClose }: { kind: 'patient' | 'sale'; su
           ]}
         />
       );
-      await downloadPdfDocument(doc, kind === 'patient' ? 'patient_due.pdf' : 'sale_on_due.pdf');
+      await downloadPdfDocument(doc, kind === 'patient' ? 'patient_due.pdf' : kind === 'total' ? 'total_sale.pdf' : 'sale_on_due.pdf');
     } finally {
       setPdfBusy(false);
     }
@@ -1808,7 +1810,7 @@ function DueListModal({ kind, summary, onClose }: { kind: 'patient' | 'sale'; su
           <div>
             <h2 className="text-lg font-black text-gray-900">{title}</h2>
             <p className="mt-1 text-xs text-gray-400">
-              {kind === 'patient' ? 'Every patient who owes right now (all days).' : 'Appointments left unpaid in this range.'}
+              {kind === 'patient' ? 'Every patient who owes right now (all days).' : kind === 'total' ? 'Appointments completed in this range.' : 'Appointments left unpaid in this range.'}
             </p>
           </div>
           <button type="button" onClick={onClose} className="rounded-full bg-[#F6F7FB] p-2.5 text-gray-500 transition hover:bg-gray-100 hover:text-gray-900">
@@ -1816,14 +1818,14 @@ function DueListModal({ kind, summary, onClose }: { kind: 'patient' | 'sale'; su
           </button>
         </div>
         <div className="mt-3 flex items-center justify-between gap-2">
-          <p className="text-sm font-black text-rose-600">Total: {cs()}{total.toLocaleString()}</p>
+          <p className={`text-sm font-black ${tone}`}>Total: {cs()}{total.toLocaleString()}</p>
           <button type="button" onClick={() => void downloadPdf()} disabled={pdfBusy || count === 0} className="rounded-full bg-emerald-50 px-3 py-1.5 text-[11px] font-black text-emerald-600 transition hover:bg-emerald-100 disabled:opacity-40">
             {pdfBusy ? '...' : 'PDF'}
           </button>
         </div>
         <div className="mt-3 flex-1 space-y-2 overflow-y-auto pr-1">
           {count === 0 ? (
-            <p className="py-8 text-center text-xs font-bold text-gray-400">Nothing due.</p>
+            <p className="py-8 text-center text-xs font-bold text-gray-400">{kind === 'total' ? 'No completed appointment yet.' : 'Nothing due.'}</p>
           ) : kind === 'patient' ? (
             <Paged items={patientRows}>{(rows) => rows.map((row, index) => (
               <div key={`${row.phone}-${index}`} className="flex items-center justify-between gap-3 rounded-2xl bg-[#F8F9FB] p-3">
@@ -1843,10 +1845,10 @@ function DueListModal({ kind, summary, onClose }: { kind: 'patient' | 'sale'; su
                 <div className="min-w-0">
                   <p className="truncate text-sm font-bold text-gray-800">{row.orderNumber ? `#${row.orderNumber}` : 'Appointment'} · {row.name}</p>
                   <p className="text-[10px] font-bold uppercase tracking-wide text-gray-400">
-                    {row.phone ? `${row.phone} · ` : ''}{new Date(row.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
+                    {'doctor' in row && row.doctor ? `${row.doctor} · ` : ''}{row.phone ? `${row.phone} · ` : ''}{new Date(row.createdAt).toLocaleString('en-GB', { day: '2-digit', month: 'short', hour: '2-digit', minute: '2-digit' })}
                   </p>
                 </div>
-                <p className="shrink-0 text-sm font-black text-rose-600">{cs()}{row.amount.toLocaleString()}</p>
+                <p className={`shrink-0 text-sm font-black ${tone}`}>{cs()}{row.amount.toLocaleString()}</p>
               </div>
             ))}</Paged>
           )}

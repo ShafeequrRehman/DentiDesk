@@ -560,6 +560,7 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
   const { toast } = useToast();
   const [prescription, setPrescription] = useState(order.prescription || '');
   const [diagnosis, setDiagnosis] = useState(order.diagnosis || '');
+  const [doctorNote, setDoctorNote] = useState(order.doctorNote || '');
   const [saving, setSaving] = useState(false);
   const alreadyDone = order.checkupStatus === 'done';
 
@@ -623,7 +624,7 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
     if (saving) return;
     setSaving(true);
     try {
-      const updated = await saveCheckup(order.id, prescription.trim(), true, diagnosis.trim(), true);
+      const updated = await saveCheckup(order.id, prescription.trim(), true, diagnosis.trim(), true, doctorNote);
       if (!updated) throw new Error('Could not save.');
       toast.success('Prescription saved.');
       onSaved({ ...order, ...updated, diagnosis: diagnosis.trim(), prescription: prescription.trim(), prescriptionImageCount: images.length });
@@ -638,7 +639,7 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
     if (saving) return;
     setSaving(true);
     try {
-      const updated = await saveCheckup(order.id, prescription.trim(), true, diagnosis.trim());
+      const updated = await saveCheckup(order.id, prescription.trim(), true, diagnosis.trim(), false, doctorNote);
       if (!updated) throw new Error('Could not save this checkup.');
       // Keep what the Dr just typed on the slip even if the server copy lags behind.
       const merged = { ...order, ...updated, diagnosis: updated.diagnosis ?? diagnosis.trim(), prescription: updated.prescription ?? prescription.trim(), prescriptionImageCount: images.length };
@@ -700,6 +701,20 @@ function CheckupModal({ order, onClose, onSaved }: { order: SavedOrder; onClose:
           rows={10}
           placeholder={'e.g.\nAmoxicillin 500mg - 1 tab 3 times a day - 5 days\nPanadol 500mg - when needed for pain\nWarm salt water rinse twice a day'}
           className="w-full resize-y rounded-2xl border border-gray-200 bg-[#FFFDF5] p-4 font-mono text-sm leading-6 text-gray-800 outline-none focus:border-indigo-400"
+        />
+
+        {/* Dr's own note - stays on this screen only */}
+        <label className="mb-1 mt-3 flex items-center justify-between text-xs font-black uppercase tracking-widest text-gray-400">
+          <span>Note for Doctor</span>
+          <span className="rounded-full bg-gray-100 px-2 py-0.5 text-[9px] tracking-wide text-gray-500">Private - not printed / not sent</span>
+        </label>
+        <textarea
+          value={doctorNote}
+          onChange={(event) => setDoctorNote(event.target.value)}
+          rows={3}
+          maxLength={2000}
+          placeholder="e.g. Patient anxious, check again after 2 weeks, allergic to penicillin"
+          className="w-full resize-y rounded-2xl border border-dashed border-gray-300 bg-gray-50 p-3 text-sm text-gray-800 outline-none focus:border-indigo-400"
         />
 
         {/* Attached pictures - printed under the medicine details */}

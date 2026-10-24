@@ -54,15 +54,16 @@ export function buildPrescriptionA4Html(order: SavedOrder, images: string[] = []
        script at the end shrinks the text if it is still too long, and the
        attachments share whatever space is left. */
     .page { --fs: 1; width: 210mm; height: 296mm; overflow: hidden; padding: 12mm 13mm 8mm; display: flex; flex-direction: column; }
-    .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 18px; padding-bottom: 12px; border-bottom: 3px solid #0e7490; }
+    .head { display: flex; align-items: flex-start; justify-content: space-between; gap: 30px; padding-bottom: 12px; border-bottom: 3px solid #0e7490; }
     .brand { display: flex; align-items: center; gap: 14px; flex: 1; min-width: 0; }
     .brand img { max-height: 80px; max-width: 140px; object-fit: contain; }
     .clinic { font-size: 24px; font-weight: 800; text-transform: uppercase; letter-spacing: .5px; color: #0e7490; margin: 0; }
     .sub { font-size: 12px; color: #4b5563; margin: 2px 0 0; }
-    /* Vertical separator between the clinic and the Dr */
-    .doc { text-align: left; flex-shrink: 0; max-width: 42%; align-self: stretch; border-left: 2px solid #0e7490; padding-left: 16px; }
+    /* Vertical separator between the clinic and the Dr - fixed width so the
+       line always sits at the same place, Dr text lined up beside it */
+    .doc { text-align: left; flex: 0 0 40%; width: 40%; align-self: stretch; border-left: 2px solid #0e7490; padding-left: 14px; }
     .doc .label { font-size: 10px; letter-spacing: 2px; text-transform: uppercase; color: #6b7280; }
-    .doc .name { font-size: 22px; line-height: 1.1; font-weight: 800; color: #0f172a; }
+    .doc .name { font-size: 18px; line-height: 1.15; font-weight: 600; color: #0f172a; }
     .doc .work { margin-top: 4px; font-size: 11.5px; line-height: 1.45; color: #374151; white-space: pre-line; }
     .doc .work b { color: #0e7490; }
     .doc .no { font-size: 11px; color: #6b7280; margin-top: 6px; }
