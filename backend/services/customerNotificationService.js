@@ -115,11 +115,11 @@ function buildAppointmentConfirmedMessage(order, shop, isHidden = () => false) {
     order.appointmentTime ? `Time: ${formatSlotTime(order.appointmentTime)}` : null,
     ...(() => {
       // What the appointment is for - the Dr line itself is not a service.
+      // Booking message = no prices / total / payment (that comes with
+      // the completed message and the slip).
       const services = (order.items || []).filter((item) => item.name !== order.doctorName);
-      return services.length ? [`Services:`, formatItems(services, C, isHidden)] : [];
+      return services.length ? [`Services:`, formatItems(services, C, () => true).replace(/- \d+x /g, "- ")] : [];
     })(),
-    hideMoney ? null : `Total: ${C}${formatMoney(order.total)}`,
-    paymentLine(order, C, hideMoney),
     `------------------------`,
     `Please arrive 10 minutes before your time.`,
     `${clinicPhones(shop)}`,
@@ -144,12 +144,7 @@ function buildOrderPlacedMessage(order, shop, isHidden = () => false) {
     `Appointment No: ${orderNumberOf(order)}`,
     `Date: ${formatDate(order.createdAt)}`,
     `Items:`,
-    formatItems(order.items, C, isHidden),
-    hideMoney ? null : `Subtotal: ${C}${formatMoney(order.subtotal)}`,
-    hideMoney ? null : `Other Charges: ${C}${otherCharges(order)}`,
-    hideMoney ? null : `Appointment Total: ${C}${formatMoney(order.total)}`,
-    `Payment Status: Pending`,
-    hideMoney ? null : `Amount: ${C}${formatMoney(order.paidAmount)}`,
+    formatItems(order.items, C, () => true),
     `------------------------`,
     `Appointment Status: Processing`,
     `We appreciate your trust in ${shopName} and will keep you updated about your appointment.`,
@@ -228,7 +223,7 @@ function buildAppointmentCancelledMessage(order, shop) {
   const shopName = shop?.name || "";
   const forLabel = /^dr\.?\s/i.test(order.doctorName || "") ? "Dr" : "Service";
   const reason = String(order.cancelReason || "").trim();
-  const showReason = reason && !/^(no reason provided|declined by clinic)$/i.test(reason);
+  const showReason = reason && !/^no reason provided$/i.test(reason);
   return [
     `*Your appointment is cancelled* ❌`,
     `Hello ${order.customer?.name || "there"},`,

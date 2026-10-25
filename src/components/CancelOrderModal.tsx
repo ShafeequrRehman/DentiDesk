@@ -42,7 +42,14 @@ export default function CancelOrderModal({
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState('');
 
+  // A still-pending appointment: the patient gets a WhatsApp with this
+  // reason, so it has to be written.
+  const reasonNeeded = order.status === 'pending';
   async function submit() {
+    if (reasonNeeded && !reason.trim()) {
+      setError('Write the reason - it is sent to the patient on WhatsApp.');
+      return;
+    }
     setSubmitting(true);
     setError('');
     try {
@@ -97,7 +104,9 @@ export default function CancelOrderModal({
 
         <div className="mt-4 space-y-3">
           <div>
-            <label className="mb-1 block text-sm font-semibold text-gray-700">Reason (optional)</label>
+            <label className="mb-1 block text-sm font-semibold text-gray-700">
+              {reasonNeeded ? 'Reason * (sent to the patient on WhatsApp)' : 'Reason (optional)'}
+            </label>
             <textarea
               value={reason}
               onChange={(event) => setReason(event.target.value)}
