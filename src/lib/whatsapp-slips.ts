@@ -11,6 +11,7 @@ import { fetchCustomerOutstanding, sendWhatsappDocument, sendWhatsappMessage } f
 import { getStoreSettings } from '@/lib/pos-settings';
 import type { SavedOrder } from '@/lib/pos-types';
 import { formatAppointmentDate, formatSlot } from '@/lib/appointments';
+import { accountBalanceLines } from '@/lib/order-receipt-print';
 
 const WALKIN_PHONE = '03000000000';
 
@@ -55,7 +56,6 @@ export type SlipKind = 'booked' | 'completed';
 function slipMessage(order: SavedOrder, kind: SlipKind, previousDues: number, withPdf: boolean) {
   const clinic = getStoreSettings().receiptHeader || 'Clinic';
   const withWhom = bookedWith(order);
-  const remaining = typeof order.remainingAmount === 'number' ? order.remainingAmount : Math.max(Number(order.total || 0) - Number(order.paidAmount || 0), 0);
   if (kind === 'booked') return bookedMessage(order, clinic, withPdf);
   const lines = [`*${clinic}*`, ''];
   {
@@ -65,14 +65,18 @@ function slipMessage(order: SavedOrder, kind: SlipKind, previousDues: number, wi
   if (withWhom) lines.push(`${withWhom.label}: ${withWhom.value}`);
   if (order.appointmentDate) lines.push(`Date: ${formatAppointmentDate(order.appointmentDate)}`);
   if (order.appointmentTime) lines.push(`Time: ${formatSlot(order.appointmentTime)}`);
-  lines.push(`Total: *${money(order.total)}*`);
   if (kind === 'completed') {
-    lines.push(`Paid: *${money(order.paidAmount)}*`);
-    const balance = remaining + previousDues;
-    if (balance > 0) lines.push(`Remaining due: *${money(balance)}*`);
-    else if (balance < 0) lines.push(`Advance balance: *${money(-balance)}*`);
-    else lines.push('Account: *CLEAR*');
-    if (withPdf) lines.push('', 'Your slip is attached.');
+    // Exactly the PAID and REMAINING DUE the slip prints (same maths) -
+    // the full payment breakdown is on the attached slip.
+    const slip = accountBalanceLines(order, previousDues);
+    const paidLine = slip.find((l) => l.label === 'PAID:');
+    const balanceLine = slip.find((l) => /^(REMAINING DUE|ADVANCE BALANCE|BALANCE):$/.test(l.label));
+    if (paidLine) lines.push(`Paid: *${paidLine.value}*`);
+    if (balanceLine) {
+      const label = balanceLine.label === 'REMAINING DUE:' ? 'Remaining due' : balanceLine.label === 'ADVANCE BALANCE:' ? 'Advance balance' : 'Balance';
+      lines.push(`${label}: *${balanceLine.value.replace(/^-/, '')}*`);
+    }
+    if (withPdf) lines.push('', 'Full payment details are on the attached slip.');
   } else {
     lines.push('', `Please arrive 10 minutes before your time.${withPdf ? ' Your slip is attached.' : ''}`);
   }
