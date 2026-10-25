@@ -2,7 +2,7 @@ export const sidebar = {
   dashboard: "ڈیش بورڈ",
   pos: "پی او ایس",
   sales: "اپائنٹمنٹس",
-  doctors: "ڈاکٹرز اور سروسز",
+  doctors: "چیک اپ",
   availability: "ڈاکٹر کی دستیابی",
   "dr-payments": "ڈاکٹر ادائیگیاں",
   accounting: "اکاؤنٹنگ",

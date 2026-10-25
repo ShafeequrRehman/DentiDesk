@@ -261,7 +261,7 @@ export default function DoctorsPage() {
       <div className="flex flex-wrap items-end justify-between gap-3">
         <div>
           <h1 className="flex items-center gap-3 text-3xl font-black tracking-tight text-gray-900">
-            Drs &amp; Services <Stethoscope className="text-indigo-600" size={30} />
+            Checkup <Stethoscope className="text-indigo-600" size={30} />
           </h1>
           <p className="font-bold text-gray-500">Each Dr&apos;s appointments, checkups and prescriptions - and every service the clinic offers.</p>
         </div>

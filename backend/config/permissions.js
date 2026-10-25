@@ -84,7 +84,7 @@ const SIDEBAR_PAGES = [
   ["dashboard", "Dashboard", ["view.dashboard"]],
   ["pos", "POS", ["sales.create", "sales.print", "customers.manage"]],
   ["sales", "Appointments", ["sales.create", "sales.edit", "sales.print", "customers.manage"]],
-  ["doctors", "Drs & Services", ["sales.create", "orders.record.view"]],
+  ["doctors", "Checkup", ["sales.create", "orders.record.view"]],
   ["availability", "Dr Availability", ["sales.create", "orders.record.view"]],
   ["accounting", "Accounting", ["expenses.manage"]],
   ["purchase", "Purchase", ["purchases.manage", "suppliers.manage"]],

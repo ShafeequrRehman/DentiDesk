@@ -50,7 +50,7 @@ export const DASHBOARD_PAGES: DashboardPageDef[] = [
   { key: 'pos', label: 'POS', href: '/dashboard/pos', permission: 'sales.create', hotkey: 'F1' },
   { key: 'sales', label: 'Appointments', href: '/dashboard/sales', permission: 'sales.create', hotkey: 'F2' },
   // Drs & Services: each Dr's appointments, checkups and prescriptions.
-  { key: 'doctors', label: 'Drs & Services', href: '/dashboard/doctors', permission: ['sales.create', 'orders.record.view'] },
+  { key: 'doctors', label: 'Checkup', href: '/dashboard/doctors', permission: ['sales.create', 'orders.record.view'] },
   // Dr/Service leave - those dates/times can't be booked on POS or online.
   { key: 'availability', label: 'Dr Availability', href: '/dashboard/availability', permission: ['sales.create', 'orders.record.view'] },
   { key: 'accounting', label: 'Accounting', href: '/dashboard/accounting', permission: 'expenses.manage', hotkey: 'F3' },

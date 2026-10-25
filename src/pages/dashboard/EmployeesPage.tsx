@@ -540,7 +540,7 @@ function StaffFormModal({
             {form.linkedDoctor && !drNames.includes(form.linkedDoctor) ? <option value={form.linkedDoctor}>{form.linkedDoctor}</option> : null}
           </select>
           <p className="mt-1 text-[11px] text-gray-500">
-            Pick a Dr and this login sees ONLY that Dr on Drs &amp; Services (appointments, checkups) and Dr Availability - never the other Drs. Give the role the pages &quot;Drs &amp; Services&quot; and &quot;Dr Availability&quot;.
+            Pick a Dr and this login sees ONLY that Dr on Checkup (appointments, checkups) and Dr Availability - never the other Drs. Give the role the pages &quot;Checkup&quot; and &quot;Dr Availability&quot;.
           </p>
         </div>
 
