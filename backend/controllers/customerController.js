@@ -217,7 +217,7 @@ exports.getCustomerLedger = async (req, res) => {
       // to hit the frontend's request timeout.
       Order.find(
         { ...scope, "customer.phone": { $exists: true, $ne: "" } },
-        "customer.phone dailyOrderNumber createdAt orderType status paymentMethod total paidAmount remainingAmount billTid billName cashRecipientName doctorName items.name items.price items.quantity"
+        "customer.phone customer.name dailyOrderNumber createdAt orderType status paymentMethod total paidAmount remainingAmount billTid billName cashRecipientName doctorName items.name items.price items.quantity"
       )
         .sort({ createdAt: -1 })
         .lean(),
@@ -248,6 +248,31 @@ exports.getCustomerLedger = async (req, res) => {
       if (!phone || phone === WALKIN_PHONE) continue;
       if (!ordersByPhone.has(phone)) ordersByPhone.set(phone, []);
       ordersByPhone.get(phone).push(order);
+    }
+
+    // Never lose a due: a patient who has appointments but no patient
+    // record yet (booked online, saved before the record existed, number
+    // typed differently...) used to be missing from Dues even with money
+    // left to pay. Create the missing records now (name from their latest
+    // appointment) so EVERY phone with appointments shows up here.
+    const knownPhones = new Set(customers.map((c) => c.phone));
+    const missing = [...ordersByPhone.entries()]
+      .filter(([phone]) => !knownPhones.has(phone))
+      .map(([phone, list]) => ({
+        shopId: scope.shopId,
+        phone,
+        name: String(list.find((o) => o.customer?.name)?.customer?.name || phone).trim() || phone,
+      }));
+    if (missing.length > 0 && scope.shopId) {
+      try {
+        const created = await Customer.insertMany(missing, { ordered: false });
+        customers.push(...created.map((doc) => doc.toObject()));
+      } catch (error) {
+        // a duplicate (made at the same moment elsewhere) - load what exists
+        const again = await Customer.find({ ...scope, phone: { $in: missing.map((m) => m.phone) } }).lean();
+        customers.push(...again.filter((c) => !knownPhones.has(c.phone)));
+      }
+      customers.sort((a, b) => String(a.name || "").localeCompare(String(b.name || "")));
     }
 
     // Unified Khata: keyed by linkedCustomerId (a real ObjectId ref, unlike
